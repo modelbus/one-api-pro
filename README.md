@@ -1,14 +1,13 @@
 
-
 <p align="center">
-  <a href="https://github.com/songquanpeng/one-api"><img src="https://raw.githubusercontent.com/songquanpeng/one-api/main/web/default/public/logo.png" width="150" height="150" alt="one-api logo"></a>
+  <img src="docs/logo.png" width="150" height="150" alt="one-api-pro logo">
 </p>
 
 <div align="center">
 
 # One Api Pro
 
-_✨ 针对企业级的 AI API Gateway ✨_
+_✨ 企业级 AI API Gateway ✨_
 
 > 本项目基于 [one-api](https://github.com/songquanpeng/one-api) (by [JustSong](https://github.com/songquanpeng)) 二次开发，感谢原作者的开源贡献。
 
@@ -55,11 +54,21 @@ _✨ 针对企业级的 AI API Gateway ✨_
 
 - [🔥 one-api-pro vs one-api](#-one-api-pro-vs-one-api)
 - [📦 部署](#-部署)
+  - [🔨 手动部署](#-手动部署)
+  - [🏢 多机部署](#-多机部署)
+  - [🌐 集群部署（去中心化多活）](#-集群部署去中心化多活)
+  - [🔌 部署第三方服务配合 One Api Pro 使用](#-部署第三方服务配合-one-api-pro-使用)
 - [⚙️ 配置](#%EF%B8%8F-配置)
 - [📖 使用方法](#-使用方法)
+  - [🔧 环境变量](#-环境变量)
+  - [⌨️ 命令行参数](#%EF%B8%8F-命令行参数)
 - [🎬 演示](#-演示)
+  - [🔗 在线演示](#-在线演示)
+  - [📸 截图展示](#-截图展示)
 - [❓ 常见问题](#-常见问题)
 - [🔧 第三方技术](#-第三方技术)
+  - [🔙 后端（Go）](#-后端go)
+  - [🎨 前端（React）](#-前端react默认主题-webdefault)
 
 ---
 
@@ -69,6 +78,7 @@ _✨ 针对企业级的 AI API Gateway ✨_
 |----------|---------|-------------|
 | 项目名称 | one-api | one-api-pro |
 | Adaptor 架构 | 集中式常量管理（channeltype/define.go 56 行 iota + url.go 平行数组 + helper.go 双层 switch），新增提供商必须修改 4 个框架文件 | 自注册机制（registry + register.go），新增提供商只需创建包 + 注册即可，框架代码零修改 |
+| 权限精细化 | 管理员与普通用户权限边界模糊，任何人可通过 API 操作设置项 | 分级权限体系，修复 API 权限漏洞，精细化管理员操作权限 |
 | 订阅模式 | 无套餐/订阅体系 | 完整套餐订阅 + 周期限频 + 按模型管控 |
 | 去中心化集群 | 无独立集群支持，多机部署需共享 MySQL | 支持去中心化多活集群，每节点独立 MySQL + Redis，通过应用层事件同步实现数据互信，无需共享数据库 |
 | 目录结构 | relay/adaptor/ 平铺 40 个目录，基础协议与供应商混在一起，relay/model/ 与根 model/ 冲突 | adaptor/openai/、adaptor/anthropic/ 作为基础协议独立放置，adaptor/provider/ 统一收纳 37 个供应商，relay/schema/ 消除命名冲突 |
@@ -969,7 +979,6 @@ channeltype.Unknown    → &openai.Adaptor{}                         (默认兜�
 
 ## 注意
 
-本项目使用 MIT 协议进行开源，**在此基础上**，必须在页面底部保留署名以及指向本项目的链接。如果不想保留署名，必须首先获得授权。
 
 同样适用于基于本项目的二开项目。
 
