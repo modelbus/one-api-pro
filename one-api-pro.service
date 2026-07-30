@@ -1,0 +1,18 @@
+# File path: /etc/systemd/system/one-api-pro.service
+# sudo systemctl daemon-reload
+# sudo systemctl start one-api-pro
+# sudo systemctl enable one-api-pro
+# sudo systemctl status one-api-pro
+[Unit]
+Description=One API Pro Service
+After=network.target
+
+[Service]
+User=ubuntu  # 注意修改用户名
+WorkingDirectory=/path/to/one-api-pro  # 注意修改路径
+ExecStart=/path/to/one-api-pro/one-api-pro --port 3000 --log-dir /path/to/one-api-pro/logs  # 注意修改路径和端口号
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
