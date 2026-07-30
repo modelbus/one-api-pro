@@ -5,8 +5,6 @@
 
 <div align="center">
 
-# One Api Pro
-
 _✨ 企业级 AI API Gateway ✨_
 
 > 本项目基于 [one-api](https://github.com/songquanpeng/one-api) (by [JustSong](https://github.com/songquanpeng)) 二次开发，感谢原作者的开源贡献。
