@@ -1,15 +1,14 @@
-
 <p align="center">
   <img src="docs/logo.png" width="150" height="150" alt="one-api-pro logo">
 </p>
 
-<div align="center">
+<p align="center">
+  <em>✨ 企业级 AI API Gateway ✨</em>
+</p>
 
-_✨ 企业级 AI API Gateway ✨_
-
-> 本项目基于 [one-api](https://github.com/songquanpeng/one-api) (by [JustSong](https://github.com/songquanpeng)) 二次开发，感谢原作者的开源贡献。
-
-</div>
+<p align="center">
+  本项目基于 <a href="https://github.com/songquanpeng/one-api">one-api</a> (by <a href="https://github.com/songquanpeng">JustSong</a>) 二次开发，感谢原作者的开源贡献。
+</p>
 
 <p align="center">
   <a href="https://raw.githubusercontent.com/songquanpeng/one-api/main/LICENSE">
@@ -31,20 +30,21 @@ _✨ 企业级 AI API Gateway ✨_
 
 <p align="center">
   <a href="https://github.com/songquanpeng/one-api#部署">部署教程</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://github.com/songquanpeng/one-api#使用方法">使用方法</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://github.com/songquanpeng/one-api/issues">意见反馈</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://github.com/songquanpeng/one-api#截图展示">截图展示</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://openai.justsong.cn/">在线演示</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://github.com/songquanpeng/one-api#常见问题">常见问题</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://github.com/songquanpeng/one-api#相关项目">相关项目</a>
-  ·
+  &nbsp;·&nbsp;
   <a href="https://iamazing.cn/page/reward">赞赏支持</a>
+</p>
 
 ---
 
