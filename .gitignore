@@ -13,3 +13,5 @@ cmd.md
 /one-api
 temp
 .DS_Store
+# Old frontend (kept for reference)
+web-back/

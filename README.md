@@ -10,14 +10,14 @@
 </p>
 
 <p align="center">
-  <a href="https://raw.githubusercontent.com/songquanpeng/one-api/main/LICENSE">
-    <img src="https://img.shields.io/github/license/songquanpeng/one-api?color=brightgreen" alt="license">
+  <a href="https://raw.githubusercontent.com/Leon-PanPan/one-api-pro/main/LICENSE">
+    <img src="https://img.shields.io/github/license/Leon-PanPan/one-api-pro?color=brightgreen" alt="license">
   </a>
-  <a href="https://github.com/songquanpeng/one-api/releases/latest">
-    <img src="https://img.shields.io/github/v/release/songquanpeng/one-api?color=brightgreen&include_prereleases" alt="release">
+  <a href="https://github.com/Leon-PanPan/one-api-pro/releases/latest">
+    <img src="https://img.shields.io/github/v/release/Leon-PanPan/one-api-pro?color=brightgreen&include_prereleases" alt="release">
   </a>
-  <a href="https://github.com/songquanpeng/one-api/releases/latest">
-    <img src="https://img.shields.io/github/downloads/songquanpeng/one-api/total?color=brightgreen&include_prereleases" alt="release">
+  <a href="https://github.com/Leon-PanPan/one-api-pro/releases/latest">
+    <img src="https://img.shields.io/github/downloads/Leon-PanPan/one-api-pro/total?color=brightgreen&include_prereleases" alt="release">
   </a>
 </p>
 
@@ -49,9 +49,11 @@
   - [🔗 在线演示](#-在线演示)
   - [📸 截图展示](#-截图展示)
 - [❓ 常见问题](#-常见问题)
-- [🔧 第三方技术](#-第三方技术)
-  - [🔙 后端（Go）](#-后端go)
-  - [🎨 前端（React）](#-前端react默认主题-webdefault)
+- [🔧 技术栈](#-技术栈)
+  - [Go 后端](#go-后端)
+  - [Vue 3 前端](#vue-3-前端)
+- [相关项目](#相关项目)
+- [License](#license)
 
 ---
 
@@ -70,18 +72,17 @@
 
 ## 📦 部署
 ### 🔨 手动部署
-1. 从 [GitHub Releases](https://github.com/songquanpeng/one-api/releases/latest) 下载可执行文件或者从源码编译：
+1. 从 [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) 下载可执行文件或者从源码编译：
    ```shell
    git clone https://github.com/Leon-PanPan/one-api-pro.git
 
    # 构建前端
-   cd one-api-pro/web/default
+   cd one-api-pro/web
    npm install
    npm run build
 
    # 构建后端
-   cd ../..
-   go mod download
+   cd ..
    go build -ldflags "-s -w" -o one-api-pro
    ````
 2. 运行：
@@ -494,7 +495,7 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 | 新节点加入集群 | ❌ | DBA 手动 `mysqldump` 初始化 |
 | 节点长期离线后恢复 | ❌ | DBA 手动 `mysqldump` 补齐 |
 
-如果部署后访问出现空白页面，详见 [#97](https://github.com/songquanpeng/one-api/issues/97)。
+如果部署后访问出现空白页面，详见 [#97](https://github.com/Leon-PanPan/one-api-pro/issues/97)。
 
 ### 🔌 部署第三方服务配合 One Api Pro 使用
 > 欢迎 PR 添加更多示例。
@@ -756,213 +757,43 @@ https://openai.justsong.cn
    + 这是检测到 ability 表里有些记录的渠道 id 是不存在的，这大概率是因为你删了 channel 表里的记录但是没有同步在 ability 表里清理无效的渠道。
    + 对于每一个渠道，其所支持的模型都需要有一个专门的 ability 表的记录，表示该渠道支持该模型。
 
-## 🔧 第三方技术
+## 🔧 技术栈
 
-本项目在后端和前端都使用了大量的开源第三方库，下面列出主要依赖及其用途。
+本项目基于以下开源技术构建，感谢所有开源项目作者。
 
-### 🔙 后端（Go）
-
-#### 🌐 Web 框架与中间件
+### Go 后端
 
 | 技术 | 用途 |
 | --- | --- |
-| [Gin](https://github.com/gin-gonic/gin) | HTTP Web 框架，负责路由注册、请求处理、中间件链和响应渲染，是整个后端服务的基础 |
-| [gin-contrib/cors](https://github.com/gin-contrib/cors) | 跨域资源共享（CORS）中间件，允许前端从不同域访问 API |
-| [gin-contrib/gzip](https://github.com/gin-contrib/gzip) | Gzip 压缩中间件，对 HTTP 响应进行压缩以减少传输体积 |
-| [gin-contrib/sessions](https://github.com/gin-contrib/sessions) | 基于 Cookie 的 Session 管理，保存用户登录状态 |
-| [gin-contrib/static](https://github.com/gin-contrib/static) | 静态文件服务中间件，用于托管前端构建产物 |
-| [go-playground/validator](https://github.com/go-playground/validator) | Struct tag 驱动的请求参数校验 |
-| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket 协议实现，用于支持流式响应（打字机效果）等长连接场景 |
+| [Gin](https://github.com/gin-gonic/gin) | HTTP Web 框架 |
+| [GORM](https://gorm.io) | ORM 库，支持 SQLite / MySQL / PostgreSQL |
+| [go-redis/redis](https://github.com/go-redis/redis) | Redis 客户端 |
+| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT 鉴权 |
+| [AWS SDK for Go v2](https://github.com/aws/aws-sdk-go-v2) | AWS Bedrock 集成 |
+| [Google API Go Client](https://github.com/googleapis/google-api-go-client) | Google Gemini / PaLM2 集成 |
+| [pkoukk/tiktoken-go](https://github.com/pkoukk/tiktoken-go) | Token 计数 |
+| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket 支持（讯飞等渠道） |
+| [joho/godotenv](https://github.com/joho/godotenv) | .env 配置文件解析 |
 
-#### 🗄️ 数据库与 ORM
-
-| 技术 | 用途 |
-| --- | --- |
-| [GORM](https://gorm.io) | Go 主流 ORM 库，负责业务模型定义、数据库迁移、查询和写入 |
-| [gorm.io/driver/sqlite](https://gorm.io/driver/sqlite) | GORM 的 SQLite 驱动，作为默认数据库，方便单机零配置部署 |
-| [gorm.io/driver/mysql](https://gorm.io/driver/mysql) | GORM 的 MySQL 驱动，支持高并发场景下的 MySQL 部署 |
-| [gorm.io/driver/postgres](https://gorm.io/driver/postgres) | GORM 的 PostgreSQL 驱动，提供 PostgreSQL 数据库支持 |
-| [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) | MySQL 协议驱动，被 GORM MySQL driver 间接依赖 |
-| [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3) | SQLite 的 CGo 实现，被 GORM SQLite driver 间接依赖 |
-| [jackc/pgx](https://github.com/jackc/pgx) | PostgreSQL 驱动，被 GORM PostgreSQL driver 间接依赖 |
-
-#### ⚡ 缓存、限流与同步原语
+### Vue 3 前端
 
 | 技术 | 用途 |
 | --- | --- |
-| [go-redis/redis](https://github.com/go-redis/redis) | Redis 客户端，用于缓存、分布式限流计数器、集群模式下的节点限流共享等 |
-| [patrickmn/go-cache](https://github.com/patrickmn/go-cache) | 进程内的内存缓存（`MEMORY_CACHE_ENABLED`），用于减轻数据库压力 |
-| [golang/sync](https://pkg.go.dev/golang.org/x/sync) （`errgroup` 等） | 提供同步原语与错误聚合，简化并发任务编排 |
-| [cloud.google.com/go/iam](https://cloud.google.com/go/iam) | 间接用于 Google API 客户端中的 IAM 凭证处理（Gemini 等渠道） |
-
-#### 🔐 认证、安全与配置
-
-| 技术 | 用途 |
-| --- | --- |
-| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT（JSON Web Token）的生成与解析，用于系统访问令牌等场景 |
-| [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) | Go 官方加密扩展库，提供 bcrypt 等密码哈希算法用于用户密码加密 |
-| [joho/godotenv](https://github.com/joho/godotenv) | 解析 `.env` 配置文件，将其中的键值对注入为环境变量 |
-
-#### 🤖 大模型 / AI 集成
-
-| 技术 | 用途 |
-| --- | --- |
-| [AWS SDK for Go v2](https://github.com/aws/aws-sdk-go-v2) 及其 `credentials`、`bedrockruntime` 子模块 | 访问 AWS Bedrock 上的 Claude 系列模型 |
-| [Google API Go Client](https://github.com/googleapis/google-api-go-client) （`google.golang.org/api`） | 调用 Google Gemini / PaLM2 系列模型 |
-| [pkoukk/tiktoken-go](https://github.com/pkoukk/tiktoken-go) | OpenAI `tiktoken` 的 Go 移植版，用于对 prompt/completion 进行精确的 token 计数与计费 |
-| [jinzhu/copier](https://github.com/jinzhu/copier) | 结构体之间按字段名快速复制，用于在不同请求/响应模型之间做转换 |
-
-#### 🛠️ 通用工具
-
-| 技术 | 用途 |
-| --- | --- |
-| [google/uuid](https://github.com/google/uuid) | 生成 UUID，用于兑换码、请求标识等 |
-| [pkg/errors](https://github.com/pkg/errors) | 带堆栈信息的错误包装与处理，便于排障 |
-| [golang.org/x/image](https://pkg.go.dev/golang.org/x/image) | Go 官方图像处理扩展库，用于图片相关辅助处理 |
-| [smartystreets/goconvey](https://github.com/smartystreets/goconvey) | 测试与断言辅助库，配套 `stretchr/testify` 在测试中使用 |
-| [stretchr/testify](https://github.com/stretchr/testify) | 常用的断言、mock、测试套件库，用于编写单元测试 |
-
-### 🎨 前端（React，默认主题 `web/default`）
-
-#### 🏗️ 核心框架与构建
-
-| 技术 | 用途 |
-| --- | --- |
-| [React](https://react.dev) 18 | 负责整个管理后台 UI 的组件化渲染 |
-| [React DOM](https://react.dev) | 在浏览器中挂载 React 组件树 |
-| [react-router-dom](https://reactrouter.com) | 客户端路由，支撑多页面（渠道、令牌、用户管理等）切换 |
-| [history](https://github.com/remix-run/history) | 被 react-router 用于管理浏览器历史栈 |
-| [react-scripts](https://create-react-app.dev) | Create React App 的脚本集合，提供开发服务器、打包、测试等构建流程 |
-| [Prettier](https://prettier.io) | 代码格式化工具，统一前端代码风格 |
-
-#### UI 与交互
-
-| 技术 | 用途 |
-| --- | --- |
-| [Semantic UI React](https://react.semantic-ui.com) 及其 [Semantic UI CSS](https://semantic-ui.com) | 管理后台主要的 UI 组件库（按钮、表单、表格、菜单等） |
-| [react-toastify](https://github.com/fkhadra/react-toastify) | 全局通知/Toast 组件，用于操作结果提示 |
-| [react-dropzone](https://react-dropzone.js.org) | 文件拖拽上传组件，用于头像等资源上传 |
-| [react-turnstile](https://github.com/Le0developer/react-turnstile) | 集成 Cloudflare Turnstile 人机验证 |
-
-#### 数据可视化与工具
-
-| 技术 | 用途 |
-| --- | --- |
-| [Recharts](https://recharts.org) | 基于 React 的图表库，用于仪表盘等数据可视化 |
-| [axios](https://axios-http.com) | HTTP 客户端，统一封装与管理后端 API 的交互 |
-| [moment](https://momentjs.com) | 日期与时间的格式化、解析、相对时间展示 |
-| [marked](https://github.com/markedjs/marked) | Markdown 渲染器，用于渲染公告、关于页等 Markdown 内容 |
-| [i18next](https://www.i18next.com) 及其 `browser-languagedetector`、`react-i18next` | 国际化方案，支持多语言界面切换 |
-
-### 部署与运维相关
-
-| 技术 | 用途 |
-| --- | --- |
-| [Docker](https://www.docker.com) | 容器化打包与运行，便于跨平台一致部署 |
-| [Nginx](https://nginx.org) | 文档中给出的反向代理与 HTTPS 终止示例 |
-| [Let's Encrypt / certbot](https://certbot.eff.org) | 文档中推荐的免费 HTTPS 证书签发与自动续期方案 |
-| [宝塔面板](https://www.bt.cn) | 文档中提到的可视化运维面板，可一键安装 One API |
-| [Watchtower](https://github.com/containrrr/watchtower) | 自动监控并更新 Docker 镜像 |
-| [MySQL](https://www.mysql.com) / [PostgreSQL](https://www.postgresql.org) | 生产环境推荐的关系型数据库 |
-| [Redis](https://redis.io) | 可选的缓存与分布式限流后端 |
-| [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) / [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) | 渠道代理与人机验证服务（功能层面集成） |
-| [Feishu](https://open.feishu.cn) / [GitHub OAuth](https://github.com/settings/applications/new) | 第三方登录功能所对接的开放平台 |
-
-## 适配器架构
-
-One API 通过一套**适配器（Adaptor）接口**来对接不同的大模型厂商，所有渠道的 API 请求/响应处理都走统一的中继流程。
-
-### 设计模式
-
-```
-                    Adaptor 接口（10 methods）
-                    ┌───────┴──────────┐
-                    │                  │
-            GetRequestURL(),       DoResponse()
-            SetupRequestHeader(),   │
-            ConvertRequest(),       ├─ Passthrough → StreamPipeline.Run(openai配置)
-            DoRequest()             ├─ Converting  → StreamPipeline.Run(gemini配置)
-                                    ├─ EventDriven → AnthropicPipeline.Run(...)
-                                    └─ 自定义      → xunfei/aws 独立实现
-```
-
-| 设计模式 | 用在哪 | 说明 |
-|---------|-------|------|
-| **Template Method** | `openai.Adaptor` 作为基类，子类覆写差异方法 | 20+ 个 OpenAI 兼容渠道继承 `openai.Adaptor`，仅覆写 `GetRequestURL` / `SetupRequestHeader` / `GetModelList` 等差异步骤 |
-| **Strategy** | `StreamPipeline` 和 `AnthropicPipeline` | 将流式响应处理拆成三种策略：透传（Passthrough）、逐行转换（Converting）、事件驱动（EventDriven），每个 adaptor 选择其一 |
-| **Hook（内嵌 Strategy）** | `StreamPipeline` 的 `ProcessLine` / `Render` / `MergeUsage` | 对逐行转换型渠道（gemini / baidu / cohere 等），通过注入拆帧函数、转换函数、usage 提取函数来参数化处理管线 |
-
-### 目录结构
-
-```
-relay/adaptor/
-├── interface.go              # Adaptor 接口契约
-├── common.go                 # DoRequestHelper, SetupCommonRequestHeader
-├── pipeline.go               # StreamPipeline — 标准 SSE/NDJSON 流处理
-│
-├── openai/                   # 基类：纯粹的 OpenAI 协议实现（无渠道特化分支）
-│   └── adaptor.go            # 提供完整默认实现，子类通过 struct embedding 继承
-│
-├── groq/adaptor.go           # 子类：仅覆写模型列表（~10 行）
-├── doubao/adaptor.go         # 子类：覆写 GetRequestURL + 模型列表（~25 行）
-├── azure/adaptor.go          # 子类：覆写 GetRequestURL + SetupRequestHeader（~30 行）
-│
-├── anthropic/                # 独立渠道：AnthropicPipeline（事件驱动流处理）
-├── gemini/                   # 独立渠道：StreamPipeline（逐行转换型）
-├── xunfei/                   # 独立渠道：WebSocket 自定义传输
-└── aws/                      # 独立渠道：AWS SDK 自定义传输
-```
-
-### 新增一个渠道需要写多少代码
-
-**纯 OpenAI 兼容（如 Groq）—— ~10 行**：
-```go
-package groq
-import oa "github.com/songquanpeng/one-api/relay/adaptor/openai"
-
-type Adaptor struct { *oa.Adaptor }                       // 继承全部默认行为
-func (a *Adaptor) GetModelList() []string { return ModelList }
-func (a *Adaptor) GetChannelName() string { return "groq" }
-
-var ModelList = []string{"llama-3.1-8b-instant", ...}
-```
-
-**URL 有差异（如 Doubao）—— ~25 行**，多覆写一个 `GetRequestURL` 方法。
-
-**完全不同协议（如新厂商）—— ~80 行**，实现全部 Adaptor 方法 + 选择对应的 Pipeline 引擎。
-
-### Dispatcher 派发机制
-
-`relay/adaptor.go:GetAdaptorByChannel(channelType)` 接收渠道类型，返回对应的适配器：
-
-```
-channeltype.Doubao  → &doubao.Adaptor{Adaptor: &openai.Adaptor{}}  (子类)
-channeltype.Anthropic  → &anthropic.Adaptor{}                      (独立渠道)
-channeltype.Unknown    → &openai.Adaptor{}                         (默认兜底)
-```
-
-### Usage 提取
-
-所有渠道的 `DoResponse` 最终返回 `*model.Usage`（共三个关键字段）：
-
-| 字段 | 用途 |
-|------|------|
-| `PromptTokens` | 输入 token 总数 |
-| `CompletionTokens` | 输出 token 总数 |
-| `PromptTokensDetails.CachedTokens` | 缓存命中 token（按 `CachedPrice` 计价） |
-
-计费公式：`非缓存Input × InputPrice + 缓存Input × CachedPrice + Output × OutputPrice`。各渠道在各自的 Pipeline 配置或 Hook 中完成原始响应 → Usage 的映射，对上游计费管线完全透明。
+| [Vue 3](https://vuejs.org) | 前端框架（组合式 API） |
+| [Vite](https://vitejs.dev) | 构建工具 |
+| [Arco Design Vue](https://arco.design/vue) | UI 组件库 |
+| [Pinia](https://pinia.vuejs.org) | 状态管理 |
+| [Vue Router 4](https://router.vuejs.org) | 路由管理 |
+| [Axios](https://axios-http.com) | HTTP 客户端 |
+| [ECharts](https://echarts.apache.org) | 数据可视化图表 |
+| [vue-i18n](https://vue-i18n.intlify.dev) | 国际化 |
 
 ## 相关项目
-* [FastGPT](https://github.com/labring/FastGPT): 基于 LLM 大语言模型的知识库问答系统
-* [ChatGPT Next Web](https://github.com/Yidadaa/ChatGPT-Next-Web):  一键拥有你自己的跨平台 ChatGPT 应用
-* [VChart](https://github.com/VisActor/VChart):  不只是开箱即用的多端图表库，更是生动灵活的数据故事讲述者。
-* [VMind](https://github.com/VisActor/VMind):  不仅自动，还很智能。开源智能可视化解决方案。
-* [CherryStudio](https://github.com/CherryHQ/cherry-studio):  全平台支持的AI客户端, 多服务商集成管理、本地知识库支持。
+* [one-api](https://github.com/songquanpeng/one-api) — 本项目上游项目，感谢 JustSong
+* [FastGPT](https://github.com/labring/FastGPT) — 基于 LLM 的知识库问答系统
+* [ChatGPT Next Web](https://github.com/Yidadaa/ChatGPT-Next-Web) — 跨平台 ChatGPT 应用
+* [CherryStudio](https://github.com/CherryHQ/cherry-studio) — 全平台 AI 客户端，多服务商集成
 
-## 注意
+## License
 
-
-同样适用于基于本项目的二开项目。
-
-依据 MIT 协议，使用者需自行承担使用本项目的风险与责任，本开源项目开发者与此无关。
+[MIT License](LICENSE)
