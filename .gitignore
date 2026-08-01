@@ -14,4 +14,9 @@ cmd.md
 temp
 .DS_Store
 # Old frontend (kept for reference)
-web-back/
+web/air
+web/default
+web/berry
+web/build
+web/README.md
+web/

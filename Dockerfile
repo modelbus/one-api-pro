@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM node:20 AS builder
 WORKDIR /web
 COPY ./web /web
 
-RUN npm install && npm run build
+RUN sh build.sh
 
 FROM golang:alpine AS builder2
 
