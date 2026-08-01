@@ -24,7 +24,7 @@ import (
 	"github.com/Leon-PanPan/one-api-pro/router"
 )
 
-//go:embed web/build/*
+//go:embed all:web/build
 var buildFS embed.FS
 
 func main() {

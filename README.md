@@ -22,11 +22,15 @@
 </p>
 
 <p align="center">
+  <a href="#-功能亮点">功能亮点</a>
+  &nbsp;·&nbsp;
   <a href="#-部署">部署教程</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/Leon-PanPan/one-api-pro/blob/main/docs/API.md">接口文档</a>
   &nbsp;·&nbsp;
   <a href="http://doc.one-api.pro">使用方法</a>
   &nbsp;·&nbsp;
-  <a href="http://demo.one-api.pro">在线演示</a>
+  <a href="#-开发计划">开发计划</a>
   &nbsp;·&nbsp;
   <a href="#-常见问题">常见问题</a>
 </p>
@@ -35,19 +39,21 @@
 
 ## 📑 目录
 
+- [✨ 功能亮点](#-功能亮点)
+- [🚀 快速开始](#-快速开始)
 - [🔥 one-api-pro vs one-api](#-one-api-pro-vs-one-api)
 - [📦 部署](#-部署)
   - [🔨 手动部署](#-手动部署)
   - [🏢 多机部署](#-多机部署)
   - [🌐 集群部署（去中心化多活）](#-集群部署去中心化多活)
   - [🔌 部署第三方服务配合 One Api Pro 使用](#-部署第三方服务配合-one-api-pro-使用)
+- [📖 接口文档](#-接口文档)
 - [⚙️ 配置](#%EF%B8%8F-配置)
 - [📖 使用方法](#-使用方法)
   - [🔧 环境变量](#-环境变量)
   - [⌨️ 命令行参数](#%EF%B8%8F-命令行参数)
-- [🎬 演示](#-演示)
-  - [🔗 在线演示](#-在线演示)
-  - [📸 截图展示](#-截图展示)
+- [📸 截图展示](#-截图展示)
+- [🗺️ 开发计划](#%EF%B8%8F-开发计划)
 - [❓ 常见问题](#-常见问题)
 - [🔧 技术栈](#-技术栈)
   - [Go 后端](#go-后端)
@@ -56,6 +62,75 @@
 - [License](#license)
 
 ---
+
+## ✨ 功能亮点
+
+One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全新打造，在保留原版 one-api 全部功能的基础上，进行了架构级重构与企业级增强。
+
+### 🖥️ 可视化仪表盘
+
+全新的 Vue 3 + Arco Design 管理后台，提供数据可视化仪表盘，核心指标、使用趋势、模型用量分布一目了然。
+
+| 核心指标卡 | 使用趋势图 |
+|:---:|:---:|
+| ![仪表盘首页](docs/Demo-Index.png) | ![仪表盘首页](docs/Demo-Index.png) |
+
+### 🔑 精细的令牌管理
+
+支持多维度令牌管控：可用模型白名单、IP 子网限制、额度上限、过期时间、无限额度，权限粒度细化到单个模型。
+
+| 令牌管理 |
+|:---:|
+| ![令牌管理](docs/Demo-Token.png) |
+
+### 📦 套餐订阅体系
+
+内置完整的套餐与订阅体系：按 Token / 按请求计费，周期限频（小时 / 周 / 月），按模型精细管控，支持推荐套餐与价格配置。
+
+| 套餐管理 | 订阅管理 |
+|:---:|:---:|
+| ![套餐管理](docs/Demo-Plan.png) | ![订阅管理](docs/Demo-Subscribe.png) |
+
+### 🌐 去中心化多活集群
+
+支持去中心化多活集群部署，每个节点独立 MySQL + Redis，通过应用层事件同步实现数据互信，无需共享数据库，天然支持全球多地域就近访问。
+
+| 集群节点管理 |
+|:---:|
+| ![集群节点管理](docs/Demo-cluster.png) |
+
+### 🧩 其他核心能力
+
+- **30+ 模型平台接入**：OpenAI / Anthropic / Gemini / DeepSeek / 通义千问 / 文心一言 / 讯飞 / 智谱 等主流平台全覆盖，统一 OpenAI 兼容接口
+- **精确成本核算**：按 Token 或按次计费，Prompt / Completion / Cached 独立定价，分组折扣叠加，周期用量追踪
+- **渠道负载均衡**：按权重随机分配、自动故障切换、冷却 / 禁用策略、渠道并发与 RPM 限流
+- **多级权限体系**：Guest / User / Admin / Root 四级权限，修复原版 API 权限漏洞，精细化管理员操作权限
+- **企业级安全**：全链路 HTTPS、Token 鉴权、子网 IP 限制、审计日志实时追踪
+
+---
+
+## 🚀 快速开始
+
+```bash
+# 从 GitHub Releases 下载可执行文件，或从源码编译
+git clone https://github.com/Leon-PanPan/one-api-pro.git
+cd one-api-pro
+
+# 构建前端（Vue 3）
+cd web
+sh build.sh        # 按 web/THEMES 构建主题（默认 default-pro）
+cd ..
+
+# 构建后端
+go build -ldflags "-s -w" -o one-api-pro
+
+# 启动
+./one-api-pro --port 3000 --log-dir ./logs
+```
+
+访问 `http://localhost:3000`，使用初始账号 `root / 123456` 登录。
+
+> 详细部署方式见 [📦 部署](#-部署)，接口文档见 [📖 接口文档](#-接口文档)。
 
 ## 🔥 one-api-pro vs one-api
 
@@ -76,15 +151,14 @@
    ```shell
    git clone https://github.com/Leon-PanPan/one-api-pro.git
 
-   # 构建前端
+   # 构建前端（Vue 3 管理后台，按 web/THEMES 依次构建）
    cd one-api-pro/web
-   npm install
-   npm run build
+   sh build.sh
 
-   # 构建后端
+   # 构建后端（注意：必须在构建前端之后执行，以便嵌入最新前端产物）
    cd ..
    go build -ldflags "-s -w" -o one-api-pro
-   ````
+   ```
 2. 运行：
    ```shell
    chmod u+x one-api-pro
@@ -389,19 +463,7 @@ curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
 
 或在管理后台：**设置 → 节点管理** 页面查看节点列表、状态、最后心跳时间等。
 
-#### 📡 集群管理 API
-
-| 接口 | 方法 | 说明 | 认证 |
-|------|------|------|------|
-| `/api/cluster/ping` | POST | 节点发现与心跳（双向注册） | 集群密钥 |
-| `/api/cluster/sync` | POST | 接收同步事件 | 集群密钥 |
-| `/api/cluster_node/` | GET | 查看节点列表（含本机、已禁用节点） | Root 管理员 |
-| `/api/cluster_node/:id` | GET | 查看单个节点 | Root 管理员 |
-| `/api/cluster_node/` | POST | 添加节点（含 secret） | Root 管理员 |
-| `/api/cluster_node/` | PUT | 更新节点（可更新 secret） | Root 管理员 |
-| `/api/cluster_node/:id` | DELETE | 软删除（禁用）节点 | Root 管理员 |
-| `/api/cluster_node/:id/enable` | POST | 重新启用已禁用的节点 | Root 管理员 |
-| `/api/cluster_node/ping/:id` | GET | 手动 ping 节点 | Root 管理员 |
+> 💡 集群管理 API 详见 [docs/API.md 附录 E：集群管理 API](./docs/API.md#附录-e集群管理-api)
 
 #### ⚠️ 注意事项
 
@@ -571,6 +633,19 @@ Render 可以直接部署 docker 镜像，不需要 fork 仓库：https://dashbo
 </div>
 </details>
 
+## 📖 接口文档
+
+完整的接口文档已独立维护在 [docs/API.md](./docs/API.md)，涵盖：
+
+- **鉴权机制**：Cookie Session / Access Token / API Key（Bearer Token）三种鉴权方式
+- **管理接口**：模型定价、分组折扣、渠道、令牌、用户、日志、兑换码、套餐、订阅等完整 CRUD
+- **OpenAI 兼容接口**：`/v1/models`、`/v1/chat/completions`、`/v1/embeddings`、图片、音频、内容审核等
+- **集群管理 API**：节点发现、心跳、数据同步等去中心化集群接口
+
+👉 [查看完整接口文档 →](./docs/API.md)
+
+---
+
 ## ⚙️ 配置
 系统本身开箱即用。
 
@@ -667,7 +742,7 @@ graph LR
 20. `SQLITE_BUSY_TIMEOUT`：SQLite 锁等待超时设置，单位为毫秒，默认 `3000`。
 21. `GEMINI_SAFETY_SETTING`：Gemini 的安全设置，默认 `BLOCK_NONE`。
 22. `GEMINI_VERSION`：One Api Pro 所使用的 Gemini 版本，默认为 `v1`。
-23. `THEME`：系统的主题设置，默认为 `default`，具体可选值参考[此处](./web/README.md)。
+23. `THEME`：系统的主题设置，默认为 `default-pro`（Vue 3 管理后台），也可切换为 `default` / `berry` / `air`（旧 React 主题），具体可选值参考[此处](./web/README.md)。
 24. `ENABLE_METRIC`：是否根据请求成功率禁用渠道，默认不开启，可选值为 `true` 和 `false`。
 25. `METRIC_QUEUE_SIZE`：请求成功率统计队列大小，默认为 `10`。
 26. `METRIC_SUCCESS_RATE_THRESHOLD`：请求成功率阈值，默认为 `0.8`。
@@ -717,14 +792,51 @@ graph LR
 4. `--version`: 打印系统版本号并退出。
 5. `--help`: 查看命令的使用帮助和参数说明。
 
-## 🎬 演示
-### 🔗 在线演示
-注意，该演示站不提供对外服务：
-https://openai.justsong.cn
+## 📸 截图展示
 
-### 📸 截图展示
-![channel](https://user-images.githubusercontent.com/39998050/233837954-ae6683aa-5c4f-429f-a949-6645a83c9490.png)
-![token](https://user-images.githubusercontent.com/39998050/233837971-dab488b7-6d96-43af-b640-a168e8d1c9bf.png)
+### 🖥️ 仪表盘
+![仪表盘首页](docs/Demo-Index.png)
+
+### 🔑 令牌管理
+![令牌管理](docs/Demo-Token.png)
+
+### 📦 套餐管理
+![套餐管理](docs/Demo-Plan.png)
+
+### 🔄 订阅管理
+![订阅管理](docs/Demo-Subscribe.png)
+
+### 🌐 集群节点管理
+![集群节点管理](docs/Demo-cluster.png)
+
+---
+
+## 🗺️ 开发计划
+
+### ✅ 已完成
+
+- [x] **架构级重构**：Adaptor 自注册机制，新增供应商零框架修改
+- [x] **Vue 3 全新管理后台**：Arco Design + 可视化仪表盘 + 30+ 模型平台图标
+- [x] **套餐订阅体系**：按 Token / 按次计费，周期限频，按模型精细管控
+- [x] **去中心化多活集群**：GORM 事件驱动 + HTTP 主动推送同步，无需共享数据库
+- [x] **精确成本核算**：Prompt / Completion / Cached 独立定价，分组折扣叠加
+- [x] **多级权限体系**：Guest / User / Admin / Root 四级，修复原版 API 权限漏洞
+- [x] **OpenAI 兼容接口**：完整支持 models / chat / completions / embeddings / images / audio / moderations
+
+### 🔄 进行中
+
+- [ ] 渠道状态自动诊断与智能路由优化
+- [ ] 更丰富的用量分析报表与导出
+- [ ] 多语言国际化（i18n）完善
+
+### 🔭 规划中
+
+- [ ] 插件化扩展机制
+- [ ] 企业级 SSO / LDAP 对接
+- [ ] 用量告警与通知渠道扩展（钉钉 / 飞书 / 企业微信等）
+- [ ] 更多模型平台的持续接入
+
+> 💡 欢迎提交 PR 或 Issue 参与共建，详见 [CONTRIBUTING](https://github.com/Leon-PanPan/one-api-pro/issues)。
 
 ## ❓ 常见问题
 1. 额度是什么？怎么计算的？One Api Pro 的额度计算有问题？
