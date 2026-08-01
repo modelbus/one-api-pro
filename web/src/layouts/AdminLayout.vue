@@ -1,15 +1,14 @@
 <template>
   <a-layout class="admin-layout">
     <a-layout-sider
-      :collapsed="collapsed"
+      v-model:collapsed="collapsed"
       :width="180"
       collapsible
       breakpoint="lg"
-      @collapse="onCollapse"
+      :default-collapsed="false"
     >
       <div class="sidebar-logo">
-        <img v-if="statusStore.status?.logo" :src="statusStore.status.logo" class="logo-img" />
-        <span v-if="!collapsed" class="logo-text">{{ systemName }}</span>
+        <img :src="logoSrc" class="logo-img" @error="onLogoError" />
       </div>
       <a-menu
         v-model:selected-keys="selectedKeys"
@@ -146,6 +145,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
 import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
+import logoPng from '@/assets/logo.png'
 
 const { locale } = useI18n()
 const router = useRouter()
@@ -161,6 +161,14 @@ const systemName = computed(() => statusStore.status?.system_name || 'One Api Pr
 const chatLink = computed(() => statusStore.status?.chat_link || '')
 const currentTitle = computed(() => route.meta?.title || '')
 
+const logoFallback = computed(() => statusStore.status?.logo || '')
+const logoSrc = ref(logoPng)
+function onLogoError() {
+  if (logoSrc.value !== logoFallback.value && logoFallback.value) {
+    logoSrc.value = logoFallback.value
+  }
+}
+
 const roleText = computed(() => {
   if (authStore.isRoot) return locale.value === 'zh' ? '超级管理员' : 'Super Admin'
   if (authStore.isAdmin) return locale.value === 'zh' ? '管理员' : 'Admin'
@@ -168,7 +176,6 @@ const roleText = computed(() => {
 })
 const roleColor = computed(() => authStore.isRoot ? 'orangered' : authStore.isAdmin ? 'arcoblue' : 'gray')
 
-const onCollapse = (val) => { collapsed.value = val }
 const handleMenuClick = (key) => { router.push(key) }
 const changeLang = (val) => { locale.value = val; localStorage.setItem('lang', val) }
 const handleLogout = async () => { await authStore.logout(); router.push('/login') }
@@ -237,7 +244,7 @@ watch(() => route.path, (path) => { selectedKeys.value = [path] })
   border-bottom: 1px solid var(--color-border-2);
   padding: 0 16px;
 }
-.logo-img { width: 32px; height: 32px; border-radius: 4px; }
+.logo-img { height: 36px; border-radius: 4px; }
 .logo-text { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; }
 .sidebar-menu { border-right: none; }
 .menu-divider { height: 1px; background: var(--color-border-2); margin: 16px 16px; }

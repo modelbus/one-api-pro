@@ -1,108 +1,171 @@
 <template>
-  <a-card :bordered="false" class="table-card">
-    <div class="action-bar">
-      <a-input-search v-model="keyword" placeholder="搜索日志..." @search="handleSearch" @clear="refresh" allow-clear :style="{ width: '220px' }" />
-      <div class="action-bar-right">
-        <a-button size="small" @click="toggleStat">{{ showStat ? '隐藏统计' : '统计信息' }}</a-button>
+  <div class="log-page">
+    <!-- 顶部欢迎条 -->
+    <div class="welcome-bar">
+      <div class="welcome-text">
+        <h1 class="welcome-title">日志</h1>
+        <p class="welcome-desc">查看系统调用记录与操作流水</p>
       </div>
-    </div>
-
-    <div v-if="showStat" class="stats-row">
-      <span>总配额：<strong>{{ stat.quota || 0 }}</strong></span>
-      <span class="stats-sub">普通配额：{{ stat.normal_quota || 0 }} | 订阅配额：{{ stat.subscription_quota || 0 }}</span>
-    </div>
-
-    <div class="filters">
-      <a-row :gutter="[12, 8]">
-        <a-col :span="4">
-          <a-input v-model="filters.token_name" placeholder="令牌名称" size="small" allow-clear />
-        </a-col>
-        <a-col :span="4">
-          <a-input v-model="filters.model_name" placeholder="模型名称" size="small" allow-clear />
-        </a-col>
-        <a-col :span="4">
-          <a-date-picker v-model="filters.start_timestamp" placeholder="开始时间" size="small" style="width:100%" show-time />
-        </a-col>
-        <a-col :span="4">
-          <a-date-picker v-model="filters.end_timestamp" placeholder="结束时间" size="small" style="width:100%" show-time />
-        </a-col>
-        <a-col :span="2">
-          <a-button type="primary" size="small" @click="refresh" :loading="loading">查询</a-button>
-        </a-col>
-        <a-col :span="2" v-if="isAdmin">
-          <a-input v-model="filters.channel" placeholder="渠道ID" size="small" allow-clear />
-        </a-col>
-        <a-col :span="2" v-if="isAdmin">
-          <a-input v-model="filters.username" placeholder="用户名" size="small" allow-clear />
-        </a-col>
-      </a-row>
-    </div>
-
-    <a-table :columns="columns" :data="logs" :loading="loading" :pagination="false" row-key="id" size="medium" :bordered="{ wrapper: true, cell: false }" :scroll="{ x: 1400 }">
-      <template #created_at="{ record }">
-        <code class="clickable" @click="copyId(record.request_id)">{{ formatTime(record.created_at) }}</code>
-      </template>
-      <template #channel="{ record }">
-        <a-tag v-if="record.channel" color="arcoblue" size="small">{{ record.channel_name || record.channel }}</a-tag>
-      </template>
-      <template #billing_source="{ record }">
-        <a-tag :color="record.billing_source===1?'blue':''" size="small">{{ record.billing_source===1?'订阅':'额度' }}</a-tag>
-      </template>
-      <template #plan_name="{ record }">
-        <a-tag v-if="record.plan_name" color="teal" size="small">{{ record.plan_name }}</a-tag>
-        <span v-else>-</span>
-      </template>
-      <template #type="{ record }">
-        <a-tag :color="typeColor(record.type)" size="small">{{ typeLabel(record.type) }}</a-tag>
-      </template>
-      <template #model_name="{ record }">
-        <a-tag color="arcoblue" size="small" v-if="record.model_name">{{ record.model_name }}</a-tag>
-        <span v-else>-</span>
-      </template>
-      <template #username="{ record }">
-        <a-tag v-if="record.username" color="arcoblue" size="small">{{ record.username }}</a-tag>
-      </template>
-      <template #token_name="{ record }">
-        <a-tag v-if="record.token_name" size="small">{{ record.token_name }}</a-tag>
-        <span v-else>-</span>
-      </template>
-      <template #detail="{ record }">
-        <div>{{ record.content }}</div>
-        <a-space size="mini" style="margin-top:4px">
-          <a-tag v-if="record.elapsed_time" :color="elapsedColor(record.elapsed_time)" size="small">{{ record.elapsed_time }}ms</a-tag>
-          <a-tag v-if="record.is_stream" color="pink" size="small">Stream</a-tag>
-          <a-tag v-if="record.system_prompt_reset" color="red" size="small">提示词重置</a-tag>
-        </a-space>
-      </template>
-    </a-table>
-
-    <div class="table-page-footer table-page-footer--between">
-      <a-space>
-        <a-select v-model="logType" @change="refresh" size="small" style="width:110px">
-          <a-option :value="0" label="全部" />
+      <div class="welcome-meta">
+        <a-select v-model="logType" @change="refresh" size="small" style="width: 110px">
+          <a-option :value="0" label="全部类型" />
           <a-option :value="1" label="充值" />
           <a-option :value="2" label="消费" />
           <a-option :value="3" label="管理" />
           <a-option :value="4" label="系统" />
           <a-option :value="5" label="测试" />
         </a-select>
-        <a-button size="small" @click="refresh" :loading="loading">刷新</a-button>
-      </a-space>
-      <a-pagination
-        :current="page"
-        :total="totalLogs"
-        :page-size="10"
-        size="small"
-        show-total
-        @change="onPageChange"
-      />
+      </div>
     </div>
-  </a-card>
+
+    <!-- 统计 -->
+    <div v-if="showStat" class="tip-bar">
+      <span class="tip-dot"></span>
+      <span class="tip-text">
+        总配额 <strong>{{ stat.quota || 0 }}</strong>
+        <span class="meta-sep">·</span>
+        普通配额 {{ stat.normal_quota || 0 }}
+        <span class="meta-sep">·</span>
+        订阅配额 {{ stat.subscription_quota || 0 }}
+      </span>
+    </div>
+
+    <!-- 独立搜索栏 -->
+    <div class="search-card">
+      <div class="search-left">
+        <a-input-search
+          v-model="keyword"
+          placeholder="搜索日志..."
+          allow-clear
+          @search="handleSearch"
+          @clear="refresh"
+          :style="{ width: '260px' }"
+        />
+        <a-input v-model="filters.token_name" placeholder="令牌名称" size="medium" allow-clear :style="{ width: '160px' }" />
+        <a-input v-model="filters.model_name" placeholder="模型名称" size="medium" allow-clear :style="{ width: '160px' }" />
+        <a-input v-if="isAdmin" v-model="filters.username" placeholder="用户名" size="medium" allow-clear :style="{ width: '160px' }" />
+        <a-input v-if="isAdmin" v-model="filters.channel" placeholder="渠道 ID" size="medium" allow-clear :style="{ width: '140px' }" />
+        <a-date-picker v-model="filters.start_timestamp" placeholder="开始时间" size="medium" :style="{ width: '180px' }" show-time />
+        <a-date-picker v-model="filters.end_timestamp" placeholder="结束时间" size="medium" :style="{ width: '180px' }" show-time />
+      </div>
+      <div class="search-right">
+        <a-button @click="toggleStat">{{ showStat ? '隐藏统计' : '统计' }}</a-button>
+        <a-button type="primary" size="large" @click="refresh" :loading="loading">
+          <template #icon><icon-search :size="14" /></template>
+          查询
+        </a-button>
+      </div>
+    </div>
+
+    <!-- 列表 -->
+    <div class="list-wrap">
+      <div v-if="pageItems.length === 0 && !loading && !loadingMore" class="empty-state">
+        <div class="empty-icon">
+          <icon-file :size="32" />
+        </div>
+        <p class="empty-title">暂无日志记录</p>
+        <p class="empty-desc">尝试调整筛选条件或刷新</p>
+      </div>
+
+      <div v-else class="list-body">
+        <div class="list-head" :style="{ gridTemplateColumns: headGrid }">
+          <div class="col">时间</div>
+          <div v-if="isAdmin" class="col">渠道</div>
+          <div class="col">来源</div>
+          <div class="col">套餐</div>
+          <div class="col">类型</div>
+          <div class="col">模型</div>
+          <div v-if="isAdmin" class="col">用户</div>
+          <div class="col">令牌</div>
+          <template v-if="logType !== 5">
+            <div class="col col-num">Prompt</div>
+            <div class="col col-num">Completion</div>
+            <div class="col col-num">配额</div>
+          </template>
+          <div class="col">详情</div>
+        </div>
+
+        <a-spin :loading="loading && !loadingMore" style="width: 100%">
+          <div v-for="(r, idx) in pageItems" :key="r.id || idx" class="list-row" :style="{ gridTemplateColumns: headGrid }">
+            <div class="col">
+              <code class="cell-mono clickable" @click="copyId(r.request_id)" :title="r.request_id || ''">
+                {{ formatTime(r.created_at) }}
+              </code>
+            </div>
+            <div v-if="isAdmin" class="col">
+              <a-tag v-if="r.channel" color="arcoblue" size="small">{{ r.channel_name || r.channel }}</a-tag>
+              <span v-else>-</span>
+            </div>
+            <div class="col">
+              <a-tag :color="r.billing_source === 1 ? 'arcoblue' : 'gray'" size="small">
+                {{ r.billing_source === 1 ? '订阅' : '额度' }}
+              </a-tag>
+            </div>
+            <div class="col">
+              <a-tag v-if="r.plan_name" color="teal" size="small">{{ r.plan_name }}</a-tag>
+              <span v-else>-</span>
+            </div>
+            <div class="col">
+              <a-tag :color="typeColor(r.type)" size="small">{{ typeLabel(r.type) }}</a-tag>
+            </div>
+            <div class="col">
+              <span class="cell-strong">{{ r.model_name || '-' }}</span>
+            </div>
+            <div v-if="isAdmin" class="col">
+              <span class="cell-muted">{{ r.username || '-' }}</span>
+            </div>
+            <div class="col">
+              <span class="cell-muted">{{ r.token_name || '-' }}</span>
+            </div>
+            <template v-if="logType !== 5">
+              <div class="col col-num"><span class="cell-num">{{ r.prompt_tokens || 0 }}</span></div>
+              <div class="col col-num"><span class="cell-num">{{ r.completion_tokens || 0 }}</span></div>
+              <div class="col col-num"><span class="cell-num">{{ r.quota || 0 }}</span></div>
+            </template>
+            <div class="col">
+              <div class="detail-text">{{ r.content }}</div>
+              <div class="detail-tags">
+                <a-tag v-if="r.elapsed_time" :color="elapsedColor(r.elapsed_time)" size="small">{{ r.elapsed_time }}ms</a-tag>
+                <a-tag v-if="r.is_stream" color="pink" size="small">Stream</a-tag>
+                <a-tag v-if="r.system_prompt_reset" color="red" size="small">提示词重置</a-tag>
+              </div>
+            </div>
+          </div>
+        </a-spin>
+
+        <div v-if="loadingMore" class="load-more-row">
+          <a-spin :loading="true" :size="14" />
+          <span class="load-more-text">正在加载更多…</span>
+        </div>
+        <div
+          v-else-if="isReachedEnd && logs.length > pageSize && !loading"
+          class="load-end-row"
+        >
+          已显示全部 {{ logs.length }} 条数据
+        </div>
+      </div>
+
+      <div v-if="logs.length > 0" class="list-footer">
+        <a-pagination
+          :current="activePage"
+          :total="totalCountForPager"
+          :page-size="pageSize"
+          show-total
+          show-page-size
+          :page-size-options="[10, 20, 50]"
+          size="small"
+          @change="onPaginationChange"
+          @page-size-change="onPageSizeChange"
+        />
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { IconSearch, IconFile } from '@arco-design/web-vue/es/icon'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
 
@@ -111,10 +174,12 @@ const isAdmin = computed(() => authStore.isAdmin)
 
 const logs = ref([])
 const loading = ref(false)
+const loadingMore = ref(false)
+const isReachedEnd = ref(false)
 const keyword = ref('')
 const logType = ref(0)
-const page = ref(1)
-const totalLogs = ref(0)
+const activePage = ref(1)
+const pageSize = ref(10)
 const showStat = ref(false)
 
 const stat = reactive({ quota: 0, token: 0, normal_quota: 0, subscription_quota: 0 })
@@ -128,29 +193,27 @@ const filters = reactive({
   username: '',
 })
 
-const basePath = computed(() => isAdmin.value ? '/api/log' : '/api/log/self')
+const basePath = computed(() => (isAdmin.value ? '/api/log' : '/api/log/self'))
 
-const columns = computed(() => {
-  const cols = [
-    { title: '时间', slotName: 'created_at', width: 160 },
-    { title: '来源', slotName: 'billing_source', width: 70 },
-    { title: '套餐', slotName: 'plan_name', width: 80 },
-    { title: '类型', slotName: 'type', width: 70 },
-    { title: '模型', slotName: 'model_name', width: 140 },
-  ]
-  if (isAdmin.value) {
-    cols.splice(1, 0, { title: '渠道', slotName: 'channel', width: 100 })
-  }
-  if (logType.value !== 5) {
-    if (isAdmin.value) cols.push({ title: '用户', slotName: 'username', width: 100 })
-    cols.push(
-      { title: 'Prompt', dataIndex: 'prompt_tokens', width: 80 },
-      { title: 'Completion', dataIndex: 'completion_tokens', width: 100 },
-      { title: '配额', dataIndex: 'quota', width: 90 },
-    )
-  }
-  cols.push({ title: '详情', slotName: 'detail', width: 200 })
-  return cols
+const headGrid = computed(() => {
+  const cols = ['180px']
+  if (isAdmin.value) cols.push('120px')
+  cols.push('80px', '100px', '80px', '180px')
+  if (isAdmin.value) cols.push('110px')
+  cols.push('130px')
+  if (logType.value !== 5) cols.push('100px', '110px', '100px')
+  cols.push('280px')
+  return cols.join(' ')
+})
+
+const pageItems = computed(() => {
+  const start = (activePage.value - 1) * pageSize.value
+  return logs.value.slice(start, start + pageSize.value)
+})
+
+const totalCountForPager = computed(() => {
+  if (isReachedEnd.value) return logs.value.length
+  return logs.value.length + pageSize.value
 })
 
 function typeLabel(t) {
@@ -162,24 +225,39 @@ function typeColor(t) {
   return m[t] || ''
 }
 function elapsedColor(ms) {
-  if (!ms) return ''; if (ms < 1000) return 'green'; if (ms < 3000) return 'olive'; if (ms < 5000) return 'yellow'; if (ms < 10000) return 'orange'; return 'red'
+  if (!ms) return ''
+  if (ms < 1000) return 'green'
+  if (ms < 3000) return 'olive'
+  if (ms < 5000) return 'yellow'
+  if (ms < 10000) return 'orange'
+  return 'red'
 }
 
-function formatTime(ts) { if (!ts) return '-'; return new Date(ts * 1000).toLocaleString() }
+function formatTime(ts) {
+  if (!ts) return '-'
+  return new Date(ts * 1000).toLocaleString()
+}
 
 async function copyId(id) {
   if (!id) return
-  try { await navigator.clipboard.writeText(id); Message.success(`已复制：${id}`) }
-  catch (e) { Message.warning('复制失败') }
+  try {
+    await navigator.clipboard.writeText(id)
+    Message.success(`已复制：${id}`)
+  } catch {
+    Message.warning('复制失败')
+  }
 }
 
-function getTs(v) { return v ? Math.floor(new Date(v).getTime() / 1000) : v }
+function getTs(v) {
+  return v ? Math.floor(new Date(v).getTime() / 1000) : v
+}
 
-async function loadLogs() {
-  loading.value = true
+async function loadLogs({ append = false, pageIdx = 0 } = {}) {
+  if (append) loadingMore.value = true
+  else loading.value = true
   try {
     const params = {
-      p: page.value - 1,
+      p: pageIdx,
       type: logType.value,
       token_name: filters.token_name,
       model_name: filters.model_name,
@@ -192,10 +270,26 @@ async function loadLogs() {
     }
     const { data } = await api.get(`${basePath.value}/`, { params })
     if (data.success && data.data) {
-      logs.value = Array.isArray(data.data) ? data.data : data.data?.items || []
-      totalLogs.value = data.total || logs.value.length
+      const list = Array.isArray(data.data) ? data.data : (data.data?.items || [])
+      if (append) {
+        if (list.length === 0) {
+          isReachedEnd.value = true
+        } else {
+          logs.value = [...logs.value, ...list]
+          if (list.length < pageSize.value) isReachedEnd.value = true
+        }
+      } else {
+        logs.value = list
+        activePage.value = 1
+        isReachedEnd.value = list.length < pageSize.value
+      }
     }
-  } catch (e) { /* ignore */ } finally { loading.value = false }
+  } catch {
+    /* ignore */
+  } finally {
+    loading.value = false
+    loadingMore.value = false
+  }
 }
 
 async function loadStat() {
@@ -213,7 +307,9 @@ async function loadStat() {
     }
     const { data } = await api.get(`${basePath.value}/stat`, { params })
     if (data.success) Object.assign(stat, data.data)
-  } catch (e) { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function toggleStat() {
@@ -221,8 +317,25 @@ async function toggleStat() {
   showStat.value = !showStat.value
 }
 
-function refresh() { page.value = 1; loadLogs() }
-function onPageChange(p) { page.value = p; loadLogs() }
+function refresh() {
+  isReachedEnd.value = false
+  loadLogs({ append: false })
+}
+
+function onPaginationChange(page) {
+  activePage.value = page
+  const totalPages = Math.ceil(logs.value.length / pageSize.value)
+  // 翻到"最后一页 + 1"且未触底时触发追加加载
+  if (page > totalPages && !isReachedEnd.value && !loadingMore.value && !keyword.value) {
+    const nextPageIdx = totalPages
+    loadLogs({ append: true, pageIdx: nextPageIdx })
+  }
+}
+
+function onPageSizeChange(s) {
+  pageSize.value = s
+  activePage.value = 1
+}
 
 async function handleSearch() {
   if (!keyword.value) return refresh()
@@ -231,25 +344,256 @@ async function handleSearch() {
     const { data } = await api.get(`${basePath.value}/search`, { params: { keyword: keyword.value } })
     if (data.success && data.data) {
       logs.value = Array.isArray(data.data) ? data.data : []
-      totalLogs.value = logs.value.length
+      activePage.value = 1
+      isReachedEnd.value = true // 搜索结果不支持追加
     }
-  } catch (e) { /* ignore */ } finally { loading.value = false }
+  } catch {
+    /* ignore */
+  } finally {
+    loading.value = false
+  }
 }
 
-onMounted(() => { refresh() })
+onMounted(() => {
+  refresh()
+})
 </script>
 
 <style scoped>
-.table-card { border-radius: 6px; }
-.action-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--color-fill-2); border-radius: 6px; margin-bottom: 15px; }
-.action-bar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.table-page-footer { display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-border-2); }
-.table-page-footer--between { justify-content: space-between; }
+.log-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 
-.stats-row { font-size: 14px; color: var(--color-text-2); margin-bottom: 12px; }
-.stats-row strong { font-weight: 600; color: var(--color-text-1); }
-.stats-sub { margin-left: 12px; font-size: 13px; color: var(--color-text-3); }
-.filters { margin-bottom: 12px; }
-.clickable { cursor: pointer; font-size: 13px; }
-.clickable:hover { color: rgb(var(--primary-6)); }
+/* ============ 顶部欢迎条 ============ */
+.welcome-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 4px 4px 0;
+}
+.welcome-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin: 0 0 4px;
+  letter-spacing: -0.2px;
+}
+.welcome-desc {
+  font-size: 13px;
+  color: var(--color-text-3);
+  margin: 0;
+}
+.welcome-meta {
+  display: flex;
+  gap: 6px;
+}
+
+/* ============ 提示卡 / 统计 ============ */
+.tip-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(22, 93, 255, 0.06);
+  border: 1px solid rgba(22, 93, 255, 0.12);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+.tip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(var(--primary-6));
+  flex-shrink: 0;
+}
+.tip-text {
+  line-height: 1.6;
+}
+.tip-text strong {
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin: 0 2px;
+}
+.meta-sep {
+  margin: 0 8px;
+  color: var(--color-text-4);
+}
+
+/* ============ 搜索栏 ============ */
+.search-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+.search-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+.search-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ============ 列表（与 Token 一致） ============ */
+.list-wrap {
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.list-body {
+  padding: 0;
+  overflow-x: auto;
+}
+.list-head,
+.list-row {
+  display: grid;
+  align-items: center;
+  padding: 0 20px;
+  min-width: max-content;
+}
+.list-head {
+  height: 40px;
+  background: var(--color-fill-1);
+  border-bottom: 1px solid var(--color-fill-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-3);
+}
+.list-row {
+  min-height: 52px;
+  border-bottom: 1px solid var(--color-fill-3);
+  transition: background 0.15s;
+}
+.list-row:last-child {
+  border-bottom: none;
+}
+.list-row:hover {
+  background: var(--color-fill-1);
+}
+
+/* ============ 单元格 ============ */
+.col {
+  font-size: 13px;
+  color: var(--color-text-2);
+  min-width: 0;
+  padding-right: 16px;
+}
+.col:last-child {
+  padding-right: 0;
+}
+.col-num {
+  text-align: right;
+}
+
+.cell-mono {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--color-text-2);
+  font-variant-numeric: tabular-nums;
+}
+.cell-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+.cell-strong {
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+.cell-muted {
+  color: var(--color-text-3);
+}
+.clickable {
+  cursor: pointer;
+}
+.clickable:hover {
+  color: rgb(var(--primary-6));
+}
+
+.detail-text {
+  font-size: 13px;
+  color: var(--color-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 2px;
+}
+.detail-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ============ 分页 ============ */
+.list-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--color-fill-3);
+}
+
+/* ============ 追加加载 / 末尾提示 ============ */
+.load-more-row,
+.load-end-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  font-size: 12px;
+  color: var(--color-text-3);
+  border-top: 1px dashed var(--color-fill-3);
+}
+.load-more-text {
+  color: var(--color-text-3);
+}
+.load-end-row {
+  color: var(--color-text-4);
+  background: var(--color-fill-1);
+  border-top: 1px solid var(--color-fill-3);
+}
+
+/* ============ 空状态 ============ */
+.empty-state {
+  padding: 80px 20px;
+  text-align: center;
+}
+.empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--color-fill-2);
+  color: var(--color-text-3);
+  margin-bottom: 12px;
+}
+.empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  margin: 0 0 4px;
+}
+.empty-desc {
+  font-size: 13px;
+  color: var(--color-text-3);
+  margin: 0;
+}
 </style>

@@ -41,7 +41,7 @@ const routes = [
     path: '/',
     component: AdminLayout,
     children: [
-      { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/home/Home.vue'), meta: { title: '仪表盘' } },
+      { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/Dashboard.vue'), meta: { title: '仪表盘' } },
       { path: 'channel', name: 'Channel', component: () => import('@/views/channel/Channel.vue'), meta: { title: '渠道', admin: true } },
       { path: 'token', name: 'Token', component: () => import('@/views/token/Token.vue'), meta: { title: '令牌' } },
       { path: 'user', name: 'User', component: () => import('@/views/user/User.vue'), meta: { title: '用户', admin: true } },

@@ -3,8 +3,7 @@
     <header class="nav-bar">
       <div class="nav-inner">
         <div class="nav-brand">
-          <img v-if="statusStore.status?.logo" :src="statusStore.status.logo" class="nav-logo" />
-          <span class="nav-name">{{ systemName }}</span>
+          <img :src="logoSrc" class="nav-logo" @error="onLogoError" />
         </div>
         <div class="nav-menu">
           <a href="#features">优势</a>
@@ -175,9 +174,12 @@
         <p>覆盖全球主流 AI 服务商，持续增加中</p>
       </div>
       <div class="model-grid">
-        <div class="model-card" v-for="m in models" :key="m.name">
-          <div class="mc-icon">{{ m.icon }}</div>
-          <span>{{ m.name }}</span>
+        <div class="model-card" v-for="m in models" :key="m.slug">
+          <img v-if="m.slug" :src="modelIconSrc(m.slug)" class="mc-icon" :alt="m.name" loading="lazy" @error="onIconError" />
+          <span v-else class="mc-icon mc-icon-fallback" :style="{ background: m.color + '15', color: m.color }">{{ m.name.charAt(0) }}</span>
+          <span class="mc-name">{{ m.name }}</span>
+          <span v-if="m.tag === '国产'" class="mc-tag mc-tag-cn">国产</span>
+          <span v-else class="mc-tag mc-tag-intl">海外</span>
         </div>
       </div>
     </section>
@@ -249,16 +251,28 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
 import { IconDashboard, IconApps, IconLock, IconCloud, IconThunderbolt, IconTool, IconCode, IconGithub, IconRight, IconDown, IconCheckCircleFill } from '@arco-design/web-vue/es/icon'
+import { PROVIDERS } from '@/constants/providers'
+import logoPng from '@/assets/logo.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const statusStore = useStatusStore()
 const systemName = computed(() => statusStore.status?.system_name || 'One Api Pro')
+
+const logoFallback = computed(() => statusStore.status?.logo || '')
+const logoSrc = ref(logoPng)
+function onLogoError(e) {
+  if (logoFallback.value && logoSrc.value !== logoFallback.value) {
+    logoSrc.value = logoFallback.value
+  } else {
+    e.target.style.visibility = 'hidden'
+  }
+}
 
 const features = [
   { icon: IconLock, title: '精细治理', desc: '多级权限管理、令牌按模型限制、分组倍率控制、IP 白名单，支持按渠道/用户/模型三级配额体系', color: '#165DFF' },
@@ -287,18 +301,16 @@ const faqs = [
   { q: '多个 API Key 如何负载均衡？', a: '支持按权重随机分配、自动故障切换、渠道冷却/禁用策略，还可按用户组和模型维度精细化配置优先级。' },
 ]
 
-const models = [
-  { icon: '🤖', name: 'OpenAI' }, { icon: '☁️', name: 'Azure' }, { icon: '🧠', name: 'Anthropic' },
-  { icon: '☁️', name: 'AWS Bedrock' }, { icon: '🌐', name: 'Google Gemini' }, { icon: '🔍', name: 'DeepSeek' },
-  { icon: '📚', name: '百度文心' }, { icon: '💡', name: '阿里通义' }, { icon: '⭐', name: '讯飞星火' },
-  { icon: '🎓', name: '智谱 ChatGLM' }, { icon: '🛡️', name: '360 智脑' }, { icon: '💬', name: '腾讯混元' },
-  { icon: '🌙', name: 'Moonshot' }, { icon: '🏔️', name: '百川' }, { icon: '🎯', name: 'MINIMAX' },
-  { icon: '⚡', name: 'Groq' }, { icon: '🐫', name: 'Ollama' }, { icon: '🌊', name: '零一万物' },
-  { icon: '✨', name: '阶跃星辰' }, { icon: '🤖', name: 'Coze' }, { icon: '🧩', name: 'Cohere' },
-  { icon: '☁️', name: 'Cloudflare' }, { icon: '🌍', name: 'DeepL' }, { icon: '🤝', name: 'together.ai' },
-  { icon: '💎', name: '硅基流动' }, { icon: '❌', name: 'xAI' }, { icon: '🔗', name: 'OpenRouter' },
-  { icon: '🫘', name: '豆包' }, { icon: '🎨', name: 'Novita' },
-]
+const models = PROVIDERS
+
+const modelIconMap = import.meta.glob('../assets/lobehub/*.svg', { eager: true, query: '?url', import: 'default' })
+function modelIconSrc(slug) {
+  const key = `../assets/lobehub/${slug}.svg`
+  return modelIconMap[key] || ''
+}
+function onIconError(e) {
+  e.target.style.visibility = 'hidden'
+}
 
 const particleStyle = (n) => ({
   left: `${(n * 37 + 13) % 100}%`,
@@ -324,7 +336,7 @@ onMounted(async () => {
 .nav-bar { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.06); }
 .nav-inner { max-width: 1280px; margin: 0 auto; padding: 0 32px; height: 64px; display: flex; align-items: center; gap: 40px; }
 .nav-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.nav-logo { width: 32px; height: 32px; border-radius: 6px; }
+.nav-logo { height: 36px; border-radius: 6px; }
 .nav-name { font-size: 18px; font-weight: 700; color: #1d2129; }
 .nav-menu { display: flex; gap: 32px; flex: 1; }
 .nav-menu a { color: #4e5969; text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
@@ -408,10 +420,58 @@ onMounted(async () => {
 .scenario-card p { font-size: 13px; color: #86909c; line-height: 1.7; }
 
 /* Models */
-.model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-.model-card { padding: 16px; border-radius: 12px; background: #fff; border: 1px solid #e5e6eb; display: flex; align-items: center; gap: 10px; transition: all .2s; }
-.model-card:hover { border-color: #165dff40; box-shadow: 0 2px 12px rgba(22,93,255,0.08); }
-.mc-icon { font-size: 20px; }
+.model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.model-card {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5e6eb;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all .2s;
+  position: relative;
+}
+.model-card:hover { border-color: #165dff40; box-shadow: 0 2px 12px rgba(22,93,255,0.08); transform: translateY(-1px); }
+.mc-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  object-fit: contain;
+  color: #1d2129;
+}
+.mc-icon-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+.mc-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.mc-tag-cn {
+  background: rgba(255, 77, 79, 0.1);
+  color: #f53f3f;
+}
+.mc-tag-intl {
+  background: rgba(22, 93, 255, 0.1);
+  color: #165dff;
+}
 
 /* Compare */
 .cmp-old { color: #86909c; font-weight: 600; }
