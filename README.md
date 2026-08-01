@@ -26,13 +26,13 @@
   &nbsp;·&nbsp;
   <a href="#-部署">部署教程</a>
   &nbsp;·&nbsp;
-  <a href="https://github.com/Leon-PanPan/one-api-pro/blob/main/docs/API.md">接口文档</a>
-  &nbsp;·&nbsp;
-  <a href="http://doc.one-api.pro">使用方法</a>
+  <a href="./docs/API.md">接口文档</a>
   &nbsp;·&nbsp;
   <a href="#-开发计划">开发计划</a>
   &nbsp;·&nbsp;
-  <a href="#-常见问题">常见问题</a>
+  <a href="#-截图展示">截图展示</a>
+  &nbsp;·&nbsp;
+  <a href="#-技术栈">技术栈</a>
 </p>
 
 ---
@@ -41,7 +41,7 @@
 
 - [✨ 功能亮点](#-功能亮点)
 - [🚀 快速开始](#-快速开始)
-- [🔥 one-api-pro vs one-api](#-one-api-pro-vs-one-api)
+- [🔥 对比 one-api](#-对比-one-api)
 - [📦 部署](#-部署)
   - [🔨 手动部署](#-手动部署)
   - [🏢 多机部署](#-多机部署)
@@ -49,12 +49,10 @@
   - [🔌 部署第三方服务配合 One Api Pro 使用](#-部署第三方服务配合-one-api-pro-使用)
 - [📖 接口文档](#-接口文档)
 - [⚙️ 配置](#%EF%B8%8F-配置)
-- [📖 使用方法](#-使用方法)
   - [🔧 环境变量](#-环境变量)
   - [⌨️ 命令行参数](#%EF%B8%8F-命令行参数)
 - [📸 截图展示](#-截图展示)
 - [🗺️ 开发计划](#%EF%B8%8F-开发计划)
-- [❓ 常见问题](#-常见问题)
 - [🔧 技术栈](#-技术栈)
   - [Go 后端](#go-后端)
   - [Vue 3 前端](#vue-3-前端)
@@ -132,7 +130,7 @@ go build -ldflags "-s -w" -o one-api-pro
 
 > 详细部署方式见 [📦 部署](#-部署)，接口文档见 [📖 接口文档](#-接口文档)。
 
-## 🔥 one-api-pro vs one-api
+## 🔥 对比 one-api
 
 | 对比维度 | one-api | one-api-pro |
 |----------|---------|-------------|
@@ -585,52 +583,6 @@ docker run --name chatgpt-web -d -p 3002:3002 -e OPENAI_API_BASE_URL=https://ope
 
 运行期间可以通过`!model`命令查看、切换可用模型。
 
-### ☁️ 部署到第三方平台
-<details>
-<summary><strong>部署到 Sealos </strong></summary>
-<div>
-
-> Sealos 的服务器在国外，不需要额外处理网络问题，支持高并发 & 动态伸缩。
-
-点击以下按钮一键部署（部署后访问出现 404 请等待 3~5 分钟）：
-
-[![Deploy-on-Sealos.svg](https://raw.githubusercontent.com/labring-actions/templates/main/Deploy-on-Sealos.svg)](https://cloud.sealos.io/?openapp=system-fastdeploy?templateName=one-api)
-
-</div>
-</details>
-
-<details>
-<summary><strong>部署到 Zeabur</strong></summary>
-<div>
-
-> Zeabur 的服务器在国外，自动解决了网络的问题，同时免费的额度也足够个人使用
-
-[![Deploy on Zeabur](https://zeabur.com/button.svg)](https://zeabur.com/templates/7Q0KO3)
-
-1. 首先 fork 一份代码。
-2. 进入 [Zeabur](https://zeabur.com?referralCode=songquanpeng)，登录，进入控制台。
-3. 新建一个 Project，在 Service -> Add Service 选择 Marketplace，选择 MySQL，并记下连接参数（用户名、密码、地址、端口）。
-4. 复制链接参数，运行 ```create database `one-api-pro` ``` 创建数据库。
-5. 然后在 Service -> Add Service，选择 Git（第一次使用需要先授权），选择你 fork 的仓库。
-6. Deploy 会自动开始，先取消。进入下方 Variable，添加一个 `PORT`，值为 `3000`，再添加一个 `SQL_DSN`，值为 `<username>:<password>@tcp(<addr>:<port>)/one-api` ，然后保存。 注意如果不填写 `SQL_DSN`，数据将无法持久化，重新部署后数据会丢失。
-7. 选择 Redeploy。
-8. 进入下方 Domains，选择一个合适的域名前缀，如 "my-one-api"，最终域名为 "my-one-api.zeabur.app"，也可以 CNAME 自己的域名。
-9. 等待部署完成，点击生成的域名进入 One Api Pro。
-
-</div>
-</details>
-
-<details>
-<summary><strong>部署到 Render</strong></summary>
-<div>
-
-> Render 提供免费额度，绑卡后可以进一步提升额度
-
-Render 可以直接部署 docker 镜像，不需要 fork 仓库：https://dashboard.render.com
-
-</div>
-</details>
-
 ## 📖 接口文档
 
 完整的接口文档已独立维护在 [docs/API.md](./docs/API.md)，涵盖：
@@ -653,36 +605,6 @@ Render 可以直接部署 docker 镜像，不需要 fork 仓库：https://dashbo
 
 **Note**：如果你不知道某个配置项的含义，可以临时删掉值以看到进一步的提示文字。
 
-## 📖 使用方法
-在`渠道`页面中添加你的 API Key，之后在`令牌`页面中新增访问令牌。
-
-之后就可以使用你的令牌访问 One Api Pro 了，使用方式与 [OpenAI API](https://platform.openai.com/docs/api-reference/introduction) 一致。
-
-你需要在各种用到 OpenAI API 的地方设置 API Base 为你的 One Api Pro 的部署地址，例如：`https://openai.justsong.cn`，API Key 则为你在 One API 中生成的令牌。
-
-注意，具体的 API Base 的格式取决于你所使用的客户端。
-
-例如对于 OpenAI 的官方库：
-```bash
-OPENAI_API_KEY="sk-xxxxxx"
-OPENAI_API_BASE="https://<HOST>:<PORT>/v1"
-```
-
-```mermaid
-graph LR
-    A(用户)
-    A --->|使用 One API 分发的 key 进行请求| B(One API)
-    B -->|中继请求| C(OpenAI)
-    B -->|中继请求| D(Azure)
-    B -->|中继请求| E(其他 OpenAI API 格式下游渠道)
-    B -->|中继并修改请求体和返回体| F(非 OpenAI API 格式下游渠道)
-```
-
-可以通过在令牌后面添加渠道 ID 的方式指定使用哪一个渠道处理本次请求，例如：`Authorization: Bearer ONE_API_PRO_KEY-CHANNEL_ID`。
-注意，需要是管理员用户创建的令牌才能指定渠道 ID。
-
-不加的话将会使用负载均衡的方式使用多个渠道。
-
 ### 🔧 环境变量
 > One API 支持从 `.env` 文件中读取环境变量，请参照 `.env.example` 文件，使用时请将其重命名为 `.env`。也可通过 `--env` 参数指定配置文件路径（支持相对路径），详见命令行参数一节。
 1. `REDIS_CONN_STRING`：设置之后将使用 Redis 作为缓存使用。
@@ -700,7 +622,6 @@ graph LR
      + MySQL：`SQL_DSN=root:123456@tcp(localhost:3306)/oneapi`
      + PostgreSQL：`SQL_DSN=postgres://postgres:123456@localhost:5432/oneapi`（适配中，欢迎反馈）
    + 注意需要提前建立数据库 `oneapi`，无需手动建表，程序将自动建表。
-   + 如果使用本地数据库：部署命令可添加 `--network="host"` 以使得容器内的程序可以访问到宿主机上的 MySQL。
    + 如果使用云数据库：如果云服务器需要验证身份，需要在连接参数中添加 `?tls=skip-verify`。
    + 请根据你的数据库配置修改下列参数（或者保持默认值）：
      + `SQL_MAX_IDLE_CONNS`：最大空闲连接数，默认为 `100`。
@@ -841,37 +762,6 @@ graph LR
 - [ ] 更多模型平台的持续接入
 
 > 💡 欢迎提交 PR 或 Issue 参与共建，详见 [CONTRIBUTING](https://github.com/Leon-PanPan/one-api-pro/issues)。
-
-## ❓ 常见问题
-1. 额度是什么？怎么计算的？One Api Pro 的额度计算有问题？
-   + 额度 = 分组倍率 * 模型倍率 * （提示 token 数 + 补全 token 数 * 补全倍率）
-   + 其中补全倍率对于 GPT3.5 固定为 1.33，GPT4 为 2，与官方保持一致。
-   + 如果是非流模式，官方接口会返回消耗的总 token，但是你要注意提示和补全的消耗倍率不一样。
-   + 注意，One Api Pro 的默认倍率就是官方倍率，是已经调整过的。
-2. 账户额度足够为什么提示额度不足？
-   + 请检查你的令牌额度是否足够，这个和账户额度是分开的。
-   + 令牌额度仅供用户设置最大使用量，用户可自由设置。
-3. 提示无可用渠道？
-   + 请检查的用户分组和渠道分组设置。
-   + 以及渠道的模型设置。
-4. 渠道测试报错：`invalid character '<' looking for beginning of value`
-   + 这是因为返回值不是合法的 JSON，而是一个 HTML 页面。
-   + 大概率是你的部署站的 IP 或代理的节点被 CloudFlare 封禁了。
-5. ChatGPT Next Web 报错：`Failed to fetch`
-   + 部署的时候不要设置 `BASE_URL`。
-   + 检查你的接口地址和 API Key 有没有填对。
-   + 检查是否启用了 HTTPS，浏览器会拦截 HTTPS 域名下的 HTTP 请求。
-6. 报错：`当前分组负载已饱和，请稍后再试`
-   + 上游渠道 429 了。
-7. 升级之后我的数据会丢失吗？
-   + 如果使用 MySQL，不会。
-   + 如果使用 SQLite，需要按照我所给的部署命令挂载 volume 持久化 one-api-pro.db 数据库文件，否则容器重启后数据会丢失。
-8. 升级之前数据库需要做变更吗？
-   + 一般情况下不需要，系统将在初始化的时候自动调整。
-   + 如果需要的话，我会在更新日志中说明，并给出脚本。
-9. 手动修改数据库后报错：`数据库一致性已被破坏，请联系管理员`？
-   + 这是检测到 ability 表里有些记录的渠道 id 是不存在的，这大概率是因为你删了 channel 表里的记录但是没有同步在 ability 表里清理无效的渠道。
-   + 对于每一个渠道，其所支持的模型都需要有一个专门的 ability 表的记录，表示该渠道支持该模型。
 
 ## 🔧 技术栈
 
