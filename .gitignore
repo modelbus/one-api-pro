@@ -19,4 +19,4 @@ web/default
 web/berry
 web/build
 web/README.md
-web/
+/web/*/node_modules
