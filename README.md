@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  One Api Pro · 基于Go语言的企业级 AI API Gateway 
+  One Api Pro · 基于Go语言的企业级 AI API Gateway
 </p>
 <p align="center">
   本项目基于 <a href="https://github.com/songquanpeng/one-api">one-api</a> (by <a href="https://github.com/songquanpeng">JustSong</a>) 深度重构开发，感谢原作者的开源贡献。
@@ -22,42 +22,106 @@
 </p>
 
 <p align="center">
+  <a href="#-快速开始">快速开始</a>
+  &nbsp;·&nbsp;
+  <a href="#-技术栈">技术栈</a>
+  &nbsp;·&nbsp;
   <a href="#-功能亮点">功能亮点</a>
   &nbsp;·&nbsp;
-  <a href="#-部署">部署教程</a>
-  &nbsp;·&nbsp;
-  <a href="./docs/API.md">接口文档</a>
-  &nbsp;·&nbsp;
-  <a href="#-开发计划">开发计划</a>
+  <a href="#-对比-one-api">对比 one-api</a>
   &nbsp;·&nbsp;
   <a href="#-截图展示">截图展示</a>
   &nbsp;·&nbsp;
-  <a href="#-技术栈">技术栈</a>
+  <a href="#%EF%B8%8F-配置">配置</a>
+  &nbsp;·&nbsp;
+  <a href="./docs/API.md">接口文档</a>
+  &nbsp;·&nbsp;
+  <a href="#-部署">部署</a>
+  &nbsp;·&nbsp;
+  <a href="#-开发计划">开发计划</a>
 </p>
 
 ---
 
 ## 📑 目录
 
-- [✨ 功能亮点](#-功能亮点)
 - [🚀 快速开始](#-快速开始)
+- [🔧 技术栈](#-技术栈)
+  - [Go 后端](#go-后端)
+  - [Vue 3 前端](#vue-3-前端)
+- [✨ 功能亮点](#-功能亮点)
 - [🔥 对比 one-api](#-对比-one-api)
+- [📸 截图展示](#-截图展示)
+- [⚙️ 配置](#%EF%B8%8F-配置)
+  - [🔧 环境变量](#-环境变量)
+  - [⌨️ 命令行参数](#%EF%B8%8F-命令行参数)
+- [📖 接口文档](#-接口文档)
 - [📦 部署](#-部署)
   - [🔨 手动部署](#-手动部署)
   - [🏢 多机部署](#-多机部署)
   - [🌐 集群部署（去中心化多活）](#-集群部署去中心化多活)
   - [🔌 部署第三方服务配合 One Api Pro 使用](#-部署第三方服务配合-one-api-pro-使用)
-- [📖 接口文档](#-接口文档)
-- [⚙️ 配置](#%EF%B8%8F-配置)
-  - [🔧 环境变量](#-环境变量)
-  - [⌨️ 命令行参数](#%EF%B8%8F-命令行参数)
-- [📸 截图展示](#-截图展示)
 - [🗺️ 开发计划](#%EF%B8%8F-开发计划)
-- [🔧 技术栈](#-技术栈)
-  - [Go 后端](#go-后端)
-  - [Vue 3 前端](#vue-3-前端)
 - [相关项目](#相关项目)
 - [License](#license)
+
+---
+
+## 🚀 快速开始
+
+```bash
+# 从 GitHub Releases 下载可执行文件，或从源码编译
+git clone https://github.com/Leon-PanPan/one-api-pro.git
+cd one-api-pro
+
+# 构建前端（Vue 3）
+cd web
+sh build.sh        # 按 web/THEMES 构建主题（默认 default-pro）
+cd ..
+
+# 构建后端
+go build -ldflags "-s -w" -o one-api-pro
+
+# 启动
+./one-api-pro --port 3000 --log-dir ./logs
+```
+
+访问 `http://localhost:3000`，使用初始账号 `root / 123456` 登录。
+
+> 详细部署方式见 [📦 部署](#-部署)，接口文档见 [📖 接口文档](#-接口文档)。
+
+---
+
+## 🔧 技术栈
+
+本项目基于以下开源技术构建，感谢所有开源项目作者。
+
+### Go 后端
+
+| 技术 | 用途 |
+| --- | --- |
+| [Gin](https://github.com/gin-gonic/gin) | HTTP Web 框架 |
+| [GORM](https://gorm.io) | ORM 库，支持 SQLite / MySQL / PostgreSQL |
+| [go-redis/redis](https://github.com/go-redis/redis) | Redis 客户端 |
+| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT 鉴权 |
+| [AWS SDK for Go v2](https://github.com/aws/aws-sdk-go-v2) | AWS Bedrock 集成 |
+| [Google API Go Client](https://github.com/googleapis/google-api-go-client) | Google Gemini / PaLM2 集成 |
+| [pkoukk/tiktoken-go](https://github.com/pkoukk/tiktoken-go) | Token 计数 |
+| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket 支持（讯飞等渠道） |
+| [joho/godotenv](https://github.com/joho/godotenv) | .env 配置文件解析 |
+
+### Vue 3 前端
+
+| 技术 | 用途 |
+| --- | --- |
+| [Vue 3](https://vuejs.org) | 前端框架（组合式 API） |
+| [Vite](https://vitejs.dev) | 构建工具 |
+| [Arco Design Vue](https://arco.design/vue) | UI 组件库 |
+| [Pinia](https://pinia.vuejs.org) | 状态管理 |
+| [Vue Router 4](https://router.vuejs.org) | 路由管理 |
+| [Axios](https://axios-http.com) | HTTP 客户端 |
+| [ECharts](https://echarts.apache.org) | 数据可视化图表 |
+| [vue-i18n](https://vue-i18n.intlify.dev) | 国际化 |
 
 ---
 
@@ -107,29 +171,6 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 ---
 
-## 🚀 快速开始
-
-```bash
-# 从 GitHub Releases 下载可执行文件，或从源码编译
-git clone https://github.com/Leon-PanPan/one-api-pro.git
-cd one-api-pro
-
-# 构建前端（Vue 3）
-cd web
-sh build.sh        # 按 web/THEMES 构建主题（默认 default-pro）
-cd ..
-
-# 构建后端
-go build -ldflags "-s -w" -o one-api-pro
-
-# 启动
-./one-api-pro --port 3000 --log-dir ./logs
-```
-
-访问 `http://localhost:3000`，使用初始账号 `root / 123456` 登录。
-
-> 详细部署方式见 [📦 部署](#-部署)，接口文档见 [📖 接口文档](#-接口文档)。
-
 ## 🔥 对比 one-api
 
 | 对比维度 | one-api | one-api-pro |
@@ -143,7 +184,160 @@ go build -ldflags "-s -w" -o one-api-pro
 | 管理后台 | 3 套前端主题（default/berry/air），基础管理功能 | Vue 3 + Arco Design 全新管理后台，可视化仪表盘 |
 | 持续更新 | 原项目已于 2024 年停止更新 | 持续维护更新，针对企业级场景优化 |
 
+---
+
+## 📸 截图展示
+
+### 🖥️ 仪表盘
+![仪表盘首页](docs/Demo-Index.png)
+
+### 🔑 令牌管理
+![令牌管理](docs/Demo-Token.png)
+
+### 📦 套餐管理
+![套餐管理](docs/Demo-Plan.png)
+
+### 🔄 订阅管理
+![订阅管理](docs/Demo-Subscribe.png)
+
+### 🌐 集群节点管理
+![集群节点管理](docs/Demo-cluster.png)
+
+---
+
+## ⚙️ 配置
+
+系统本身开箱即用。
+
+你可以通过设置环境变量或者命令行参数进行配置。
+
+等到系统启动后，使用 `root` 用户登录系统并做进一步的配置。
+
+**Note**：如果你不知道某个配置项的含义，可以临时删掉值以看到进一步的提示文字。
+
+### 🔧 环境变量
+> One API 支持从 `.env` 文件中读取环境变量，请参照 `.env.example` 文件，使用时请将其重命名为 `.env`。也可通过 `--env` 参数指定配置文件路径（支持相对路径），详见命令行参数一节。
+1. `REDIS_CONN_STRING`：设置之后将使用 Redis 作为缓存使用。
+   + 例子：`REDIS_CONN_STRING=redis://default:redispw@localhost:49153`
+   + 如果数据库访问延迟很低，没有必要启用 Redis，启用后反而会出现数据滞后的问题。
+   + 如果需要使用哨兵或者集群模式：
+     + 则需要把该环境变量设置为节点列表，例如：`localhost:49153,localhost:49154,localhost:49155`。
+     + 除此之外还需要设置以下环境变量：
+       + `REDIS_PASSWORD`：Redis 集群或者哨兵模式下的密码设置。
+       + `REDIS_MASTER_NAME`：Redis 哨兵模式下主节点的名称。
+2. `SESSION_SECRET`：设置之后将使用固定的会话密钥，这样系统重新启动后已登录用户的 cookie 将依旧有效。
+   + 例子：`SESSION_SECRET=random_string`
+3. `SQL_DSN`：设置之后将使用指定数据库而非 SQLite，请使用 MySQL 或 PostgreSQL。
+   + 例子：
+     + MySQL：`SQL_DSN=root:123456@tcp(localhost:3306)/oneapi`
+     + PostgreSQL：`SQL_DSN=postgres://postgres:123456@localhost:5432/oneapi`（适配中，欢迎反馈）
+   + 注意需要提前建立数据库 `oneapi`，无需手动建表，程序将自动建表。
+   + 如果使用云数据库：如果云服务器需要验证身份，需要在连接参数中添加 `?tls=skip-verify`。
+   + 请根据你的数据库配置修改下列参数（或者保持默认值）：
+     + `SQL_MAX_IDLE_CONNS`：最大空闲连接数，默认为 `100`。
+     + `SQL_MAX_OPEN_CONNS`：最大打开连接数，默认为 `1000`。
+       + 如果报错 `Error 1040: Too many connections`，请适当减小该值。
+     + `SQL_CONN_MAX_LIFETIME`：连接的最大生命周期，默认为 `60`，单位分钟。
+4. `LOG_SQL_DSN`：设置之后将为 `logs` 表使用独立的数据库，请使用 MySQL 或 PostgreSQL。
+5. `FRONTEND_BASE_URL`：设置之后将重定向页面请求到指定的地址，仅限从服务器设置。
+   + 例子：`FRONTEND_BASE_URL=https://openai.justsong.cn`
+6. `MEMORY_CACHE_ENABLED`：启用内存缓存，会导致用户额度的更新存在一定的延迟，可选值为 `true` 和 `false`，未设置则默认为 `false`。
+   + 例子：`MEMORY_CACHE_ENABLED=true`
+7. `SYNC_FREQUENCY`：在启用缓存的情况下与数据库同步配置的频率，单位为秒，默认为 `600` 秒。
+   + 例子：`SYNC_FREQUENCY=60`
+8. `NODE_TYPE`：设置之后将指定节点类型，可选值为 `master` 和 `slave`，未设置则默认为 `master`。
+   + 例子：`NODE_TYPE=slave`
+9. `CHANNEL_UPDATE_FREQUENCY`：设置之后将定期更新渠道余额，单位为分钟，未设置则不进行更新。
+   + 例子：`CHANNEL_UPDATE_FREQUENCY=1440`
+10. `CHANNEL_TEST_FREQUENCY`：设置之后将定期检查渠道，单位为分钟，未设置则不进行检查。
+    +例子：`CHANNEL_TEST_FREQUENCY=1440`
+11. `POLLING_INTERVAL`：批量更新渠道余额以及测试可用性时的请求间隔，单位为秒，默认无间隔。
+    + 例子：`POLLING_INTERVAL=5`
+12. `BATCH_UPDATE_ENABLED`：启用数据库批量更新聚合，会导致用户额度的更新存在一定的延迟可选值为 `true` 和 `false`，未设置则默认为 `false`。
+    + 例子：`BATCH_UPDATE_ENABLED=true`
+    + 如果你遇到了数据库连接数过多的问题，可以尝试启用该选项。
+13. `BATCH_UPDATE_INTERVAL=5`：批量更新聚合的时间间隔，单位为秒，默认为 `5`。
+    + 例子：`BATCH_UPDATE_INTERVAL=5`
+14. 请求频率限制：
+    + `GLOBAL_API_RATE_LIMIT`：全局 API 速率限制（除中继请求外），单 ip 三分钟内的最大请求数，默认为 `180`。
+    + `GLOBAL_WEB_RATE_LIMIT`：全局 Web 速率限制，单 ip 三分钟内的最大请求数，默认为 `60`。
+15. 编码器缓存设置：
+    + `TIKTOKEN_CACHE_DIR`：默认程序启动时会联网下载一些通用的词元的编码，如：`gpt-3.5-turbo`，在一些网络环境不稳定，或者离线情况，可能会导致启动有问题，可以配置此目录缓存数据，可迁移到离线环境。
+    + `DATA_GYM_CACHE_DIR`：目前该配置作用与 `TIKTOKEN_CACHE_DIR` 一致，但是优先级没有它高。
+16. `RELAY_TIMEOUT`：中继超时设置，单位为秒，默认不设置超时时间。
+17. `RELAY_PROXY`：设置后使用该代理来请求 API。
+18. `USER_CONTENT_REQUEST_TIMEOUT`：用户上传内容下载超时时间，单位为秒。
+19. `USER_CONTENT_REQUEST_PROXY`：设置后使用该代理来请求用户上传的内容，例如图片。
+20. `SQLITE_BUSY_TIMEOUT`：SQLite 锁等待超时设置，单位为毫秒，默认 `3000`。
+21. `GEMINI_SAFETY_SETTING`：Gemini 的安全设置，默认 `BLOCK_NONE`。
+22. `GEMINI_VERSION`：One Api Pro 所使用的 Gemini 版本，默认为 `v1`。
+23. `THEME`：系统的主题设置，默认为 `default-pro`（Vue 3 管理后台），也可切换为 `default` / `berry` / `air`（旧 React 主题），具体可选值参考[此处](./web/README.md)。
+24. `ENABLE_METRIC`：是否根据请求成功率禁用渠道，默认不开启，可选值为 `true` 和 `false`。
+25. `METRIC_QUEUE_SIZE`：请求成功率统计队列大小，默认为 `10`。
+26. `METRIC_SUCCESS_RATE_THRESHOLD`：请求成功率阈值，默认为 `0.8`。
+27. `INITIAL_ROOT_TOKEN`：如果设置了该值，则在系统首次启动时会自动创建一个值为该环境变量值的 root 用户令牌。
+28. `INITIAL_ROOT_ACCESS_TOKEN`：如果设置了该值，则在系统首次启动时会自动创建一个值为该环境变量的 root 用户创建系统管理令牌。
+29. `ENFORCE_INCLUDE_USAGE`：是否强制在 stream 模型下返回 usage，默认不开启，可选值为 `true` 和 `false`。
+30. `TEST_PROMPT`：测试模型时的用户 prompt，默认为 `Print your model name exactly and do not output without any other text.`。
+
+#### 🌐 集群配置（去中心化多活部署）
+> 不配置以下环境变量时，系统以单节点模式运行，无任何副作用。
+
+1. `CLUSTER_ENABLED`：是否启用集群模式，默认不启用。
+   + 例子：`CLUSTER_ENABLED=true`
+2. `CLUSTER_NODE_ID`：节点编号（1-49），必须与 MySQL 的 `auto_increment_offset` 一致，不同节点不能重复。
+   + 例子：`CLUSTER_NODE_ID=1`
+3. `CLUSTER_NODE_NAME`：节点名称，便于识别，默认为 `node-{NODE_ID}`。
+   + 例子：`CLUSTER_NODE_NAME=node-cn`
+4. `CLUSTER_NODE_ADDRESS`：本节点的公网访问地址（需包含协议前缀），其他节点通过此地址推送数据。
+   + 例子：`CLUSTER_NODE_ADDRESS=https://cn.example.com`
+5. `CLUSTER_SECRET`：本节点的初始 secret，**每个节点独立**。首次启动时作为初始 secret 写入数据库，之后可由 admin 修改。
+   + 例子：`CLUSTER_SECRET=MyClusterSecret123abc`
+6. `CLUSTER_SEEDS`：种子节点地址（逗号分隔），新节点启动时向种子节点注册获取集群信息，只需配置一个可达节点即可。第一个节点可以不配置或配置自己的地址。
+   + 例子：`CLUSTER_SEEDS=https://cn.example.com`
+   + 多个种子：`CLUSTER_SEEDS=https://cn.example.com,https://us.example.com`
+7. `CLUSTER_PUSH_INTERVAL`：同步事件推送间隔，单位为秒，默认 `3`。
+8. `CLUSTER_DISCOVERY_INTERVAL`：节点发现间隔，单位为秒，存活节点每周期互相 ping，默认 `30`。
+9. `CLUSTER_DEAD_PING_INTERVAL`：失败节点 ping 间隔，单位为秒，比存活间隔长以减少无效请求，默认 `120`。
+10. `CLUSTER_MAX_PING_FAILURES`：连续 ping 失败次数，达到后标记节点为失败状态，默认 `3`。
+11. `CLUSTER_SYNC_LOGS`：是否同步日志表，日志数据量较大可按需关闭，默认 `true`。
+     + 例子：`CLUSTER_SYNC_LOGS=false`
+12. `CLUSTER_BATCH_SIZE`：每次推送最大事件数，默认 `50`。
+
+### ⌨️ 命令行参数
+1. `--port <port_number>`: 指定服务器监听的端口号，默认为 `3000`。
+   + 例子：`--port 3000`
+2. `--log-dir <log_dir>`: 指定日志文件夹，如果没有设置，默认保存至工作目录的 `logs` 文件夹下。
+   + 例子：`--log-dir ./logs`
+3. `--env <env_file_path>`: 指定配置文件路径，支持相对路径和绝对路径。未指定时自动加载当前目录的 `.env` 文件。
+   + 例子：`--env ./config.env`
+   + 例子：`--env /etc/one-api-pro/production.env`
+   + 多实例部署示例：
+     ```bash
+     ./one-api-pro --env ./instances/instance1.env --port 3001 &
+     ./one-api-pro --env ./instances/instance2.env --port 3002 &
+     ```
+   + 配置优先级：命令行参数 > 系统环境变量 > `--env` 指定的配置文件 > 默认值
+4. `--version`: 打印系统版本号并退出。
+5. `--help`: 查看命令的使用帮助和参数说明。
+
+---
+
+## 📖 接口文档
+
+完整的接口文档已独立维护在 [docs/API.md](./docs/API.md)，涵盖：
+
+- **鉴权机制**：Cookie Session / Access Token / API Key（Bearer Token）三种鉴权方式
+- **管理接口**：模型定价、分组折扣、渠道、令牌、用户、日志、兑换码、套餐、订阅等完整 CRUD
+- **OpenAI 兼容接口**：`/v1/models`、`/v1/chat/completions`、`/v1/embeddings`、图片、音频、内容审核等
+- **集群管理 API**：节点发现、心跳、数据同步等去中心化集群接口
+
+👉 [查看完整接口文档 →](./docs/API.md)
+
+---
+
 ## 📦 部署
+
 ### 🔨 手动部署
 1. 从 [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) 下载可执行文件或者从源码编译：
    ```shell
@@ -583,151 +777,6 @@ docker run --name chatgpt-web -d -p 3002:3002 -e OPENAI_API_BASE_URL=https://ope
 
 运行期间可以通过`!model`命令查看、切换可用模型。
 
-## 📖 接口文档
-
-完整的接口文档已独立维护在 [docs/API.md](./docs/API.md)，涵盖：
-
-- **鉴权机制**：Cookie Session / Access Token / API Key（Bearer Token）三种鉴权方式
-- **管理接口**：模型定价、分组折扣、渠道、令牌、用户、日志、兑换码、套餐、订阅等完整 CRUD
-- **OpenAI 兼容接口**：`/v1/models`、`/v1/chat/completions`、`/v1/embeddings`、图片、音频、内容审核等
-- **集群管理 API**：节点发现、心跳、数据同步等去中心化集群接口
-
-👉 [查看完整接口文档 →](./docs/API.md)
-
----
-
-## ⚙️ 配置
-系统本身开箱即用。
-
-你可以通过设置环境变量或者命令行参数进行配置。
-
-等到系统启动后，使用 `root` 用户登录系统并做进一步的配置。
-
-**Note**：如果你不知道某个配置项的含义，可以临时删掉值以看到进一步的提示文字。
-
-### 🔧 环境变量
-> One API 支持从 `.env` 文件中读取环境变量，请参照 `.env.example` 文件，使用时请将其重命名为 `.env`。也可通过 `--env` 参数指定配置文件路径（支持相对路径），详见命令行参数一节。
-1. `REDIS_CONN_STRING`：设置之后将使用 Redis 作为缓存使用。
-   + 例子：`REDIS_CONN_STRING=redis://default:redispw@localhost:49153`
-   + 如果数据库访问延迟很低，没有必要启用 Redis，启用后反而会出现数据滞后的问题。
-   + 如果需要使用哨兵或者集群模式：
-     + 则需要把该环境变量设置为节点列表，例如：`localhost:49153,localhost:49154,localhost:49155`。
-     + 除此之外还需要设置以下环境变量：
-       + `REDIS_PASSWORD`：Redis 集群或者哨兵模式下的密码设置。
-       + `REDIS_MASTER_NAME`：Redis 哨兵模式下主节点的名称。
-2. `SESSION_SECRET`：设置之后将使用固定的会话密钥，这样系统重新启动后已登录用户的 cookie 将依旧有效。
-   + 例子：`SESSION_SECRET=random_string`
-3. `SQL_DSN`：设置之后将使用指定数据库而非 SQLite，请使用 MySQL 或 PostgreSQL。
-   + 例子：
-     + MySQL：`SQL_DSN=root:123456@tcp(localhost:3306)/oneapi`
-     + PostgreSQL：`SQL_DSN=postgres://postgres:123456@localhost:5432/oneapi`（适配中，欢迎反馈）
-   + 注意需要提前建立数据库 `oneapi`，无需手动建表，程序将自动建表。
-   + 如果使用云数据库：如果云服务器需要验证身份，需要在连接参数中添加 `?tls=skip-verify`。
-   + 请根据你的数据库配置修改下列参数（或者保持默认值）：
-     + `SQL_MAX_IDLE_CONNS`：最大空闲连接数，默认为 `100`。
-     + `SQL_MAX_OPEN_CONNS`：最大打开连接数，默认为 `1000`。
-       + 如果报错 `Error 1040: Too many connections`，请适当减小该值。
-     + `SQL_CONN_MAX_LIFETIME`：连接的最大生命周期，默认为 `60`，单位分钟。
-4. `LOG_SQL_DSN`：设置之后将为 `logs` 表使用独立的数据库，请使用 MySQL 或 PostgreSQL。
-5. `FRONTEND_BASE_URL`：设置之后将重定向页面请求到指定的地址，仅限从服务器设置。
-   + 例子：`FRONTEND_BASE_URL=https://openai.justsong.cn`
-6. `MEMORY_CACHE_ENABLED`：启用内存缓存，会导致用户额度的更新存在一定的延迟，可选值为 `true` 和 `false`，未设置则默认为 `false`。
-   + 例子：`MEMORY_CACHE_ENABLED=true`
-7. `SYNC_FREQUENCY`：在启用缓存的情况下与数据库同步配置的频率，单位为秒，默认为 `600` 秒。
-   + 例子：`SYNC_FREQUENCY=60`
-8. `NODE_TYPE`：设置之后将指定节点类型，可选值为 `master` 和 `slave`，未设置则默认为 `master`。
-   + 例子：`NODE_TYPE=slave`
-9. `CHANNEL_UPDATE_FREQUENCY`：设置之后将定期更新渠道余额，单位为分钟，未设置则不进行更新。
-   + 例子：`CHANNEL_UPDATE_FREQUENCY=1440`
-10. `CHANNEL_TEST_FREQUENCY`：设置之后将定期检查渠道，单位为分钟，未设置则不进行检查。 
-   +例子：`CHANNEL_TEST_FREQUENCY=1440`
-11. `POLLING_INTERVAL`：批量更新渠道余额以及测试可用性时的请求间隔，单位为秒，默认无间隔。
-    + 例子：`POLLING_INTERVAL=5`
-12. `BATCH_UPDATE_ENABLED`：启用数据库批量更新聚合，会导致用户额度的更新存在一定的延迟可选值为 `true` 和 `false`，未设置则默认为 `false`。
-    + 例子：`BATCH_UPDATE_ENABLED=true`
-    + 如果你遇到了数据库连接数过多的问题，可以尝试启用该选项。
-13. `BATCH_UPDATE_INTERVAL=5`：批量更新聚合的时间间隔，单位为秒，默认为 `5`。
-    + 例子：`BATCH_UPDATE_INTERVAL=5`
-14. 请求频率限制：
-    + `GLOBAL_API_RATE_LIMIT`：全局 API 速率限制（除中继请求外），单 ip 三分钟内的最大请求数，默认为 `180`。
-    + `GLOBAL_WEB_RATE_LIMIT`：全局 Web 速率限制，单 ip 三分钟内的最大请求数，默认为 `60`。
-15. 编码器缓存设置：
-    + `TIKTOKEN_CACHE_DIR`：默认程序启动时会联网下载一些通用的词元的编码，如：`gpt-3.5-turbo`，在一些网络环境不稳定，或者离线情况，可能会导致启动有问题，可以配置此目录缓存数据，可迁移到离线环境。
-    + `DATA_GYM_CACHE_DIR`：目前该配置作用与 `TIKTOKEN_CACHE_DIR` 一致，但是优先级没有它高。
-16. `RELAY_TIMEOUT`：中继超时设置，单位为秒，默认不设置超时时间。
-17. `RELAY_PROXY`：设置后使用该代理来请求 API。
-18. `USER_CONTENT_REQUEST_TIMEOUT`：用户上传内容下载超时时间，单位为秒。
-19. `USER_CONTENT_REQUEST_PROXY`：设置后使用该代理来请求用户上传的内容，例如图片。
-20. `SQLITE_BUSY_TIMEOUT`：SQLite 锁等待超时设置，单位为毫秒，默认 `3000`。
-21. `GEMINI_SAFETY_SETTING`：Gemini 的安全设置，默认 `BLOCK_NONE`。
-22. `GEMINI_VERSION`：One Api Pro 所使用的 Gemini 版本，默认为 `v1`。
-23. `THEME`：系统的主题设置，默认为 `default-pro`（Vue 3 管理后台），也可切换为 `default` / `berry` / `air`（旧 React 主题），具体可选值参考[此处](./web/README.md)。
-24. `ENABLE_METRIC`：是否根据请求成功率禁用渠道，默认不开启，可选值为 `true` 和 `false`。
-25. `METRIC_QUEUE_SIZE`：请求成功率统计队列大小，默认为 `10`。
-26. `METRIC_SUCCESS_RATE_THRESHOLD`：请求成功率阈值，默认为 `0.8`。
-27. `INITIAL_ROOT_TOKEN`：如果设置了该值，则在系统首次启动时会自动创建一个值为该环境变量值的 root 用户令牌。
-28. `INITIAL_ROOT_ACCESS_TOKEN`：如果设置了该值，则在系统首次启动时会自动创建一个值为该环境变量的 root 用户创建系统管理令牌。
-29. `ENFORCE_INCLUDE_USAGE`：是否强制在 stream 模型下返回 usage，默认不开启，可选值为 `true` 和 `false`。
-30. `TEST_PROMPT`：测试模型时的用户 prompt，默认为 `Print your model name exactly and do not output without any other text.`。
-
-#### 🌐 集群配置（去中心化多活部署）
-> 不配置以下环境变量时，系统以单节点模式运行，无任何副作用。
-
-1. `CLUSTER_ENABLED`：是否启用集群模式，默认不启用。
-   + 例子：`CLUSTER_ENABLED=true`
-2. `CLUSTER_NODE_ID`：节点编号（1-49），必须与 MySQL 的 `auto_increment_offset` 一致，不同节点不能重复。
-   + 例子：`CLUSTER_NODE_ID=1`
-3. `CLUSTER_NODE_NAME`：节点名称，便于识别，默认为 `node-{NODE_ID}`。
-   + 例子：`CLUSTER_NODE_NAME=node-cn`
-4. `CLUSTER_NODE_ADDRESS`：本节点的公网访问地址（需包含协议前缀），其他节点通过此地址推送数据。
-   + 例子：`CLUSTER_NODE_ADDRESS=https://cn.example.com`
-5. `CLUSTER_SECRET`：本节点的初始 secret，**每个节点独立**。首次启动时作为初始 secret 写入数据库，之后可由 admin 修改。
-   + 例子：`CLUSTER_SECRET=MyClusterSecret123abc`
-6. `CLUSTER_SEEDS`：种子节点地址（逗号分隔），新节点启动时向种子节点注册获取集群信息，只需配置一个可达节点即可。第一个节点可以不配置或配置自己的地址。
-   + 例子：`CLUSTER_SEEDS=https://cn.example.com`
-   + 多个种子：`CLUSTER_SEEDS=https://cn.example.com,https://us.example.com`
-7. `CLUSTER_PUSH_INTERVAL`：同步事件推送间隔，单位为秒，默认 `3`。
-8. `CLUSTER_DISCOVERY_INTERVAL`：节点发现间隔，单位为秒，存活节点每周期互相 ping，默认 `30`。
-9. `CLUSTER_DEAD_PING_INTERVAL`：失败节点 ping 间隔，单位为秒，比存活间隔长以减少无效请求，默认 `120`。
-10. `CLUSTER_MAX_PING_FAILURES`：连续 ping 失败次数，达到后标记节点为失败状态，默认 `3`。
-11. `CLUSTER_SYNC_LOGS`：是否同步日志表，日志数据量较大可按需关闭，默认 `true`。
-     + 例子：`CLUSTER_SYNC_LOGS=false`
-12. `CLUSTER_BATCH_SIZE`：每次推送最大事件数，默认 `50`。
-
-### ⌨️ 命令行参数
-1. `--port <port_number>`: 指定服务器监听的端口号，默认为 `3000`。
-   + 例子：`--port 3000`
-2. `--log-dir <log_dir>`: 指定日志文件夹，如果没有设置，默认保存至工作目录的 `logs` 文件夹下。
-   + 例子：`--log-dir ./logs`
-3. `--env <env_file_path>`: 指定配置文件路径，支持相对路径和绝对路径。未指定时自动加载当前目录的 `.env` 文件。
-   + 例子：`--env ./config.env`
-   + 例子：`--env /etc/one-api-pro/production.env`
-   + 多实例部署示例：
-     ```bash
-     ./one-api-pro --env ./instances/instance1.env --port 3001 &
-     ./one-api-pro --env ./instances/instance2.env --port 3002 &
-     ```
-   + 配置优先级：命令行参数 > 系统环境变量 > `--env` 指定的配置文件 > 默认值
-4. `--version`: 打印系统版本号并退出。
-5. `--help`: 查看命令的使用帮助和参数说明。
-
-## 📸 截图展示
-
-### 🖥️ 仪表盘
-![仪表盘首页](docs/Demo-Index.png)
-
-### 🔑 令牌管理
-![令牌管理](docs/Demo-Token.png)
-
-### 📦 套餐管理
-![套餐管理](docs/Demo-Plan.png)
-
-### 🔄 订阅管理
-![订阅管理](docs/Demo-Subscribe.png)
-
-### 🌐 集群节点管理
-![集群节点管理](docs/Demo-cluster.png)
-
 ---
 
 ## 🗺️ 开发计划
@@ -763,36 +812,7 @@ docker run --name chatgpt-web -d -p 3002:3002 -e OPENAI_API_BASE_URL=https://ope
 
 > 💡 欢迎提交 PR 或 Issue 参与共建，详见 [CONTRIBUTING](https://github.com/Leon-PanPan/one-api-pro/issues)。
 
-## 🔧 技术栈
-
-本项目基于以下开源技术构建，感谢所有开源项目作者。
-
-### Go 后端
-
-| 技术 | 用途 |
-| --- | --- |
-| [Gin](https://github.com/gin-gonic/gin) | HTTP Web 框架 |
-| [GORM](https://gorm.io) | ORM 库，支持 SQLite / MySQL / PostgreSQL |
-| [go-redis/redis](https://github.com/go-redis/redis) | Redis 客户端 |
-| [golang-jwt/jwt](https://github.com/golang-jwt/jwt) | JWT 鉴权 |
-| [AWS SDK for Go v2](https://github.com/aws/aws-sdk-go-v2) | AWS Bedrock 集成 |
-| [Google API Go Client](https://github.com/googleapis/google-api-go-client) | Google Gemini / PaLM2 集成 |
-| [pkoukk/tiktoken-go](https://github.com/pkoukk/tiktoken-go) | Token 计数 |
-| [gorilla/websocket](https://github.com/gorilla/websocket) | WebSocket 支持（讯飞等渠道） |
-| [joho/godotenv](https://github.com/joho/godotenv) | .env 配置文件解析 |
-
-### Vue 3 前端
-
-| 技术 | 用途 |
-| --- | --- |
-| [Vue 3](https://vuejs.org) | 前端框架（组合式 API） |
-| [Vite](https://vitejs.dev) | 构建工具 |
-| [Arco Design Vue](https://arco.design/vue) | UI 组件库 |
-| [Pinia](https://pinia.vuejs.org) | 状态管理 |
-| [Vue Router 4](https://router.vuejs.org) | 路由管理 |
-| [Axios](https://axios-http.com) | HTTP 客户端 |
-| [ECharts](https://echarts.apache.org) | 数据可视化图表 |
-| [vue-i18n](https://vue-i18n.intlify.dev) | 国际化 |
+---
 
 ## 相关项目
 * [one-api](https://github.com/songquanpeng/one-api) — 本项目上游项目，感谢 JustSong
