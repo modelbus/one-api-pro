@@ -29,6 +29,8 @@ func printHelp() {
 }
 
 func Init() {
+	loadVersionFromFile()
+
 	flag.Parse()
 
 	if *PrintVersion {

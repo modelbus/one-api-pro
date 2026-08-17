@@ -7,7 +7,7 @@
         <p class="welcome-desc">{{ greeting }}，{{ authStore.user?.display_name || authStore.user?.username || '用户' }} · 今天 {{ todayStr }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip" v-if="version">v{{ version }}</span>
+        <span class="meta-chip" v-if="version">{{ version }}</span>
         <span class="meta-chip">{{ roleText }}</span>
       </div>
     </div>
@@ -219,7 +219,7 @@
           <div class="changelog">
             <div class="cl-item">
               <div class="cl-head">
-                <span class="cl-version">v{{ version || '1.0.0' }}</span>
+                <span class="cl-version">{{ version || 'v1.0.0' }}</span>
                 <span class="cl-date">{{ todayStr }}</span>
               </div>
               <p class="cl-desc">全新仪表盘：核心指标 + 趋势图表 + 模型分布</p>
