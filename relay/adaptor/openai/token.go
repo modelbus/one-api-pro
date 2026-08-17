@@ -21,19 +21,23 @@ var defaultTokenEncoder *tiktoken.Tiktoken
 
 func InitTokenEncoders() {
 	logger.SysLog("initializing token encoders")
+	tiktoken.SetBpeLoader(newHTTPBpeLoader())
+
 	gpt35TokenEncoder, err := tiktoken.EncodingForModel("gpt-3.5-turbo")
 	if err != nil {
-		logger.FatalLog(fmt.Sprintf("failed to get gpt-3.5-turbo token encoder: %s, "+
-			"if you are using in offline environment, please set TIKTOKEN_CACHE_DIR to use exsited files, check this link for more information: https://stackoverflow.com/questions/76106366/how-to-use-tiktoken-in-offline-mode-computer ", err.Error()))
+		fallbackToApproximateTokenCount("gpt-3.5-turbo", err)
+		return
 	}
 	defaultTokenEncoder = gpt35TokenEncoder
 	gpt4oTokenEncoder, err := tiktoken.EncodingForModel("gpt-4o")
 	if err != nil {
-		logger.FatalLog(fmt.Sprintf("failed to get gpt-4o token encoder: %s", err.Error()))
+		fallbackToApproximateTokenCount("gpt-4o", err)
+		return
 	}
 	gpt4TokenEncoder, err := tiktoken.EncodingForModel("gpt-4")
 	if err != nil {
-		logger.FatalLog(fmt.Sprintf("failed to get gpt-4 token encoder: %s", err.Error()))
+		fallbackToApproximateTokenCount("gpt-4", err)
+		return
 	}
 	prices, dbErr := model.GetAllModelPrices()
 	if dbErr != nil {
@@ -52,6 +56,15 @@ func InitTokenEncoders() {
 		}
 	}
 	logger.SysLog("token encoders initialized")
+}
+
+// fallbackToApproximateTokenCount 在 token 编码器初始化失败时降级为近似计数，
+// 避免离线/网络受限环境下因无法下载编码文件导致服务启动失败。
+func fallbackToApproximateTokenCount(modelName string, err error) {
+	logger.SysError(fmt.Sprintf("failed to get %s token encoder: %s, falling back to approximate token counting. "+
+		"if you are in an offline environment, set TIKTOKEN_CACHE_DIR to a directory with pre-downloaded encodings. "+
+		"see: https://stackoverflow.com/questions/76106366/how-to-use-tiktoken-in-offline-mode-computer", modelName, err.Error()))
+	config.ApproximateTokenEnabled = true
 }
 
 func getTokenEncoder(model string) *tiktoken.Tiktoken {
