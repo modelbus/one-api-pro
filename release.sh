@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# release.sh - 一键构建并打包所有平台的可执行文件
+# release.sh - 一键构建所有平台的可执行文件（不压缩，直接可用）
 #
 # 用法:
 #   ./release.sh                      # 使用 VERSION 文件 / git tag 作为版本号
@@ -8,11 +8,11 @@
 #   ./release.sh v0.1.0 --skip-frontend  # 跳过前端构建（复用已有 web/build）
 #
 # 输出（与 .github/workflows/release.yml 保持一致）:
-#   dist/one-api-pro-linux-amd64.tar.gz
-#   dist/one-api-pro-linux-arm64.tar.gz
-#   dist/one-api-pro-windows-amd64.zip
-#   dist/one-api-pro-darwin-amd64.tar.gz
-#   dist/one-api-pro-darwin-arm64.tar.gz
+#   dist/one-api-pro-linux-amd64
+#   dist/one-api-pro-linux-arm64
+#   dist/one-api-pro-windows-amd64.exe
+#   dist/one-api-pro-darwin-amd64
+#   dist/one-api-pro-darwin-arm64
 
 set -euo pipefail
 
@@ -55,7 +55,7 @@ esac
 echo "==> 版本号: $VERSION"
 
 # ---------- 依赖检查 ----------
-for cmd in go node npm tar; do
+for cmd in go node npm; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "错误: 缺少依赖 $cmd，请先安装" >&2
     exit 1
@@ -94,22 +94,7 @@ CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/one-
 echo "==> 构建 one-api-pro-darwin-arm64 (darwin/arm64)"
 CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags "$LDFLAGS" -o dist/one-api-pro-darwin-arm64 .
 
-# ---------- 打包 ----------
-echo "==> 打包"
-cd dist
-tar -czf one-api-pro-linux-amd64.tar.gz one-api-pro-linux-amd64
-tar -czf one-api-pro-linux-arm64.tar.gz one-api-pro-linux-arm64
-tar -czf one-api-pro-darwin-amd64.tar.gz one-api-pro-darwin-amd64
-tar -czf one-api-pro-darwin-arm64.tar.gz one-api-pro-darwin-arm64
-if command -v zip >/dev/null 2>&1; then
-  zip -q one-api-pro-windows-amd64.zip one-api-pro-windows-amd64.exe
-else
-  echo "警告: 未找到 zip，Windows 包改为 tar.gz 格式" >&2
-  tar -czf one-api-pro-windows-amd64.tar.gz one-api-pro-windows-amd64.exe
-fi
-cd ..
-
 # ---------- 输出 ----------
 echo ""
-echo "==> 打包完成:"
+echo "==> 构建完成:"
 ls -lh dist/

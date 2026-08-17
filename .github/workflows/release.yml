@@ -52,23 +52,14 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-amd64 .
           CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-arm64 .
 
-      - name: Package
-        run: |
-          cd dist
-          tar -czf one-api-pro-linux-amd64.tar.gz one-api-pro-linux-amd64
-          tar -czf one-api-pro-linux-arm64.tar.gz one-api-pro-linux-arm64
-          tar -czf one-api-pro-darwin-amd64.tar.gz one-api-pro-darwin-amd64
-          tar -czf one-api-pro-darwin-arm64.tar.gz one-api-pro-darwin-arm64
-          zip one-api-pro-windows-amd64.zip one-api-pro-windows-amd64.exe
-
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
-            dist/one-api-pro-linux-amd64.tar.gz
-            dist/one-api-pro-linux-arm64.tar.gz
-            dist/one-api-pro-darwin-amd64.tar.gz
-            dist/one-api-pro-darwin-arm64.tar.gz
-            dist/one-api-pro-windows-amd64.zip
+            dist/one-api-pro-linux-amd64
+            dist/one-api-pro-linux-arm64
+            dist/one-api-pro-windows-amd64.exe
+            dist/one-api-pro-darwin-amd64
+            dist/one-api-pro-darwin-arm64
           generate_release_notes: true
