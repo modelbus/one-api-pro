@@ -45,7 +45,6 @@
   - [🔨 Manual Deployment](#-manual-deployment)
   - [🏢 Multi-host Deployment](#-multi-host-deployment)
   - [🌐 Decentralized Cluster Deployment](#-decentralized-cluster-deployment)
-  - [🔌 Pairing With Third-party Services](#-pairing-with-third-party-services)
 - [🗺️ Roadmap](#%EF%B8%8F-roadmap)
 - [📄 License](#-license)
 
@@ -729,36 +728,6 @@ Cluster data sync relies entirely on **GORM callbacks + HTTP active push**:
 | Long offline node recovers | ❌ | DBA runs `mysqldump` to repair |
 
 If a freshly deployed cluster shows a blank page, see [#97](https://github.com/Leon-PanPan/one-api-pro/issues/97).
-
-### 🔌 Pairing With Third-party Services
-
-> PRs to add more examples welcome.
-
-#### 💬 ChatGPT Next Web
-
-Homepage: https://github.com/Yidadaa/ChatGPT-Next-Web
-
-```bash
-docker run --name chat-next-web -d -p 3001:3000 yidadaa/chatgpt-next-web
-```
-
-Adjust the port, then configure the API base URL (e.g. `https://openai.justsong.cn/`) and key in the app.
-
-#### 💬 ChatGPT Web
-
-Homepage: https://github.com/Chanzhaoyu/chatgpt-web
-
-```bash
-docker run --name chatgpt-web -d -p 3002:3002 -e OPENAI_API_BASE_URL=https://openai.justsong.cn -e OPENAI_API_KEY=sk-xxx chenzhaoyu94/chatgpt-web
-```
-
-Adjust the port, `OPENAI_API_BASE_URL`, and `OPENAI_API_KEY`.
-
-#### 🤖 QChatGPT — QQ Bot
-
-Homepage: https://github.com/RockChinQ/QChatGPT
-
-After deploying per its [docs](https://qchatgpt.rockchin.top), set `requester.openai-chat-completions.base-url` to your One Api Pro instance URL, add your API key to `keys.openai`, and set `model` to the desired model. Use the `!model` command at runtime to view or switch available models.
 
 ---
 

@@ -45,9 +45,7 @@
   - [🔨 手动部署](#-手动部署)
   - [🏢 多机部署](#-多机部署)
   - [🌐 集群部署（去中心化多活）](#-集群部署去中心化多活)
-  - [🔌 部署第三方服务配合 One Api Pro 使用](#-部署第三方服务配合-one-api-pro-使用)
 - [🗺️ 开发计划](#%EF%B8%8F-开发计划)
-- [相关项目](#相关项目)
 - [License](#license)
 
 ---
@@ -744,34 +742,6 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 
 如果部署后访问出现空白页面，详见 [#97](https://github.com/Leon-PanPan/one-api-pro/issues/97)。
 
-### 🔌 部署第三方服务配合 One Api Pro 使用
-> 欢迎 PR 添加更多示例。
-
-#### 💬 ChatGPT Next Web
-项目主页：https://github.com/Yidadaa/ChatGPT-Next-Web
-
-```bash
-docker run --name chat-next-web -d -p 3001:3000 yidadaa/chatgpt-next-web
-```
-
-注意修改端口号，之后在页面上设置接口地址（例如：https://openai.justsong.cn/ ）和 API Key 即可。
-
-#### 💬 ChatGPT Web
-项目主页：https://github.com/Chanzhaoyu/chatgpt-web
-
-```bash
-docker run --name chatgpt-web -d -p 3002:3002 -e OPENAI_API_BASE_URL=https://openai.justsong.cn -e OPENAI_API_KEY=sk-xxx chenzhaoyu94/chatgpt-web
-```
-
-注意修改端口号、`OPENAI_API_BASE_URL` 和 `OPENAI_API_KEY`。
-
-#### 🤖 QChatGPT - QQ 机器人
-项目主页：https://github.com/RockChinQ/QChatGPT
-
-根据[文档](https://qchatgpt.rockchin.top)完成部署后，在 `data/provider.json`设置`requester.openai-chat-completions.base-url`为 One Api Pro 实例地址，并填写 API Key 到 `keys.openai` 组中，设置 `model` 为要使用的模型名称。
-
-运行期间可以通过`!model`命令查看、切换可用模型。
-
 ---
 
 ## 🗺️ 开发计划
@@ -808,12 +778,6 @@ docker run --name chatgpt-web -d -p 3002:3002 -e OPENAI_API_BASE_URL=https://ope
 > 💡 欢迎提交 PR 或 Issue 参与共建，详见 [Issues](https://github.com/Leon-PanPan/one-api-pro/issues)。
 
 ---
-
-## 相关项目
-* [one-api](https://github.com/songquanpeng/one-api) — 本项目上游项目，感谢 JustSong
-* [FastGPT](https://github.com/labring/FastGPT) — 基于 LLM 的知识库问答系统
-* [ChatGPT Next Web](https://github.com/Yidadaa/ChatGPT-Next-Web) — 跨平台 ChatGPT 应用
-* [CherryStudio](https://github.com/CherryHQ/cherry-studio) — 全平台 AI 客户端，多服务商集成
 
 ## License
 
