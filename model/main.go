@@ -12,9 +12,9 @@ import (
 	"github.com/Leon-PanPan/one-api-pro/common/helper"
 	appLogger "github.com/Leon-PanPan/one-api-pro/common/logger"
 	"github.com/Leon-PanPan/one-api-pro/common/random"
+	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 )
@@ -127,7 +127,7 @@ func newGormLogger() gormlogger.Interface {
 func openSQLite() (*gorm.DB, error) {
 	appLogger.SysLog("SQL_DSN not set, using SQLite as database")
 	common.UsingSQLite = true
-	dsn := fmt.Sprintf("%s?_busy_timeout=%d", common.SQLitePath, common.SQLiteBusyTimeout)
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(%d)", common.SQLitePath, common.SQLiteBusyTimeout)
 	return gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		PrepareStmt: true, // precompile SQL
 		Logger: newGormLogger(),

@@ -1,0 +1,74 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.0.0). Leave empty to use the pushed tag."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build frontend
+        run: |
+          cd web
+          sh build.sh
+          cd ..
+
+      - name: Build binaries
+        env:
+          VERSION: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          LDFLAGS="-s -w -X github.com/Leon-PanPan/one-api-pro/common.Version=${VERSION}"
+          mkdir -p dist
+          CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-linux-amd64 .
+          CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-linux-arm64 .
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-windows-amd64.exe .
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-amd64 .
+          CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-arm64 .
+
+      - name: Package
+        run: |
+          cd dist
+          tar -czf one-api-pro-linux-amd64.tar.gz one-api-pro-linux-amd64
+          tar -czf one-api-pro-linux-arm64.tar.gz one-api-pro-linux-arm64
+          tar -czf one-api-pro-darwin-amd64.tar.gz one-api-pro-darwin-amd64
+          tar -czf one-api-pro-darwin-arm64.tar.gz one-api-pro-darwin-arm64
+          zip one-api-pro-windows-amd64.zip one-api-pro-windows-amd64.exe
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            dist/one-api-pro-linux-amd64.tar.gz
+            dist/one-api-pro-linux-arm64.tar.gz
+            dist/one-api-pro-darwin-amd64.tar.gz
+            dist/one-api-pro-darwin-arm64.tar.gz
+            dist/one-api-pro-windows-amd64.zip
+          generate_release_notes: true
