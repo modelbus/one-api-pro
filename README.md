@@ -77,7 +77,31 @@ cd ..
 go build -ldflags "-s -w" -o one-api-pro
 ```
 
-### 4. 启动
+### 4.（可选）一键打包多平台
+
+使用根目录的 `release.sh` 脚本，可一键完成依赖下载、前端构建、多平台交叉编译：
+
+```bash
+./release.sh                          # 使用 VERSION 文件作为版本号
+./release.sh v0.1.0                   # 指定版本号
+./release.sh v0.1.0 --skip-frontend   # 跳过前端构建（复用已有 web/build）
+```
+
+> 前置依赖：`go`、`node`、`npm`。版本号来自根目录 `VERSION` 文件（自动兼容有无 `v` 前缀）。
+
+打包产物为**静态编译的裸可执行文件**（无需解压，直接运行），输出到 `dist/` 目录：
+
+```
+dist/one-api-pro-linux-amd64
+dist/one-api-pro-linux-arm64
+dist/one-api-pro-windows-amd64.exe
+dist/one-api-pro-darwin-amd64
+dist/one-api-pro-darwin-arm64
+```
+
+> 其中 `linux-*` 为静态链接，CentOS / Ubuntu 通用。GitHub Releases 由 `.github/workflows/release.yml` 在推送 `v*` tag 时自动构建发布，与本地 `release.sh` 输出逻辑一致。
+
+### 5. 启动
 
 ```bash
 ./one-api-pro --port 3000 --log-dir ./logs
@@ -259,7 +283,7 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
     + `GLOBAL_API_RATE_LIMIT`：全局 API 速率限制（除中继请求外），单 ip 三分钟内的最大请求数，默认为 `180`。
     + `GLOBAL_WEB_RATE_LIMIT`：全局 Web 速率限制，单 ip 三分钟内的最大请求数，默认为 `60`。
 15. 编码器缓存设置：
-    + `TIKTOKEN_CACHE_DIR`：默认程序启动时会联网下载一些通用的词元的编码，如：`gpt-3.5-turbo`，在一些网络环境不稳定，或者离线情况，可能会导致启动有问题，可以配置此目录缓存数据，可迁移到离线环境。
+    + `TIKTOKEN_CACHE_DIR`：程序启动时会联网下载通用模型的词元编码（如 `gpt-3.5-turbo`、`gpt-4`、`gpt-4o`）。若网络受限或离线，下载超时（约 30 秒）后会自动降级为近似 token 计数（约 `0.38 × 字符数`），服务仍可正常启动。如需精确计费，可在联网环境预先下载编码文件至该目录，再迁移到离线环境。
     + `DATA_GYM_CACHE_DIR`：目前该配置作用与 `TIKTOKEN_CACHE_DIR` 一致，但是优先级没有它高。
 16. `RELAY_TIMEOUT`：中继超时设置，单位为秒，默认不设置超时时间。
 17. `RELAY_PROXY`：设置后使用该代理来请求 API。
@@ -318,7 +342,14 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
      ```
    + 配置优先级：命令行参数 > 系统环境变量 > `--env` 指定的配置文件 > 默认值
 4. `--version`: 打印系统版本号并退出。
+   + 例子：`./one-api-pro --version`
+   + 版本号来源（优先级从高到低）：
+     1. 当前工作目录或可执行文件同目录下的 `VERSION` 文件（自动兼容有无 `v` 前缀，如 `0.0.2` 或 `v0.0.2`）；
+     2. 编译时通过 `-ldflags "-X .../common.Version=..."` 注入的版本号（`release.sh` 与 CI 均会自动注入）；
+     3. 源码中的默认值 `common/constants.go`。
+   + 因此只需维护根目录 `VERSION` 文件一处，即可让 `--version`、启动日志、`/api/status` 接口与前端仪表盘展示的版本号保持一致。
 5. `--help`: 查看命令的使用帮助和参数说明。
+   + 例子：`./one-api-pro --help`
 
 ---
 
@@ -338,24 +369,48 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 ## 📦 部署
 
 ### 🔨 手动部署
-1. 从 [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) 下载可执行文件或者从源码编译：
-   ```shell
-   git clone https://github.com/Leon-PanPan/one-api-pro.git
 
-   # 构建前端（Vue 3 管理后台，按 web/THEMES 依次构建）
-   cd one-api-pro/web
-   sh build.sh
+#### 1. 获取可执行文件
 
-   # 构建后端（注意：必须在构建前端之后执行，以便嵌入最新前端产物）
-   cd ..
-   go build -ldflags "-s -w" -o one-api-pro
-   ```
-2. 运行：
-   ```shell
-   chmod u+x one-api-pro
-   ./one-api-pro --port 3000 --log-dir ./logs
-   ```
-3. 访问 [http://localhost:3000/](http://localhost:3000/) 并登录。初始账号用户名为 `root`，密码为 `123456`。
+任选以下方式之一：
+
+**方式一：下载预编译版本（推荐）**
+
+从 [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) 下载对应平台的裸可执行文件（Linux / macOS / Windows），无需解压即可直接运行。
+
+**方式二：使用 release.sh 一键打包**
+
+```shell
+git clone https://github.com/Leon-PanPan/one-api-pro.git
+cd one-api-pro
+./release.sh            # 多平台打包，产物输出到 dist/ 目录
+```
+
+**方式三：从源码编译**
+
+```shell
+git clone https://github.com/Leon-PanPan/one-api-pro.git
+cd one-api-pro
+
+# 构建前端（Vue 3 管理后台，按 web/THEMES 依次构建）
+cd web
+sh build.sh
+
+# 构建后端（注意：必须在构建前端之后执行，以便嵌入最新前端产物）
+cd ..
+go build -ldflags "-s -w" -o one-api-pro
+```
+
+#### 2. 运行
+
+```shell
+chmod u+x one-api-pro
+./one-api-pro --port 3000 --log-dir ./logs
+```
+
+#### 3. 访问
+
+访问 [http://localhost:3000/](http://localhost:3000/) 并登录。初始账号用户名为 `root`，密码为 `123456`。
 
 ### 🏢 多机部署
 1. 所有服务器 `SESSION_SECRET` 设置一样的值。

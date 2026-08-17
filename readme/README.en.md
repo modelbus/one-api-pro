@@ -77,7 +77,31 @@ cd ..
 go build -ldflags "-s -w" -o one-api-pro
 ```
 
-### 4. Run
+### 4. (Optional) One-click multi-platform packaging
+
+Use the `release.sh` script in the repo root to download dependencies, build the frontend and cross-compile all platforms in one step:
+
+```bash
+./release.sh                          # version from the VERSION file
+./release.sh v0.1.0                   # specify a version
+./release.sh v0.1.0 --skip-frontend   # skip the frontend build (reuse web/build)
+```
+
+> Prerequisites: `go`, `node`, `npm`. The version is read from the root `VERSION` file (with or without the `v` prefix).
+
+The outputs are **statically linked bare executables** (no extraction needed, run directly) written to `dist/`:
+
+```
+dist/one-api-pro-linux-amd64
+dist/one-api-pro-linux-arm64
+dist/one-api-pro-windows-amd64.exe
+dist/one-api-pro-darwin-amd64
+dist/one-api-pro-darwin-arm64
+```
+
+> The `linux-*` binaries are statically linked and work on both CentOS and Ubuntu. GitHub Releases are built and published automatically by `.github/workflows/release.yml` when a `v*` tag is pushed, mirroring the local `release.sh` output.
+
+### 5. Run
 
 ```bash
 ./one-api-pro --port 3000 --log-dir ./logs
@@ -256,7 +280,7 @@ You can further customize it through environment variables or command-line argum
     - `GLOBAL_API_RATE_LIMIT` — global API rate limit (excluding relay requests), per IP, per 3 minutes. Default `180`.
     - `GLOBAL_WEB_RATE_LIMIT` — global Web rate limit, per IP, per 3 minutes. Default `60`.
 15. Tokenizer caches:
-    - `TIKTOKEN_CACHE_DIR` — caches tiktoken encodings (e.g. `gpt-3.5-turbo`) locally; useful in restricted or offline networks.
+    - `TIKTOKEN_CACHE_DIR` — caches tiktoken encodings (e.g. `gpt-3.5-turbo`, `gpt-4`, `gpt-4o`) locally. On startup the encodings are downloaded on demand; if the network is restricted or offline, the download times out (about 30 seconds) and the system automatically falls back to approximate token counting (about `0.38 × character count`), so the service still starts normally. For precise billing, pre-download the encodings into this directory on a networked machine, then move them into the offline environment.
     - `DATA_GYM_CACHE_DIR` — same purpose, lower priority than `TIKTOKEN_CACHE_DIR`.
 16. `RELAY_TIMEOUT` — relay request timeout in seconds. No timeout by default.
 17. `RELAY_PROXY` — proxy URL for upstream API requests.
@@ -315,7 +339,14 @@ You can further customize it through environment variables or command-line argum
      ```
    - Precedence: CLI args > system env vars > `--env` file > defaults
 4. `--version` — print version and exit.
+   - Example: `./one-api-pro --version`
+   - Version source (highest priority first):
+     1. The `VERSION` file in the current working directory or next to the executable (auto-detects the `v` prefix, e.g. `0.0.2` or `v0.0.2`);
+     2. The version injected at build time via `-ldflags "-X .../common.Version=..."` (both `release.sh` and CI do this automatically);
+     3. The hard-coded default in `common/constants.go`.
+   - Therefore you only need to maintain the root `VERSION` file to keep `--version`, the startup log, the `/api/status` endpoint and the dashboard badge consistent.
 5. `--help` — print command-line help.
+   - Example: `./one-api-pro --help`
 
 ---
 
@@ -336,24 +367,47 @@ The full API reference lives at [docs/API.md](../docs/API.md), covering:
 
 ### 🔨 Manual Deployment
 
-1. Download the executable from [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) or build from source:
-   ```shell
-   git clone https://github.com/Leon-PanPan/one-api-pro.git
+#### 1. Get the executable
 
-   # Build the Vue 3 admin console (per web/THEMES)
-   cd one-api-pro/web
-   sh build.sh
+Choose one of the following:
 
-   # Build the backend (must run AFTER the frontend build, so the latest assets are embedded)
-   cd ..
-   go build -ldflags "-s -w" -o one-api-pro
-   ```
-2. Run:
-   ```shell
-   chmod u+x one-api-pro
-   ./one-api-pro --port 3000 --log-dir ./logs
-   ```
-3. Open [http://localhost:3000/](http://localhost:3000/) and log in. The default account is `root` / `123456`.
+**Option 1: Download a prebuilt binary (recommended)**
+
+Download the bare executable for your platform (Linux / macOS / Windows) from [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) — no extraction needed, run it directly.
+
+**Option 2: One-click packaging with release.sh**
+
+```shell
+git clone https://github.com/Leon-PanPan/one-api-pro.git
+cd one-api-pro
+./release.sh            # multi-platform packaging, outputs to dist/
+```
+
+**Option 3: Build from source**
+
+```shell
+git clone https://github.com/Leon-PanPan/one-api-pro.git
+cd one-api-pro
+
+# Build the Vue 3 admin console (per web/THEMES)
+cd web
+sh build.sh
+
+# Build the backend (must run AFTER the frontend build, so the latest assets are embedded)
+cd ..
+go build -ldflags "-s -w" -o one-api-pro
+```
+
+#### 2. Run
+
+```shell
+chmod u+x one-api-pro
+./one-api-pro --port 3000 --log-dir ./logs
+```
+
+#### 3. Access
+
+Open [http://localhost:3000/](http://localhost:3000/) and log in. The default account is `root` / `123456`.
 
 ### 🏢 Multi-host Deployment
 
