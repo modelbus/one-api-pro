@@ -2,10 +2,10 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
-	"github.com/Leon-PanPan/one-api-pro/model"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/model"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func GetSubscription(c *gin.Context) {

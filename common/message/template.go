@@ -3,7 +3,7 @@ package message
 import (
 	"fmt"
 
-	"github.com/Leon-PanPan/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/config"
 )
 
 // EmailTemplate 生成美观的 HTML 邮件内容

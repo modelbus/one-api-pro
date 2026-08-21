@@ -1,6 +1,6 @@
 package xai
 
-import oa "github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
+import oa "github.com/modelbus/one-api-pro/relay/adaptor/openai"
 
 type Adaptor struct {
 	*oa.Adaptor

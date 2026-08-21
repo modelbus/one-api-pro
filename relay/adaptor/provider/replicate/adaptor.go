@@ -10,12 +10,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
-	"github.com/Leon-PanPan/one-api-pro/relay/relaymode"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/relaymode"
 )
 
 type Adaptor struct {

@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/cluster"
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/cluster"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 type RPMTracker struct {

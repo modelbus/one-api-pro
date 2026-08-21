@@ -10,12 +10,12 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
-	"github.com/Leon-PanPan/one-api-pro/common/i18n"
-	"github.com/Leon-PanPan/one-api-pro/common/random"
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/common/i18n"
+	"github.com/modelbus/one-api-pro/common/random"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 type LoginRequest struct {

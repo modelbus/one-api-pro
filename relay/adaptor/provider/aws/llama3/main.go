@@ -9,20 +9,20 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
-	"github.com/Leon-PanPan/one-api-pro/common/random"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/common/random"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/provider/aws/utils"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/relay/adaptor/provider/aws/utils"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 // Only support llama-3-8b and llama-3-70b instruction models

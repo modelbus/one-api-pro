@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func ResponseText2Usage(responseText string, modelName string, promptTokens int) *model.Usage {

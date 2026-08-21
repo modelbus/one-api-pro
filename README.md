@@ -17,7 +17,7 @@
   <a href="https://arco.design/vue"><img src="https://img.shields.io/badge/ui-Arco%20Design-165DFF.svg" alt="ui"></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/build-Vite-646CFF.svg?logo=vite&logoColor=white" alt="build"></a>
   <a href="https://gorm.io/"><img src="https://img.shields.io/badge/database-MySQL%20%7C%20PostgreSQL%20%7C%20SQLite-4479A1.svg?logo=mysql&logoColor=white" alt="database"></a>
-  <a href="https://github.com/Leon-PanPan/one-api-pro"><img src="https://img.shields.io/badge/cluster-decentralized-FF6B6B.svg" alt="cluster"></a>
+  <a href="https://github.com/modelbus/one-api-pro"><img src="https://img.shields.io/badge/cluster-decentralized-FF6B6B.svg" alt="cluster"></a>
 </p>
 
 <p align="center">
@@ -54,10 +54,10 @@
 
 ### 1. 获取可执行文件
 
-从 [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) 下载预编译版本，或从源码编译：
+从 [GitHub Releases](https://github.com/modelbus/one-api-pro/releases/latest) 下载预编译版本，或从源码编译：
 
 ```bash
-git clone https://github.com/Leon-PanPan/one-api-pro.git
+git clone https://github.com/modelbus/one-api-pro.git
 cd one-api-pro
 ```
 
@@ -376,12 +376,12 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 **方式一：下载预编译版本（推荐）**
 
-从 [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) 下载对应平台的裸可执行文件（Linux / macOS / Windows），无需解压即可直接运行。
+从 [GitHub Releases](https://github.com/modelbus/one-api-pro/releases/latest) 下载对应平台的裸可执行文件（Linux / macOS / Windows），无需解压即可直接运行。
 
 **方式二：使用 release.sh 一键打包**
 
 ```shell
-git clone https://github.com/Leon-PanPan/one-api-pro.git
+git clone https://github.com/modelbus/one-api-pro.git
 cd one-api-pro
 ./release.sh            # 多平台打包，产物输出到 dist/ 目录
 ```
@@ -389,7 +389,7 @@ cd one-api-pro
 **方式三：从源码编译**
 
 ```shell
-git clone https://github.com/Leon-PanPan/one-api-pro.git
+git clone https://github.com/modelbus/one-api-pro.git
 cd one-api-pro
 
 # 构建前端（Vue 3 管理后台，按 web/THEMES 依次构建）
@@ -795,7 +795,7 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 | 新节点加入集群 | ❌ | DBA 手动 `mysqldump` 初始化 |
 | 节点长期离线后恢复 | ❌ | DBA 手动 `mysqldump` 补齐 |
 
-如果部署后访问出现空白页面，详见 [#97](https://github.com/Leon-PanPan/one-api-pro/issues/97)。
+如果部署后访问出现空白页面，详见 [#97](https://github.com/modelbus/one-api-pro/issues/97)。
 
 ---
 
@@ -830,7 +830,7 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 - [ ] 用量告警与通知渠道扩展（钉钉 / 飞书 / 企业微信等）
 - [ ] 更多模型平台的持续接入
 
-> 💡 欢迎提交 PR 或 Issue 参与共建，详见 [Issues](https://github.com/Leon-PanPan/one-api-pro/issues)。
+> 💡 欢迎提交 PR 或 Issue 参与共建，详见 [Issues](https://github.com/modelbus/one-api-pro/issues)。
 
 ---
 

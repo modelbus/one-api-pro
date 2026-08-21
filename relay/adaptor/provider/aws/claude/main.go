@@ -14,14 +14,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/pkg/errors"
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/anthropic"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/provider/aws/utils"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/relay/adaptor/anthropic"
+	"github.com/modelbus/one-api-pro/relay/adaptor/provider/aws/utils"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 // https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html

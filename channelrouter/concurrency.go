@@ -4,9 +4,9 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/Leon-PanPan/one-api-pro/cluster"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/cluster"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 type ConcurrencyTracker struct {

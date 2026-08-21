@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/helper"
 	"gorm.io/gorm"
 )
 

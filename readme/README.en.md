@@ -17,7 +17,7 @@
   <a href="https://arco.design/vue"><img src="https://img.shields.io/badge/ui-Arco%20Design-165DFF.svg" alt="ui"></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/build-Vite-646CFF.svg?logo=vite&logoColor=white" alt="build"></a>
   <a href="https://gorm.io/"><img src="https://img.shields.io/badge/database-MySQL%20%7C%20PostgreSQL%20%7C%20SQLite-4479A1.svg?logo=mysql&logoColor=white" alt="database"></a>
-  <a href="https://github.com/Leon-PanPan/one-api-pro"><img src="https://img.shields.io/badge/cluster-decentralized-FF6B6B.svg" alt="cluster"></a>
+  <a href="https://github.com/modelbus/one-api-pro"><img src="https://img.shields.io/badge/cluster-decentralized-FF6B6B.svg" alt="cluster"></a>
 </p>
 
 <p align="center">
@@ -54,10 +54,10 @@
 
 ### 1. Get the binary
 
-Either download the prebuilt binary from the [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) page, or build from source:
+Either download the prebuilt binary from the [GitHub Releases](https://github.com/modelbus/one-api-pro/releases/latest) page, or build from source:
 
 ```bash
-git clone https://github.com/Leon-PanPan/one-api-pro.git
+git clone https://github.com/modelbus/one-api-pro.git
 cd one-api-pro
 ```
 
@@ -373,12 +373,12 @@ Choose one of the following:
 
 **Option 1: Download a prebuilt binary (recommended)**
 
-Download the bare executable for your platform (Linux / macOS / Windows) from [GitHub Releases](https://github.com/Leon-PanPan/one-api-pro/releases/latest) — no extraction needed, run it directly.
+Download the bare executable for your platform (Linux / macOS / Windows) from [GitHub Releases](https://github.com/modelbus/one-api-pro/releases/latest) — no extraction needed, run it directly.
 
 **Option 2: One-click packaging with release.sh**
 
 ```shell
-git clone https://github.com/Leon-PanPan/one-api-pro.git
+git clone https://github.com/modelbus/one-api-pro.git
 cd one-api-pro
 ./release.sh            # multi-platform packaging, outputs to dist/
 ```
@@ -386,7 +386,7 @@ cd one-api-pro
 **Option 3: Build from source**
 
 ```shell
-git clone https://github.com/Leon-PanPan/one-api-pro.git
+git clone https://github.com/modelbus/one-api-pro.git
 cd one-api-pro
 
 # Build the Vue 3 admin console (per web/THEMES)
@@ -781,7 +781,7 @@ Cluster data sync relies entirely on **GORM callbacks + HTTP active push**:
 | New node joins cluster | ❌ | DBA runs `mysqldump` to seed |
 | Long offline node recovers | ❌ | DBA runs `mysqldump` to repair |
 
-If a freshly deployed cluster shows a blank page, see [#97](https://github.com/Leon-PanPan/one-api-pro/issues/97).
+If a freshly deployed cluster shows a blank page, see [#97](https://github.com/modelbus/one-api-pro/issues/97).
 
 ---
 
@@ -816,7 +816,7 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/L
 - [ ] Alerting & notification channels (DingTalk / Feishu / WeCom).
 - [ ] More model providers.
 
-> 💡 PRs and issues are welcome — see [issues](https://github.com/Leon-PanPan/one-api-pro/issues).
+> 💡 PRs and issues are welcome — see [issues](https://github.com/modelbus/one-api-pro/issues).
 
 ---
 

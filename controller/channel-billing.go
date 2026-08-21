@@ -9,17 +9,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/common/client"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/model"
-	"github.com/Leon-PanPan/one-api-pro/monitor"
-	"github.com/Leon-PanPan/one-api-pro/relay/registry"
+	"github.com/modelbus/one-api-pro/common/client"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/monitor"
+	"github.com/modelbus/one-api-pro/relay/registry"
 
 	"github.com/gin-gonic/gin"
 )
 
-// https://github.com/Leon-PanPan/one-api-pro/issues/79
+// https://github.com/modelbus/one-api-pro/issues/79
 
 type OpenAISubscriptionResponse struct {
 	Object             string  `json:"object"`

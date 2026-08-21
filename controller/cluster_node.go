@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/cluster"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	cluster_model "github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/cluster"
+	"github.com/modelbus/one-api-pro/common/helper"
+	cluster_model "github.com/modelbus/one-api-pro/model"
 )
 
 func GetAllClusterNodes(c *gin.Context) {

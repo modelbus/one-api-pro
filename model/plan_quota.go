@@ -3,8 +3,8 @@ package model
 import (
 	"math"
 
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/logger"
 )
 
 // QuotaPoolCapacity defines the total capacity of a weighted quota pool.

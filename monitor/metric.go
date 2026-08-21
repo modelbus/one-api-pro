@@ -1,7 +1,7 @@
 package monitor
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/config"
 )
 
 var store = make(map[int][]bool)

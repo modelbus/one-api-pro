@@ -3,9 +3,9 @@ package alibailian
 import (
 	"fmt"
 
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/relaymode"
-	oa "github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/relaymode"
+	oa "github.com/modelbus/one-api-pro/relay/adaptor/openai"
 )
 
 type Adaptor struct {

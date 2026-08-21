@@ -3,7 +3,7 @@ package image
 import (
 	"bytes"
 	"encoding/base64"
-	"github.com/Leon-PanPan/one-api-pro/common/client"
+	"github.com/modelbus/one-api-pro/common/client"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"

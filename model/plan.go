@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/helper"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

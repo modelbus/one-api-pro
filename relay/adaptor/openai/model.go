@@ -1,6 +1,6 @@
 package openai
 
-import "github.com/Leon-PanPan/one-api-pro/relay/schema"
+import "github.com/modelbus/one-api-pro/relay/schema"
 
 type TextContent struct {
 	Type string `json:"type,omitempty"`

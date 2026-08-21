@@ -1,6 +1,6 @@
 package aws
 
-import "github.com/Leon-PanPan/one-api-pro/relay/adaptor/anthropic"
+import "github.com/modelbus/one-api-pro/relay/adaptor/anthropic"
 
 // Request is the request to AWS Claude
 //

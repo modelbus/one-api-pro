@@ -11,16 +11,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/model"
-	"github.com/Leon-PanPan/one-api-pro/relay"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	billingratio "github.com/Leon-PanPan/one-api-pro/relay/billing/ratio"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/relay"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	billingratio "github.com/modelbus/one-api-pro/relay/billing/ratio"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func getImageRequest(c *gin.Context, _ int) (*relaymodel.ImageRequest, error) {

@@ -8,11 +8,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	channelhelper "github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	channelhelper "github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/schema"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 var _ adaptor.Adaptor = new(Adaptor)

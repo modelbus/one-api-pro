@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
 )
 
 type CooldownEntry struct {

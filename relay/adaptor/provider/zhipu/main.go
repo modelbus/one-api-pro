@@ -3,7 +3,7 @@ package zhipu
 import (
 	"bufio"
 	"encoding/json"
-	"github.com/Leon-PanPan/one-api-pro/common/render"
+	"github.com/modelbus/one-api-pro/common/render"
 	"io"
 	"net/http"
 	"strings"
@@ -12,12 +12,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	"github.com/Leon-PanPan/one-api-pro/relay/constant"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/constant"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 // https://open.bigmodel.cn/doc/api#chatglm_std

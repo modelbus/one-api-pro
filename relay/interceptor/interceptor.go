@@ -2,9 +2,9 @@ package interceptor
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/relay/errcode"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/relay/errcode"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 type ErrorContext struct {

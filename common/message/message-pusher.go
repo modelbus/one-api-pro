@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/config"
 	"net/http"
 )
 

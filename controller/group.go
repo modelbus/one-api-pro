@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 func GetGroups(c *gin.Context) {

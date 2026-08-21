@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/config"
 )
 
 func TestCalculateTokenQuota(t *testing.T) {

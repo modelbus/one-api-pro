@@ -7,21 +7,21 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/relay/constant/role"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/relay/constant/role"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	dbmodel "github.com/Leon-PanPan/one-api-pro/model"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	billingratio "github.com/Leon-PanPan/one-api-pro/relay/billing/ratio"
-	"github.com/Leon-PanPan/one-api-pro/relay/handler/validator"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
-	"github.com/Leon-PanPan/one-api-pro/relay/relaymode"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
+	dbmodel "github.com/modelbus/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	billingratio "github.com/modelbus/one-api-pro/relay/billing/ratio"
+	"github.com/modelbus/one-api-pro/relay/handler/validator"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/relaymode"
 )
 
 func getAndValidateTextRequest(c *gin.Context, relayMode int) (*relaymodel.GeneralOpenAIRequest, error) {

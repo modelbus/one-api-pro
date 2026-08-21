@@ -5,21 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Leon-PanPan/one-api-pro/common/render"
+	"github.com/modelbus/one-api-pro/common/render"
 	"io"
 	"net/http"
 	"strings"
 
-	"github.com/Leon-PanPan/one-api-pro/common/helper"
-	"github.com/Leon-PanPan/one-api-pro/common/random"
+	"github.com/modelbus/one-api-pro/common/helper"
+	"github.com/modelbus/one-api-pro/common/random"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/image"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	"github.com/Leon-PanPan/one-api-pro/relay/constant"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/image"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/constant"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func ConvertRequest(request model.GeneralOpenAIRequest) *ChatRequest {

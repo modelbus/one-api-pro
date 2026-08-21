@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Leon-PanPan/one-api-pro/common/i18n"
+	"github.com/modelbus/one-api-pro/common/i18n"
 )
 
 func Language() gin.HandlerFunc {

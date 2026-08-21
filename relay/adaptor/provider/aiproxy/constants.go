@@ -1,6 +1,6 @@
 package aiproxy
 
-import "github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
+import "github.com/modelbus/one-api-pro/relay/adaptor/openai"
 
 var ModelList = []string{""}
 

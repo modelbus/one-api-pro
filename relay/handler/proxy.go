@@ -6,11 +6,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/relay"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/relay"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 // RelayProxyHelper is a helper function to proxy the request to the upstream service

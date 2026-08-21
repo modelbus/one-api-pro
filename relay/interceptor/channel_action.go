@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Leon-PanPan/one-api-pro/channelrouter"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	dbmodel "github.com/Leon-PanPan/one-api-pro/model"
-	"github.com/Leon-PanPan/one-api-pro/monitor"
-	"github.com/Leon-PanPan/one-api-pro/relay/errcode"
+	"github.com/modelbus/one-api-pro/channelrouter"
+	"github.com/modelbus/one-api-pro/common/config"
+	dbmodel "github.com/modelbus/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/monitor"
+	"github.com/modelbus/one-api-pro/relay/errcode"
 )
 
 type ChannelActionHandler struct {

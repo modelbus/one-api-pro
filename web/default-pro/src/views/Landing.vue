@@ -15,7 +15,7 @@
           <a href="http://one-api.pro" target="_blank">文档</a>
         </div>
         <div class="nav-actions">
-          <a-button type="text" size="small" href="https://github.com/Leon-PanPan/one-api-pro" target="_blank" class="nav-github-btn">
+          <a-button type="text" size="small" href="https://github.com/modelbus/one-api-pro" target="_blank" class="nav-github-btn">
             <template #icon><icon-github /></template>
             GitHub
           </a-button>
@@ -41,7 +41,7 @@
       <div class="hero-inner">
         <div class="hero-text">
           <div class="hero-badge">
-            <a href="https://github.com/Leon-PanPan/one-api-pro" target="_blank" style="color:#165dff;text-decoration:none;">
+            <a href="https://github.com/modelbus/one-api-pro" target="_blank" style="color:#165dff;text-decoration:none;">
               <icon-github style="vertical-align:-2px" /> GitHub
             </a>
           </div>
@@ -57,11 +57,11 @@
               </a-button>
               <a-button size="large" shape="round" @click="scrollTo('features')">查看优势</a-button>
             </template>
-            <a-button size="large" shape="round" href="https://github.com/Leon-PanPan/one-api-pro" target="_blank" class="btn-gh-dark">
+            <a-button size="large" shape="round" href="https://github.com/modelbus/one-api-pro" target="_blank" class="btn-gh-dark">
               <template #icon><icon-github /></template>
               GitHub
             </a-button>
-            <a-button size="large" shape="round" href="https://github.com/Leon-PanPan/one-api-pro/releases" target="_blank">
+            <a-button size="large" shape="round" href="https://github.com/modelbus/one-api-pro/releases" target="_blank">
               立即下载 <icon-down />
             </a-button>
           </div>
@@ -191,19 +191,19 @@
         <p>开源免费，支持 Linux / macOS / Windows 多平台</p>
       </div>
       <div class="download-grid">
-        <a href="https://github.com/Leon-PanPan/one-api-pro" target="_blank" class="download-card">
+        <a href="https://github.com/modelbus/one-api-pro" target="_blank" class="download-card">
           <icon-github style="font-size:36px;color:#1d2129" />
           <h3>GitHub Releases</h3>
           <p>获取最新版本</p>
           <span class="dl-link">前往下载 →</span>
         </a>
-        <a href="https://github.com/Leon-PanPan/one-api-pro" target="_blank" class="download-card">
+        <a href="https://github.com/modelbus/one-api-pro" target="_blank" class="download-card">
           <icon-code style="font-size:36px;color:#1d2129" />
           <h3>源码编译</h3>
           <p>go build -o one-api-pro</p>
           <span class="dl-link">查看文档 →</span>
         </a>
-        <a href="https://github.com/Leon-PanPan/one-api-pro#部署" target="_blank" class="download-card">
+        <a href="https://github.com/modelbus/one-api-pro#部署" target="_blank" class="download-card">
           <icon-cloud style="font-size:36px;color:#1d2129" />
           <h3>Docker 部署</h3>
           <p>docker-compose up -d</p>
@@ -233,8 +233,8 @@
         </div>
         <div class="footer-col">
           <h4>资源</h4>
-          <a href="https://github.com/Leon-PanPan/one-api-pro" target="_blank">GitHub</a>
-          <a href="https://github.com/Leon-PanPan/one-api-pro/releases" target="_blank">Releases</a>
+          <a href="https://github.com/modelbus/one-api-pro" target="_blank">GitHub</a>
+          <a href="https://github.com/modelbus/one-api-pro/releases" target="_blank">Releases</a>
         </div>
         <div class="footer-col">
           <h4>文档</h4>
@@ -244,7 +244,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        &copy; {{ new Date().getFullYear() }} One Api Pro &nbsp;|&nbsp; <a href="https://github.com/Leon-PanPan/one-api-pro" target="_blank">GitHub</a> &nbsp;|&nbsp; MIT License
+        &copy; {{ new Date().getFullYear() }} One Api Pro &nbsp;|&nbsp; <a href="https://github.com/modelbus/one-api-pro" target="_blank">GitHub</a> &nbsp;|&nbsp; MIT License
       </div>
     </footer>
   </div>

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 func makeChannel(id, status, priority int, maxConc int) *model.Channel {

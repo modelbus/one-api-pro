@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Leon-PanPan/one-api-pro/common/env"
+	"github.com/modelbus/one-api-pro/common/env"
 
 	"github.com/google/uuid"
 )

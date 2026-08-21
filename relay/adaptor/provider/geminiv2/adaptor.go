@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	oa "github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	oa "github.com/modelbus/one-api-pro/relay/adaptor/openai"
 )
 
 type Adaptor struct {

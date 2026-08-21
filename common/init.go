@@ -8,8 +8,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
 	"github.com/joho/godotenv"
 )
 
@@ -24,7 +24,7 @@ var (
 func printHelp() {
 	fmt.Println("One Api Pro " + Version + " - All in one API service for OpenAI API.")
 	fmt.Println("Copyright (C) 2026 Leon PanPan. All rights reserved.")
-	fmt.Println("GitHub: https://github.com/Leon-PanPan/one-api-pro")
+	fmt.Println("GitHub: https://github.com/modelbus/one-api-pro")
 	fmt.Println("Usage: one-api-pro [--port <port>] [--log-dir <log directory>] [--env <env file path>] [--version] [--help]")
 }
 

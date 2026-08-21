@@ -1,9 +1,9 @@
 package groq
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	"github.com/Leon-PanPan/one-api-pro/relay/registry"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/registry"
 )
 
 func init() {

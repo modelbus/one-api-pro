@@ -1,6 +1,6 @@
 package cloudflare
 
-import "github.com/Leon-PanPan/one-api-pro/relay/schema"
+import "github.com/modelbus/one-api-pro/relay/schema"
 
 type Request struct {
 	Messages    []model.Message `json:"messages,omitempty"`

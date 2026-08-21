@@ -1,6 +1,6 @@
 package vertexai
 
-import "github.com/Leon-PanPan/one-api-pro/relay/adaptor/anthropic"
+import "github.com/modelbus/one-api-pro/relay/adaptor/anthropic"
 
 type Request struct {
 	// AnthropicVersion must be "vertex-2023-10-16"

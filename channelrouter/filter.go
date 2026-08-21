@@ -3,7 +3,7 @@ package channelrouter
 import (
 	"context"
 
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 type StatusFilter struct{}

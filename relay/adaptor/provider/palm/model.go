@@ -1,7 +1,7 @@
 package palm
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 type ChatMessage struct {

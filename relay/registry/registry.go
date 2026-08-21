@@ -3,7 +3,7 @@ package registry
 import (
 	"sync"
 
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
 )
 
 type ChannelMeta struct {

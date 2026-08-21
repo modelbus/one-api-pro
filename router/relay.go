@@ -1,8 +1,8 @@
 package router
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/controller"
-	"github.com/Leon-PanPan/one-api-pro/middleware"
+	"github.com/modelbus/one-api-pro/controller"
+	"github.com/modelbus/one-api-pro/middleware"
 
 	"github.com/gin-gonic/gin"
 )

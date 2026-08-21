@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	oa "github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	oa "github.com/modelbus/one-api-pro/relay/adaptor/openai"
 )
 
 type Adaptor struct {
@@ -67,7 +67,7 @@ var ModelList = []string{
 func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) error {
 	adaptor.SetupCommonRequestHeader(c, req, meta)
 	req.Header.Set("Authorization", "Bearer "+meta.APIKey)
-	req.Header.Set("HTTP-Referer", "https://github.com/Leon-PanPan/one-api-pro")
+	req.Header.Set("HTTP-Referer", "https://github.com/modelbus/one-api-pro")
 	req.Header.Set("X-Title", "One Api Pro")
 	return nil
 }

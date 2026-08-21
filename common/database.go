@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/common/env"
+	"github.com/modelbus/one-api-pro/common/env"
 )
 
 var UsingSQLite = false

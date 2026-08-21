@@ -2,13 +2,13 @@ package aws
 
 import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/provider/aws/utils"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/adaptor/provider/aws/utils"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 var _ utils.AwsAdapter = new(Adaptor)

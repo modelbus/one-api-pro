@@ -1,4 +1,4 @@
-module github.com/Leon-PanPan/one-api-pro
+module github.com/modelbus/one-api-pro
 
 go 1.20
 

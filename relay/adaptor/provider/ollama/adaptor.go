@@ -3,14 +3,14 @@ package ollama
 import (
 	"errors"
 	"fmt"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/relaymode"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/relaymode"
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 type Adaptor struct {

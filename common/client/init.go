@@ -2,8 +2,8 @@ package client
 
 import (
 	"fmt"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
 	"net/http"
 	"net/url"
 	"time"

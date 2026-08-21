@@ -3,8 +3,8 @@ package interceptor
 import (
 	"fmt"
 
-	"github.com/Leon-PanPan/one-api-pro/relay/errcode"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/errcode"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 type ResponseMapperHandler struct{}

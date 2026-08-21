@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/i18n"
-	"github.com/Leon-PanPan/one-api-pro/common/message"
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/i18n"
+	"github.com/modelbus/one-api-pro/common/message"
+	"github.com/modelbus/one-api-pro/model"
 
 	"github.com/gin-gonic/gin"
 )

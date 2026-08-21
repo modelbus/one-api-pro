@@ -75,7 +75,7 @@ else
 fi
 
 # ---------- 交叉编译 ----------
-LDFLAGS="-s -w -X github.com/Leon-PanPan/one-api-pro/common.Version=${VERSION}"
+LDFLAGS="-s -w -X github.com/modelbus/one-api-pro/common.Version=${VERSION}"
 rm -rf dist
 mkdir -p dist
 

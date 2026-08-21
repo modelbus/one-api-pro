@@ -2,8 +2,8 @@ package adaptor
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/schema"
 	"io"
 	"net/http"
 )

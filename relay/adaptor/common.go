@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/Leon-PanPan/one-api-pro/common/client"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/common/client"
+	"github.com/modelbus/one-api-pro/relay/meta"
 	"io"
 	"net/http"
 )

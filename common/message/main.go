@@ -2,7 +2,7 @@ package message
 
 import (
 	"fmt"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/config"
 )
 
 const (

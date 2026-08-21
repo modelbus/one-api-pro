@@ -1,8 +1,8 @@
 package anthropic
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/registry"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/registry"
 )
 
 func init() {

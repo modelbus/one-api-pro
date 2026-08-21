@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/Leon-PanPan/one-api-pro/model"
-	billingratio "github.com/Leon-PanPan/one-api-pro/relay/billing/ratio"
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/model"
+	billingratio "github.com/modelbus/one-api-pro/relay/billing/ratio"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func TestPostConsumeQuotaBillingTypeRouting(t *testing.T) {

@@ -2,8 +2,8 @@ package relay
 
 import (
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/Leon-PanPan/one-api-pro/relay/channeltype"
-	"github.com/Leon-PanPan/one-api-pro/relay/registry"
+	"github.com/modelbus/one-api-pro/relay/channeltype"
+	"github.com/modelbus/one-api-pro/relay/registry"
 	"testing"
 )
 

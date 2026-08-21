@@ -9,16 +9,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	dbmodel "github.com/Leon-PanPan/one-api-pro/model"
-	"github.com/Leon-PanPan/one-api-pro/relay"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/adaptor/openai"
-	"github.com/Leon-PanPan/one-api-pro/relay/billing"
-	billingratio "github.com/Leon-PanPan/one-api-pro/relay/billing/ratio"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
+	dbmodel "github.com/modelbus/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/relay"
+	"github.com/modelbus/one-api-pro/relay/adaptor"
+	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/billing"
+	billingratio "github.com/modelbus/one-api-pro/relay/billing/ratio"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {

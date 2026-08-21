@@ -1,8 +1,8 @@
 package interceptor
 
 import (
-	"github.com/Leon-PanPan/one-api-pro/common/ctxkey"
-	"github.com/Leon-PanPan/one-api-pro/relay/errcode"
+	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/relay/errcode"
 )
 
 type RetryHandler struct{}

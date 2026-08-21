@@ -3,7 +3,7 @@ package utils
 import (
 	"net/http"
 
-	relaymodel "github.com/Leon-PanPan/one-api-pro/relay/schema"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func WrapErr(err error) *relaymodel.ErrorWithStatusCode {

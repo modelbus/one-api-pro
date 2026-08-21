@@ -245,9 +245,9 @@
               <span class="contact-value is-active">one-api.pro</span>
               <icon-launch class="contact-arrow" :size="14" />
             </a>
-            <a class="contact-item" href="https://github.com/Leon-PanPan/one-api-pro" target="_blank">
+            <a class="contact-item" href="https://github.com/modelbus/one-api-pro" target="_blank">
               <span class="contact-label">GitHub</span>
-              <span class="contact-value is-active">Leon-PanPan/one-api-pro</span>
+              <span class="contact-value is-active">modelbus/one-api-pro</span>
               <icon-launch class="contact-arrow" :size="14" />
             </a>
           </div>

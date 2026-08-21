@@ -3,10 +3,10 @@ package monitor
 import (
 	"fmt"
 
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/common/message"
-	"github.com/Leon-PanPan/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/common/message"
+	"github.com/modelbus/one-api-pro/model"
 )
 
 func notifyRootUser(subject string, content string) {

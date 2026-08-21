@@ -4,10 +4,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	claude "github.com/Leon-PanPan/one-api-pro/relay/adaptor/provider/vertexai/claude"
-	gemini "github.com/Leon-PanPan/one-api-pro/relay/adaptor/provider/vertexai/gemini"
-	"github.com/Leon-PanPan/one-api-pro/relay/meta"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
+	claude "github.com/modelbus/one-api-pro/relay/adaptor/provider/vertexai/claude"
+	gemini "github.com/modelbus/one-api-pro/relay/adaptor/provider/vertexai/gemini"
+	"github.com/modelbus/one-api-pro/relay/meta"
+	"github.com/modelbus/one-api-pro/relay/schema"
 )
 
 type VertexAIModelType int
