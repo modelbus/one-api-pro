@@ -146,7 +146,64 @@ func (channel *Channel) Insert() error {
 
 func (channel *Channel) Update() error {
 	var err error
-	err = DB.Model(channel).Updates(channel).Error
+	// Build a map of mutable fields. Only fields that are non-nil pointer
+	// values (or non-pointer) are included, so untouched columns are NOT
+	// overwritten with NULL. This fixes a regression where Update() silently
+	// dropped pointer-to-zero-value fields like *bool=false (is_fallback
+	// when toggled off) under GORM's default zero-value skip behavior.
+	updates := map[string]interface{}{}
+	if true {
+		updates["type"] = channel.Type
+		updates["name"] = channel.Name
+		updates["models"] = channel.Models
+		updates["group"] = channel.Group
+		updates["cooldown_seconds"] = channel.CooldownSeconds
+		updates["config"] = channel.Config
+		updates["last_error"] = channel.LastError
+		updates["last_error_time"] = channel.LastErrorTime
+	}
+	if channel.Weight != nil {
+		updates["weight"] = *channel.Weight
+	}
+	if channel.BaseURL != nil {
+		updates["base_url"] = *channel.BaseURL
+	}
+	if channel.Other != nil {
+		updates["other"] = *channel.Other
+	}
+	// Key is a non-pointer string. The list endpoint Omit("key") so the
+	// frontend never sees the real value; it always sends key="". Only persist
+	// it when the caller actually provided one.
+	if channel.Key != "" {
+		updates["key"] = channel.Key
+	}
+	updates["balance"] = channel.Balance
+	if channel.BalanceUpdatedTime != 0 {
+		updates["balance_updated_time"] = channel.BalanceUpdatedTime
+	}
+	if channel.ModelMapping != nil {
+		updates["model_mapping"] = *channel.ModelMapping
+	}
+	if channel.Priority != nil {
+		updates["priority"] = *channel.Priority
+	}
+	if channel.SystemPrompt != nil {
+		updates["system_prompt"] = *channel.SystemPrompt
+	}
+	if channel.MaxConcurrency != nil {
+		updates["max_concurrency"] = *channel.MaxConcurrency
+	}
+	if channel.RPM != nil {
+		updates["rpm"] = *channel.RPM
+	}
+	// New fallback fields — always send (frontend always sends them).
+	if channel.IsFallback != nil {
+		updates["is_fallback"] = *channel.IsFallback
+	}
+	if channel.FallbackPriority != nil {
+		updates["fallback_priority"] = *channel.FallbackPriority
+	}
+	err = DB.Model(channel).Updates(updates).Error
 	if err != nil {
 		return err
 	}

@@ -60,7 +60,7 @@
           <div class="col">分组</div>
           <div class="col">状态</div>
           <div class="col">响应时间</div>
-          <div class="col">类型</div>
+          <div class="col">降级渠道</div>
           <div class="col col-action">操作</div>
         </div>
 
@@ -102,9 +102,17 @@
             </div>
 
             <div class="col">
-              <a-tag v-if="c.is_fallback" color="orangered" size="small">
-                {{ $t('channel.fallbackTag') }}
-              </a-tag>
+              <div v-if="c.is_fallback" class="fallback-cell">
+                <a-tooltip :content="$t('channel.fallbackHint')">
+                  <a-tag color="orangered" size="small" class="fallback-tag">
+                    <template #icon><icon-swap :size="12" /></template>
+                    {{ $t('channel.fallbackTag') }}
+                  </a-tag>
+                </a-tooltip>
+                <span v-if="c.fallback_priority" class="fallback-priority" :title="$t('channel.fallbackPriorityHint')">
+                  P{{ c.fallback_priority }}
+                </span>
+              </div>
               <span v-else class="cell-muted">-</span>
             </div>
 
@@ -182,8 +190,9 @@
         <a-form-item field="groups" label="分组">
           <a-input v-model="form.groups" placeholder="多个分组用逗号分隔" allow-clear />
         </a-form-item>
-        <a-form-item field="key" label="密钥" required>
-          <a-input-password v-model="form.key" placeholder="API Key" />
+        <a-form-item field="key" label="密钥" :required="!isEdit">
+          <a-input-password v-model="form.key" :placeholder="isEdit ? '留空表示不修改密钥' : 'API Key'" />
+          <span v-if="isEdit" class="form-hint">留空表示不修改密钥</span>
         </a-form-item>
         <a-divider :margin="6" />
         <a-form-item field="is_fallback" :label="$t('channel.fallback')">
@@ -202,7 +211,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconApps } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconApps, IconSwap } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 
 // 渠道类型映射（对应后端 relay/registry 的 LegacyType）
@@ -605,7 +614,7 @@ onMounted(() => {
 .list-head,
 .list-row {
   display: grid;
-  grid-template-columns: 80px 140px 160px 220px 180px 110px 110px 100px 90px 260px;
+  grid-template-columns: 80px 140px 160px 220px 180px 110px 110px 100px 130px 260px;
   align-items: center;
   padding: 0 20px;
   min-width: max-content;
@@ -787,5 +796,30 @@ onMounted(() => {
   margin-left: 12px;
   font-size: 12px;
   color: var(--color-text-3);
+}
+
+/* ============ 降级渠道标识 ============ */
+.fallback-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fallback-tag {
+  font-weight: 500;
+}
+.fallback-priority {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #d25c1f;
+  background: #fff7e8;
+  border: 1px solid #ffcca8;
+  border-radius: 10px;
+  line-height: 1.4;
+  cursor: help;
 }
 </style>
