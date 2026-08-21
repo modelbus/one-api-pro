@@ -60,6 +60,7 @@
           <div class="col">分组</div>
           <div class="col">状态</div>
           <div class="col">响应时间</div>
+          <div class="col">类型</div>
           <div class="col col-action">操作</div>
         </div>
 
@@ -98,6 +99,13 @@
 
             <div class="col">
               <span class="cell-mono">{{ c.response_time ? `${c.response_time}ms` : '-' }}</span>
+            </div>
+
+            <div class="col">
+              <a-tag v-if="c.is_fallback" color="orangered" size="small">
+                {{ $t('channel.fallbackTag') }}
+              </a-tag>
+              <span v-else class="cell-muted">-</span>
             </div>
 
             <div class="col col-action">
@@ -176,6 +184,15 @@
         </a-form-item>
         <a-form-item field="key" label="密钥" required>
           <a-input-password v-model="form.key" placeholder="API Key" />
+        </a-form-item>
+        <a-divider :margin="6" />
+        <a-form-item field="is_fallback" :label="$t('channel.fallback')">
+          <a-switch v-model="form.is_fallback" />
+          <span class="form-hint">{{ $t('channel.fallbackHint') }}</span>
+        </a-form-item>
+        <a-form-item v-if="form.is_fallback" field="fallback_priority" :label="$t('channel.fallbackPriority')">
+          <a-input-number v-model="form.fallback_priority" :min="0" :step="1" />
+          <span class="form-hint">{{ $t('channel.fallbackPriorityHint') }}</span>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -260,6 +277,8 @@ const form = reactive({
   models: '',
   groups: '',
   key: '',
+  is_fallback: false,
+  fallback_priority: 0,
 })
 
 const modalTitle = ref('添加渠道')
@@ -349,6 +368,8 @@ function openCreateModal() {
   form.models = ''
   form.groups = ''
   form.key = ''
+  form.is_fallback = false
+  form.fallback_priority = 0
   modalTitle.value = '添加渠道'
   modalVisible.value = true
 }
@@ -362,6 +383,8 @@ function openEditModal(record) {
   form.models = record.models || ''
   form.groups = record.groups || ''
   form.key = record.key || ''
+  form.is_fallback = !!record.is_fallback
+  form.fallback_priority = record.fallback_priority || 0
   modalTitle.value = '编辑渠道'
   modalVisible.value = true
 }
@@ -383,6 +406,8 @@ async function handleSubmit() {
       models: form.models,
       groups: form.groups,
       key: form.key,
+      is_fallback: form.is_fallback,
+      fallback_priority: form.fallback_priority,
     }
     let res
     if (isEdit.value) {
@@ -580,7 +605,7 @@ onMounted(() => {
 .list-head,
 .list-row {
   display: grid;
-  grid-template-columns: 80px 140px 160px 220px 180px 110px 110px 100px 260px;
+  grid-template-columns: 80px 140px 160px 220px 180px 110px 110px 100px 90px 260px;
   align-items: center;
   padding: 0 20px;
   min-width: max-content;
@@ -757,5 +782,10 @@ onMounted(() => {
   font-weight: 500;
   font-size: 13px;
   color: var(--color-text-2);
+}
+.form-hint {
+  margin-left: 12px;
+  font-size: 12px;
+  color: var(--color-text-3);
 }
 </style>

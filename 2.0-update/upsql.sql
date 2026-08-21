@@ -25,6 +25,8 @@ CREATE TABLE `channels` (
   `rpm` int(11) DEFAULT 0,
   `last_error` varchar(512) DEFAULT '',
   `last_error_time` bigint DEFAULT 0,
+  `is_fallback` tinyint(1) DEFAULT 0,
+  `fallback_priority` bigint DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `idx_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

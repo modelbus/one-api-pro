@@ -43,6 +43,8 @@ type Channel struct {
 	RPM                *int    `json:"rpm" gorm:"default:0"`
 	LastError          string  `json:"last_error" gorm:"type:varchar(512);default:''"`
 	LastErrorTime      int64   `json:"last_error_time" gorm:"bigint;default:0"`
+	IsFallback         *bool   `json:"is_fallback" gorm:"default:0"`
+	FallbackPriority   *int64  `json:"fallback_priority" gorm:"bigint;default:0"`
 	UpdatedAt          int64   `json:"updated_at" gorm:"bigint;default:0"`
 }
 
@@ -207,6 +209,20 @@ func (channel *Channel) GetRPM() int {
 		return 0
 	}
 	return *channel.RPM
+}
+
+func (channel *Channel) GetIsFallback() bool {
+	if channel.IsFallback == nil {
+		return false
+	}
+	return *channel.IsFallback
+}
+
+func (channel *Channel) GetFallbackPriority() int64 {
+	if channel.FallbackPriority == nil {
+		return 0
+	}
+	return *channel.FallbackPriority
 }
 
 func UpdateChannelLastError(id int, errMsg string) {

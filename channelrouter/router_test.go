@@ -157,3 +157,119 @@ func TestMakeSessionKey(t *testing.T) {
 		t.Errorf("MakeSessionKey = %s, want 123:gpt-4", key)
 	}
 }
+
+func makeFallbackChannel(id, status, priority int, fallback bool, fallbackPriority int64) *model.Channel {
+	p := int64(priority)
+	isFb := fallback
+	fp := fallbackPriority
+	ch := &model.Channel{
+		Id:               id,
+		Status:           status,
+		Models:           "gpt-4",
+		Group:            "default",
+		Priority:         &p,
+		IsFallback:       &isFb,
+		FallbackPriority: &fp,
+	}
+	return ch
+}
+
+func TestFallbackFilter(t *testing.T) {
+	f := &FallbackFilter{}
+	candidates := []*model.Channel{
+		makeFallbackChannel(1, model.ChannelStatusEnabled, 0, false, 0),
+		makeFallbackChannel(2, model.ChannelStatusEnabled, 0, true, 10),
+		makeFallbackChannel(3, model.ChannelStatusEnabled, 0, false, 0),
+		makeFallbackChannel(4, model.ChannelStatusEnabled, 0, true, 20),
+	}
+	result := f.Filter(context.Background(), candidates, &RouteRequest{})
+	if len(result) != 2 {
+		t.Fatalf("FallbackFilter: got %d, want 2 (non-fallback channels)", len(result))
+	}
+	for _, ch := range result {
+		if ch.GetIsFallback() {
+			t.Errorf("FallbackFilter leaked fallback channel #%d", ch.Id)
+		}
+	}
+}
+
+func TestFallbackFilter_NoFallback(t *testing.T) {
+	f := &FallbackFilter{}
+	candidates := []*model.Channel{
+		makeFallbackChannel(1, model.ChannelStatusEnabled, 0, false, 0),
+		makeFallbackChannel(2, model.ChannelStatusEnabled, 0, false, 0),
+	}
+	result := f.Filter(context.Background(), candidates, &RouteRequest{})
+	if len(result) != 2 {
+		t.Errorf("FallbackFilter (no fallback): got %d, want 2", len(result))
+	}
+}
+
+func TestFallbackFilter_AllFallback(t *testing.T) {
+	f := &FallbackFilter{}
+	candidates := []*model.Channel{
+		makeFallbackChannel(1, model.ChannelStatusEnabled, 0, true, 0),
+		makeFallbackChannel(2, model.ChannelStatusEnabled, 0, true, 0),
+	}
+	result := f.Filter(context.Background(), candidates, &RouteRequest{})
+	if len(result) != 0 {
+		t.Errorf("FallbackFilter (all fallback): got %d, want 0", len(result))
+	}
+}
+
+func TestRouteExcludesFallbackChannels(t *testing.T) {
+	router := NewChannelRouter()
+	candidates := []*model.Channel{
+		makeFallbackChannel(10, model.ChannelStatusEnabled, 100, false, 0), // highest priority, normal
+		makeFallbackChannel(20, model.ChannelStatusEnabled, 100, true, 50),  // highest priority, fallback
+		makeFallbackChannel(30, model.ChannelStatusEnabled, 50, false, 0),   // lower priority, normal
+	}
+	for i := 0; i < 50; i++ {
+		ch, err := router.Route(context.Background(), &RouteRequest{
+			Group: "default",
+			Model: "gpt-4",
+		}, candidates)
+		if err != nil {
+			t.Fatalf("Route failed: %v", err)
+		}
+		if ch.GetIsFallback() {
+			t.Errorf("Route returned a fallback channel #%d on iteration %d", ch.Id, i)
+		}
+	}
+}
+
+func TestChannelGetters(t *testing.T) {
+	t.Run("IsFallback nil pointer", func(t *testing.T) {
+		ch := &model.Channel{}
+		if ch.GetIsFallback() {
+			t.Error("nil IsFallback should return false")
+		}
+	})
+	t.Run("IsFallback true", func(t *testing.T) {
+		isFb := true
+		ch := &model.Channel{IsFallback: &isFb}
+		if !ch.GetIsFallback() {
+			t.Error("IsFallback=true should return true")
+		}
+	})
+	t.Run("IsFallback false (explicit)", func(t *testing.T) {
+		isFb := false
+		ch := &model.Channel{IsFallback: &isFb}
+		if ch.GetIsFallback() {
+			t.Error("IsFallback=false should return false")
+		}
+	})
+	t.Run("FallbackPriority nil pointer", func(t *testing.T) {
+		ch := &model.Channel{}
+		if ch.GetFallbackPriority() != 0 {
+			t.Errorf("nil FallbackPriority should return 0, got %d", ch.GetFallbackPriority())
+		}
+	})
+	t.Run("FallbackPriority set", func(t *testing.T) {
+		fp := int64(42)
+		ch := &model.Channel{FallbackPriority: &fp}
+		if ch.GetFallbackPriority() != 42 {
+			t.Errorf("FallbackPriority=42, got %d", ch.GetFallbackPriority())
+		}
+	})
+}

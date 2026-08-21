@@ -87,6 +87,11 @@ export default {
       deleteDisabled: '删除已禁用',
       enabled: '已启用',
       disabled: '已禁用',
+      fallback: '托底渠道',
+      fallbackHint: '启用后该渠道仅在所有同模型渠道失败时被调用',
+      fallbackTag: '托底',
+      fallbackPriority: '托底优先级',
+      fallbackPriorityHint: '数字越大越优先（同优先级内随机）',
     },
     token: {
       title: '令牌管理',
@@ -282,6 +287,11 @@ export default {
       deleteDisabled: 'Delete Disabled',
       enabled: 'Enabled',
       disabled: 'Disabled',
+      fallback: 'Fallback Channel',
+      fallbackHint: 'When enabled, this channel is only used after all normal channels for the requested model fail',
+      fallbackTag: 'Fallback',
+      fallbackPriority: 'Fallback Priority',
+      fallbackPriorityHint: 'Higher value = higher priority (random within same priority)',
     },
     token: {
       title: 'Token Management',

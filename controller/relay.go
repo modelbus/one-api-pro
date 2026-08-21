@@ -2,9 +2,11 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/Leon-PanPan/one-api-pro/channelrouter"
@@ -18,8 +20,8 @@ import (
 	"github.com/Leon-PanPan/one-api-pro/monitor"
 	"github.com/Leon-PanPan/one-api-pro/relay/handler"
 	"github.com/Leon-PanPan/one-api-pro/relay/interceptor"
-	"github.com/Leon-PanPan/one-api-pro/relay/schema"
 	"github.com/Leon-PanPan/one-api-pro/relay/relaymode"
+	"github.com/Leon-PanPan/one-api-pro/relay/schema"
 )
 
 var errorHandlerChain *interceptor.ErrorHandlerChain
@@ -137,6 +139,24 @@ func Relay(c *gin.Context) {
 
 		monitor.Emit(ch.Id, false)
 	}
+
+	// Fallback path: if every normal channel for the requested model failed
+	// (and the failure was retryable), attempt a single call on a configured
+	// fallback channel. The fallback channel typically advertises a single
+	// model in its `models` field — that model is what we substitute into the
+	// request body before re-invoking the relay helper.
+	if errCtx != nil && errCtx.ShouldRetry && bizErr != nil {
+		if fbErr := tryFallbackChannel(c, group, relayMode, bizErr, lastFailedChannelId); fbErr == nil {
+			return
+		} else if fbErr != bizErr {
+			// Fallback returned a *new* error (different status/message than the
+			// upstream one). Surface it to the client so we don't silently
+			// mask what happened.
+			bizErr = fbErr
+			processedErr = fbErr
+		}
+	}
+
 	if processedErr != nil {
 		processedErr.Error.Message = helper.MessageWithRequestId(processedErr.Error.Message, requestId)
 		c.JSON(processedErr.StatusCode, gin.H{
@@ -192,6 +212,112 @@ func getChannelCooldownSeconds(channelId int) int {
 		cooldownSeconds = config.ChannelDefaultCooldownSeconds
 	}
 	return cooldownSeconds
+}
+
+// tryFallbackChannel is invoked after the normal retry loop has been exhausted
+// with a retryable error. It attempts a single call on a configured fallback
+// channel (channels.is_fallback = 1) in the user's group, rewriting the
+// request body's `model` field to the fallback channel's primary model.
+//
+// Returns:
+//   - nil on success (the response was written to the client)
+//   - the same `prevErr` (or a new error) when no fallback applies / fallback
+//     itself failed; caller should surface the returned error to the client.
+func tryFallbackChannel(c *gin.Context, group string, relayMode int, prevErr *model.ErrorWithStatusCode, lastFailedChannelId int) *model.ErrorWithStatusCode {
+	fb, err := dbmodel.GetFallbackChannel(group)
+	if err != nil {
+		logger.Errorf(c.Request.Context(), "GetFallbackChannel error: %+v", err)
+		return prevErr
+	}
+	if fb == nil {
+		return prevErr
+	}
+	if fb.Id == lastFailedChannelId {
+		// Don't re-attempt a channel that just failed as a "fallback" — pick
+		// another one if available.
+		logger.Debugf(c.Request.Context(), "fallback channel #%d equals lastFailedChannelId, skipping", fb.Id)
+		return prevErr
+	}
+
+	fbModel := pickFallbackModel(fb)
+	if fbModel == "" {
+		logger.Debugf(c.Request.Context(), "fallback channel #%d has no models configured, skipping", fb.Id)
+		return prevErr
+	}
+
+	// Rewrite request body to swap the model name for the fallback channel.
+	if relayMode != relaymode.Proxy {
+		if rerr := rewriteRequestModel(c, fbModel); rerr != nil {
+			logger.Errorf(c.Request.Context(), "rewriteRequestModel failed: %+v", rerr)
+			return prevErr
+		}
+	}
+
+	// Re-bind gin context for the fallback channel (auth headers, base URL,
+	// model mapping, etc.). We pass the fallback model name so RequestModel /
+	// OriginalModel in the context reflect the actually-sent model.
+	middleware.SetupContextForSelectedChannel(c, fb, fbModel)
+
+	// Restore the request body so the helper re-reads it.
+	requestBody, _ := common.GetRequestBody(c)
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
+	logger.Infof(c.Request.Context(), "fallback: using channel #%d model=%s after original model failure", fb.Id, fbModel)
+
+	fbErr := relayHelper(c, relayMode)
+	if fbErr == nil {
+		monitor.Emit(fb.Id, true)
+		return nil
+	}
+	monitor.Emit(fb.Id, false)
+	logger.Errorf(c.Request.Context(), "fallback channel #%d also failed: status=%d code=%v type=%s message=%s",
+		fb.Id, fbErr.StatusCode, fbErr.Error.Code, fbErr.Error.Type, fbErr.Error.Message)
+	return fbErr
+}
+
+// pickFallbackModel returns the first non-empty model from a fallback channel's
+// `models` field (comma-separated). Returns "" if no model is configured.
+func pickFallbackModel(ch *dbmodel.Channel) string {
+	parts := strings.Split(ch.Models, ",")
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			return p
+		}
+	}
+	return ""
+}
+
+// rewriteRequestModel rewrites the JSON `model` field in the cached request
+// body. It also updates ctxkey.RequestModel so downstream code reads the new
+// value consistently.
+func rewriteRequestModel(c *gin.Context, newModel string) error {
+	body, err := common.GetRequestBody(c)
+	if err != nil {
+		return err
+	}
+	contentType := c.Request.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
+		// Non-JSON payloads: only safe option is to leave the body alone and
+		// rely on channel-side model_mapping to translate. Bail out so the
+		// caller knows no rewrite happened.
+		c.Set(ctxkey.RequestModel, newModel)
+		return nil
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(body, &m); err != nil {
+		return fmt.Errorf("request body is not a JSON object: %w", err)
+	}
+	modelJSON, _ := json.Marshal(newModel)
+	m["model"] = modelJSON
+	newBody, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	c.Set(ctxkey.KeyRequestBody, newBody)
+	c.Set(ctxkey.RequestModel, newModel)
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(newBody))
+	return nil
 }
 
 func RelayNotImplemented(c *gin.Context) {

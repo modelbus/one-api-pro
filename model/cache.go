@@ -5,16 +5,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/Leon-PanPan/one-api-pro/common"
-	"github.com/Leon-PanPan/one-api-pro/common/config"
-	"github.com/Leon-PanPan/one-api-pro/common/logger"
-	"github.com/Leon-PanPan/one-api-pro/common/random"
 	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Leon-PanPan/one-api-pro/common"
+	"github.com/Leon-PanPan/one-api-pro/common/config"
+	"github.com/Leon-PanPan/one-api-pro/common/logger"
+	"github.com/Leon-PanPan/one-api-pro/common/random"
 )
 
 var (
@@ -291,4 +292,50 @@ func CacheGetChannelById(channelId int) (*Channel, bool) {
 	defer channelSyncLock.RUnlock()
 	ch, ok := channelId2channel[channelId]
 	return ch, ok
+}
+
+// GetFallbackChannel returns an enabled fallback channel for the given user
+// group. It returns nil if no fallback channel is configured for that group.
+// Among fallback channels with the same priority, the pick is random.
+//
+// Note: cooldown / concurrency / RPM are intentionally NOT checked here — the
+// caller (controller/relay.go) acquires concurrency via channelrouter after
+// picking, and a failed fallback call simply returns the error to the client.
+func GetFallbackChannel(group string) (*Channel, error) {
+	if group == "" {
+		return nil, errors.New("group is empty")
+	}
+	var channels []*Channel
+	groupCol := "`group`"
+	if common.UsingPostgreSQL {
+		groupCol = `"group"`
+	}
+	err := DB.Where("status = ? AND is_fallback = ? AND "+groupCol+" LIKE ?",
+		ChannelStatusEnabled, true, "%"+group+"%").
+		Order("fallback_priority DESC, id DESC").
+		Find(&channels).Error
+	if err != nil {
+		logger.SysError("failed to query fallback channels: " + err.Error())
+		return nil, err
+	}
+	if len(channels) == 0 {
+		return nil, nil
+	}
+
+	// Walk the priority tier; skip channels that have no models configured.
+	highest := channels[0].GetFallbackPriority()
+	tier := make([]*Channel, 0, len(channels))
+	for _, ch := range channels {
+		if ch.GetFallbackPriority() != highest {
+			break
+		}
+		if strings.TrimSpace(ch.Models) == "" {
+			continue
+		}
+		tier = append(tier, ch)
+	}
+	if len(tier) == 0 {
+		return nil, nil
+	}
+	return tier[rand.Intn(len(tier))], nil
 }

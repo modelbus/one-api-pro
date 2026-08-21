@@ -134,3 +134,24 @@ func (f *RPMFilter) Filter(_ context.Context, candidates []*model.Channel, _ *Ro
 	}
 	return result
 }
+
+// FallbackFilter excludes channels that are reserved for fallback only
+// (channels with is_fallback=true). These channels are not used for normal
+// requests and are only picked by the dedicated fallback path after all
+// normal channels for the requested model are exhausted.
+type FallbackFilter struct{}
+
+func (f *FallbackFilter) Name() string {
+	return "fallback"
+}
+
+func (f *FallbackFilter) Filter(_ context.Context, candidates []*model.Channel, _ *RouteRequest) []*model.Channel {
+	result := make([]*model.Channel, 0, len(candidates))
+	for _, ch := range candidates {
+		if ch.GetIsFallback() {
+			continue
+		}
+		result = append(result, ch)
+	}
+	return result
+}

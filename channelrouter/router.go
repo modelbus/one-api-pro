@@ -31,6 +31,7 @@ func NewChannelRouter() *ChannelRouter {
 	}
 	r.filters = []ChannelFilter{
 		&StatusFilter{},
+		&FallbackFilter{},
 		&CooldownFilter{cooldown: r.Cooldown},
 		&ConcurrencyFilter{concurrency: r.Concurrency},
 		&RPMFilter{rpmTracker: r.RPM},
