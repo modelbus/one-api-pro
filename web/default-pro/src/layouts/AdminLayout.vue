@@ -27,9 +27,9 @@
           <template #icon><icon-code /></template>
           {{ $t('menu.token') }}
         </a-menu-item>
-        <a-menu-item key="/topup">
-          <template #icon><icon-archive /></template>
-          {{ $t('menu.topup') }}
+        <a-menu-item key="/redeem">
+          <template #icon><icon-gift /></template>
+          兑换
         </a-menu-item>
         <a-menu-item key="/plans">
           <template #icon><icon-gift /></template>
