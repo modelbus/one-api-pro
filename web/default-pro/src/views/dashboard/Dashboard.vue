@@ -156,9 +156,9 @@
             <span class="balance-num">{{ fmtQuota(balance) }}</span>
           </div>
           <div class="balance-actions">
-            <a class="balance-btn" @click="goTo('/topup')">充值</a>
+            <a class="balance-btn" @click="goTo('/redeem')">兑换</a>
             <a class="balance-btn" @click="goTo('/subscription')">订阅</a>
-            <a class="balance-btn" @click="goTo('/redemption')">兑换</a>
+            <a class="balance-btn" @click="goTo('/redemption')">兑换码</a>
           </div>
         </div>
 
@@ -262,7 +262,7 @@ import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import {
-  IconCodeSquare, IconSend, IconArchive, IconCalendar, IconCode, IconFile,
+  IconCodeSquare, IconSend, IconArchive, IconCalendar, IconCode, IconFile, IconGift,
   IconCopy, IconLaunch,
 } from '@arco-design/web-vue/es/icon'
 import VChart from 'vue-echarts'
@@ -404,7 +404,7 @@ function sumField(field) {
 
 const quickActions = computed(() => [
   { label: '管理令牌', path: '/token', icon: IconCode, bg: 'rgba(22,93,255,0.08)', color: '#165dff' },
-  { label: '充值额度', path: '/topup', icon: IconArchive, bg: 'rgba(255,125,0,0.08)', color: '#ff7d00' },
+  { label: '兑换码', path: '/redeem', icon: IconGift, bg: 'rgba(255,125,0,0.08)', color: '#ff7d00' },
   { label: '使用日志', path: '/log', icon: IconFile, bg: 'rgba(15,198,194,0.08)', color: '#0fc6c2' },
 ])
 
