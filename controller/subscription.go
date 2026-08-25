@@ -77,11 +77,12 @@ func GetSubscriptionDetail(c *gin.Context) {
 }
 
 type AddSubscriptionRequest struct {
-	UserId      int    `json:"user_id"`
-	PlanId      int    `json:"plan_id"`
-	BillingType string `json:"billing_type"`
-	DurationDays int   `json:"duration_days"`
-	Notes       string `json:"notes"`
+	UserId       int    `json:"user_id"`
+	PlanId       int    `json:"plan_id"`
+	BillingType  string `json:"billing_type"`
+	DurationDays int    `json:"duration_days"`
+	Notes        string `json:"notes"`
+	PayMethod    string `json:"pay_method"` // wechat/alipay/bank/offline/free
 }
 
 func AddSubscription(c *gin.Context) {
@@ -98,6 +99,16 @@ func AddSubscription(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "用户 ID 和套餐 ID 不能为空",
+		})
+		return
+	}
+	if req.PayMethod == "" {
+		req.PayMethod = model.OrderPayMethodFree
+	}
+	if !model.IsValidPayMethod(req.PayMethod) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "不支持的支付方式: " + req.PayMethod,
 		})
 		return
 	}
@@ -124,26 +135,19 @@ func AddSubscription(c *gin.Context) {
 		})
 		return
 	}
-	if req.BillingType != model.BillingTypeRequest && req.BillingType != model.BillingTypeToken {
-		req.BillingType = model.BillingTypeToken
+
+	// Build an order row so the admin grant is auditable in /api/order.
+	notes := req.Notes
+	if notes == "" {
+		notes = "管理员开通"
 	}
-	durationDays := req.DurationDays
-	if durationDays <= 0 {
-		durationDays = plan.DurationDays
-	}
-	now := helper.GetTimestamp()
-	up := &model.UserPlan{
-		UserId:      req.UserId,
-		PlanId:      req.PlanId,
-		StartTime:   now,
-		EndTime:     now + int64(durationDays)*86400,
-		Status:      model.UserPlanStatusActive,
-		BillingType: req.BillingType,
-		Notes:       req.Notes,
-		CreatedTime: now,
-		UpdatedTime: now,
-	}
-	err = up.Insert()
+	out, err := model.CreatePlanOrder(model.CreatePlanOrderInput{
+		UserId:    req.UserId,
+		PlanId:    req.PlanId,
+		PayMethod: req.PayMethod,
+		Source:    model.OrderSourceAdmin,
+		Notes:     notes,
+	})
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -151,12 +155,39 @@ func AddSubscription(c *gin.Context) {
 		})
 		return
 	}
-	model.CacheDeleteUserActivePlans(req.UserId)
-	up.Plan = plan
+	if req.BillingType != model.BillingTypeRequest && req.BillingType != model.BillingTypeToken {
+		req.BillingType = model.BillingTypeToken
+	}
+
+	// For "free" the order is paid immediately and the subscription is
+	// activated. For other admin pay methods (wechat/alipay/bank/offline)
+	// the subscription is also activated right now — the admin has
+	// confirmed the payment method offline and the order row stays as
+	// a paid audit trail. This is intentional per spec: admin grants
+	// always take effect immediately.
+	if err := model.ActivatePackageByOrder(out.Order, model.OrderUpgradeModeStack); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "激活套餐失败: " + err.Error(),
+		})
+		return
+	}
+	up, err := model.GetUserPlanByOrderId(out.Order.Id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "读取新订阅失败: " + err.Error(),
+		})
+		return
+	}
+	if up != nil {
+		up.Plan = plan
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    up,
+		"order":   out.Order,
 	})
 }
 

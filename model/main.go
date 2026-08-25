@@ -197,6 +197,12 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&UserPlan{}); err != nil {
 		return err
 	}
+	if err = DB.AutoMigrate(&Order{}); err != nil {
+		return err
+	}
+	if err = DB.AutoMigrate(&SystemSetting{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&PlanUsage{}); err != nil {
 		return err
 	}
@@ -208,6 +214,20 @@ func migrateDB() error {
 	}
 	if err = DB.AutoMigrate(&GroupPrice{}); err != nil {
 		return err
+	}
+	// Add order_id column to existing user_plans on legacy databases.
+	if common.UsingMySQL {
+		var colCount int
+		DB.Raw("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_plans' AND COLUMN_NAME = 'order_id'").Scan(&colCount)
+		if colCount == 0 {
+			DB.Exec("ALTER TABLE user_plans ADD COLUMN order_id int(11) NOT NULL DEFAULT 0 AFTER plan_id")
+		}
+	} else if common.UsingPostgreSQL {
+		var colCount int
+		DB.Raw("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_plans' AND column_name = 'order_id'").Scan(&colCount)
+		if colCount == 0 {
+			DB.Exec("ALTER TABLE user_plans ADD COLUMN order_id integer NOT NULL DEFAULT 0")
+		}
 	}
 	// Migrate old tokens column to prompt_tokens if it exists
 	if common.UsingMySQL {

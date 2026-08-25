@@ -54,6 +54,14 @@
             <template #icon><icon-calendar /></template>
             {{ $t('menu.subscription') }}
           </a-menu-item>
+          <a-menu-item key="/plans">
+            <template #icon><icon-gift /></template>
+            套餐
+          </a-menu-item>
+          <a-menu-item key="/orders">
+            <template #icon><icon-storage /></template>
+            订单
+          </a-menu-item>
           <a-menu-item key="/setting">
             <template #icon><icon-settings /></template>
             {{ $t('menu.setting') }}
@@ -143,7 +151,7 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
-import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown } from '@arco-design/web-vue/es/icon'
+import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown, IconStorage } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import logoPng from '@/assets/logo.png'
 

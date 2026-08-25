@@ -136,6 +136,10 @@ func SetApiRouter(router *gin.Engine) {
 		}
 		planRoute := apiRouter.Group("/plan")
 		{
+			// Public (user-facing) endpoints — no auth.
+			planRoute.GET("/list", controller.GetPublicPlans)
+			planRoute.GET("/detail/:id", controller.GetPublicPlanDetail)
+			// Admin endpoints
 			planRoute.GET("/", middleware.AdminAuth(), controller.GetAllPlans)
 			planRoute.GET("/search", middleware.AdminAuth(), controller.SearchPlans)
 			planRoute.GET("/:id", middleware.AdminAuth(), controller.GetPlan)
@@ -143,6 +147,46 @@ func SetApiRouter(router *gin.Engine) {
 			planRoute.PUT("/", middleware.RootAuth(), controller.UpdatePlan)
 			planRoute.DELETE("/:id", middleware.RootAuth(), controller.DeletePlan)
 		}
+		// /api/plan/current — authenticated user reads own active plan.
+		apiRouter.GET("/plan/current", middleware.UserAuth(), controller.GetCurrentPlan)
+
+		// Orders: /api/order/plan (user self-service) + /api/order/self/:id (user)
+		// + /api/order (admin).
+		orderSelfRoute := apiRouter.Group("/order/self")
+		orderSelfRoute.Use(middleware.UserAuth())
+		{
+			orderSelfRoute.GET("", controller.GetMyOrders)
+			orderSelfRoute.GET("/", controller.GetMyOrders)
+			orderSelfRoute.GET("/:id", controller.GetMyOrder)
+			orderSelfRoute.POST("/:id/cancel", controller.CancelMyOrder)
+		}
+		apiRouter.POST("/order/plan", middleware.UserAuth(), controller.CreatePlanOrder)
+		orderAdminRoute := apiRouter.Group("/order")
+		{
+			orderAdminRoute.GET("", middleware.AdminAuth(), controller.GetAllOrders)
+			orderAdminRoute.GET("/", middleware.AdminAuth(), controller.GetAllOrders)
+			orderAdminRoute.GET("/search", middleware.AdminAuth(), controller.SearchOrders)
+			orderAdminRoute.GET("/:id", middleware.AdminAuth(), controller.GetOrder)
+			orderAdminRoute.PUT("/:id", middleware.AdminAuth(), controller.MarkOrderPaid)
+			orderAdminRoute.DELETE("/:id", middleware.RootAuth(), controller.DeleteOrder)
+		}
+
+		// Payment callbacks (no auth; signature-verified) + admin mock.
+		apiRouter.POST("/payment/wechat/notify", controller.WechatNotify)
+		apiRouter.POST("/payment/alipay/notify", controller.AlipayNotify)
+		apiRouter.POST("/payment/mock/notify", middleware.RootAuth(), controller.MockPay)
+
+		// Settings: payment + plan-operations.
+		settingRoute := apiRouter.Group("/setting")
+		{
+			settingRoute.GET("/payment", middleware.RootAuth(), controller.GetPaymentSettings)
+			settingRoute.PUT("/payment/wechat", middleware.RootAuth(), controller.PutPaymentMethod)
+			settingRoute.PUT("/payment/alipay", middleware.RootAuth(), controller.PutPaymentMethod)
+			settingRoute.PUT("/payment/bank", middleware.RootAuth(), controller.PutPaymentMethod)
+			settingRoute.GET("/plan", middleware.RootAuth(), controller.GetPlanSettings)
+			settingRoute.PUT("/plan", middleware.RootAuth(), controller.PutPlanSettings)
+		}
+
 		subscriptionRoute := apiRouter.Group("/subscription")
 		{
 			subscriptionRoute.GET("/self", middleware.UserAuth(), controller.GetUserSubscriptions)

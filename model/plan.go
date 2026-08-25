@@ -127,6 +127,7 @@ type UserPlan struct {
 	Id          uint   `gorm:"primaryKey;autoIncrement" json:"id"`
 	UserId      int    `gorm:"not null;index:idx_user_status" json:"user_id"`
 	PlanId      int    `gorm:"not null" json:"plan_id"`
+	OrderId     int    `gorm:"not null;default:0" json:"order_id"`
 	StartTime   int64  `gorm:"not null" json:"start_time"`
 	EndTime     int64  `gorm:"not null;index:idx_end_time" json:"end_time"`
 	Status      int    `gorm:"not null;default:1;index:idx_user_status" json:"status"`
@@ -146,7 +147,7 @@ func (up *UserPlan) Insert() error {
 
 func (up *UserPlan) Update() error {
 	return DB.Model(up).Select("start_time", "end_time", "status",
-		"billing_type", "notes", "updated_time").Updates(up).Error
+		"order_id", "billing_type", "notes", "updated_time").Updates(up).Error
 }
 
 func DeleteUserPlanById(id int) error {
@@ -162,6 +163,19 @@ func GetUserPlanById(id int) (*UserPlan, error) {
 	var up UserPlan
 	err := DB.First(&up, "id = ?", id).Error
 	return &up, err
+}
+
+// GetUserPlanByOrderId returns the user_plan row that was created for
+// the given order id. Returns nil if not found.
+func GetUserPlanByOrderId(orderId int) (*UserPlan, error) {
+	if orderId == 0 {
+		return nil, nil
+	}
+	var up UserPlan
+	if err := DB.Where("order_id = ?", orderId).First(&up).Error; err != nil {
+		return nil, err
+	}
+	return &up, nil
 }
 
 func GetActiveUserPlansByUserId(userId int) ([]*UserPlan, error) {

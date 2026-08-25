@@ -159,3 +159,51 @@ func DeletePlan(c *gin.Context) {
 		"message": "",
 	})
 }
+
+// GetPublicPlans returns enabled plans for the user-facing subscription page.
+// No auth required.
+func GetPublicPlans(c *gin.Context) {
+	all, err := model.GetAllPlans(0, 1000)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	enabled := make([]*model.Plan, 0, len(all))
+	for _, p := range all {
+		if p.Status == model.PlanStatusEnabled {
+			enabled = append(enabled, p)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": enabled})
+}
+
+// GetPublicPlanDetail returns a single plan by id (no auth).
+func GetPublicPlanDetail(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	plan, err := model.GetPlanById(id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": plan})
+}
+
+// GetCurrentPlan returns the authenticated user's active subscription.
+// Auth: UserAuth.
+func GetCurrentPlan(c *gin.Context) {
+	userId := c.GetInt("id")
+	if userId == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "未登录"})
+		return
+	}
+	actives, err := model.GetActiveUserPlansByUserId(userId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	if len(actives) == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": nil})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": actives[0]})
+}
