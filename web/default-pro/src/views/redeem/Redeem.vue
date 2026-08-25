@@ -5,32 +5,6 @@
       <p class="page-subtitle">{{ $t('redeem.subtitle') }}</p>
     </div>
 
-    <!-- 当前额度 -->
-    <a-card :bordered="false" class="quota-card">
-      <a-spin :loading="quotaLoading">
-        <a-row :gutter="16" align="center">
-          <a-col :span="12">
-            <a-statistic
-              :title="$t('redeem.currentQuota')"
-              :value="quota"
-              :value-style="{ color: '#165DFF', fontWeight: 700 }"
-            >
-              <template #prefix><span class="stat-prefix">$</span></template>
-            </a-statistic>
-          </a-col>
-          <a-col :span="12" v-if="quotaUsed > 0 || quotaTotal > 0">
-            <a-statistic
-              :title="$t('redeem.usage')"
-              :value="quotaUsed"
-              :precision="0"
-            >
-              <template #suffix>/ {{ quotaTotal || '∞' }}</template>
-            </a-statistic>
-          </a-col>
-        </a-row>
-      </a-spin>
-    </a-card>
-
     <!-- 兑换表单（参考 tbus-web Redeem.vue 风格） -->
     <div class="redeem-card">
       <div class="redeem-icon">🎁</div>
@@ -57,6 +31,22 @@
         </a-button>
       </div>
       <div class="redeem-hint">{{ $t('redeem.hint') }}</div>
+    </div>
+
+    <!-- 额度信息（弱化展示，让兑换区域成为视觉重点） -->
+    <div class="quota-info">
+      <a-spin :loading="quotaLoading" style="width: 100%;">
+        <div class="quota-info-row">
+          <div class="quota-info-label">{{ $t('redeem.currentQuota') }}</div>
+          <div class="quota-info-value">{{ formatNumber(quota) }}</div>
+        </div>
+        <div class="quota-info-row" v-if="quotaUsed > 0 || quotaTotal > 0">
+          <div class="quota-info-label">{{ $t('redeem.usage') }}</div>
+          <div class="quota-info-value">
+            {{ formatNumber(quotaUsed) }} <span class="quota-divider">/</span> {{ formatNumber(quotaTotal) }}
+          </div>
+        </div>
+      </a-spin>
     </div>
 
     <!-- 兑换成功弹窗 -->
@@ -93,6 +83,13 @@ const quotaUsed = ref(0)
 const quotaTotal = ref(0)
 
 const redeemedAmount = ref(0)
+
+const numberFormatter = new Intl.NumberFormat('en-US')
+
+function formatNumber(n) {
+  if (n == null || isNaN(n)) return '0'
+  return numberFormatter.format(Math.floor(Number(n)))
+}
 
 function validateCode(c) {
   const v = (c || '').trim()
@@ -168,19 +165,6 @@ onMounted(fetchQuota)
   margin: 0;
 }
 
-.quota-card {
-  background: var(--color-bg-2);
-  border-radius: 12px;
-  margin-bottom: 20px;
-  padding: 4px 0;
-}
-.stat-prefix {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-3);
-  margin-right: 4px;
-}
-
 /* 兑换卡片（参考 tbus-web Redeem.vue） */
 .redeem-card {
   background: #fff;
@@ -215,6 +199,37 @@ onMounted(fetchQuota)
   font-size: 12px;
   color: var(--color-text-4);
   margin-top: 4px;
+}
+
+/* 额度信息：弱化展示（小字号、低对比度、放在兑换区域下方） */
+.quota-info {
+  max-width: 400px;
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  background: transparent;
+}
+.quota-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+.quota-info-row + .quota-info-row {
+  border-top: 1px dashed var(--color-border-2);
+}
+.quota-info-label {
+  font-size: 13px;
+  color: var(--color-text-4);
+}
+.quota-info-value {
+  font-size: 13px;
+  color: var(--color-text-3);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+.quota-divider {
+  margin: 0 6px;
+  color: var(--color-text-4);
 }
 
 /* 成功弹窗 */
