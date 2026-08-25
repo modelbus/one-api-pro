@@ -6,27 +6,36 @@
           <h3>模型定价</h3>
           <a-button type="primary" @click="openModelPrice()"><template #icon><icon-plus /></template>添加</a-button>
         </div>
-        <a-table
-          :columns="mpColumns"
-          :data="modelPrices"
-          :pagination="false"
-          row-key="id"
-          size="medium"
-          :scroll="mpScroll"
-          :scrollbar="false"
-        >
-          <template #billing="{ record }">
-            <a-tag :color="record.billing_type==='token'?'blue':'green'" size="small">{{ record.billing_type==='token'?'Token':'请求' }}</a-tag>
-          </template>
-          <template #actions="{ record }">
-            <a-space>
-              <a-button type="text" size="small" @click="openModelPrice(record)">编辑</a-button>
-              <a-popconfirm content="确定删除该定价？" @ok="handleDelMP(record.id)">
-                <a-button type="text" size="small" status="danger">删除</a-button>
-              </a-popconfirm>
-            </a-space>
-          </template>
-        </a-table>
+        <div class="table-wrap">
+          <div class="table-body">
+            <div class="table-row table-head mp-cols">
+              <div class="col">模型</div>
+              <div class="col col-num">输入价格</div>
+              <div class="col col-num">输出价格</div>
+              <div class="col col-num">缓存价格</div>
+              <div class="col col-num">请求价格</div>
+              <div class="col">方式</div>
+              <div class="col col-action">操作</div>
+            </div>
+            <div v-for="r in modelPrices" :key="r.id" class="table-row mp-cols">
+              <div class="col cell-strong ellipsis" :title="r.model_name">{{ r.model_name }}</div>
+              <div class="col col-num cell-mono">{{ r.input_price }}</div>
+              <div class="col col-num cell-mono">{{ r.output_price }}</div>
+              <div class="col col-num cell-mono">{{ r.cached_price }}</div>
+              <div class="col col-num cell-mono">{{ r.per_request_price }}</div>
+              <div class="col">
+                <a-tag :color="r.billing_type==='token'?'blue':'green'" size="small">{{ r.billing_type==='token'?'Token':'请求' }}</a-tag>
+              </div>
+              <div class="col col-action">
+                <a-button type="text" size="small" @click="openModelPrice(r)">编辑</a-button>
+                <a-popconfirm content="确定删除该定价？" @ok="handleDelMP(r.id)">
+                  <a-button type="text" size="small" status="danger">删除</a-button>
+                </a-popconfirm>
+              </div>
+            </div>
+            <div v-if="modelPrices.length === 0" class="table-empty">暂无模型定价</div>
+          </div>
+        </div>
       </a-tab-pane>
 
       <a-tab-pane key="group" title="分组折扣">
@@ -34,24 +43,28 @@
           <h3>分组折扣</h3>
           <a-button type="primary" @click="openGroupPrice()"><template #icon><icon-plus /></template>添加</a-button>
         </div>
-        <a-table
-          :columns="gpColumns"
-          :data="groupPrices"
-          :pagination="false"
-          row-key="id"
-          size="medium"
-          :scroll="gpScroll"
-          :scrollbar="false"
-        >
-          <template #actions="{ record }">
-            <a-space>
-              <a-button type="text" size="small" @click="openGroupPrice(record)">编辑</a-button>
-              <a-popconfirm content="确定删除该分组折扣？" @ok="handleDelGP(record.id)">
-                <a-button type="text" size="small" status="danger">删除</a-button>
-              </a-popconfirm>
-            </a-space>
-          </template>
-        </a-table>
+        <div class="table-wrap">
+          <div class="table-body">
+            <div class="table-row table-head gp-cols">
+              <div class="col">分组</div>
+              <div class="col">模型</div>
+              <div class="col col-num">折扣</div>
+              <div class="col col-action">操作</div>
+            </div>
+            <div v-for="r in groupPrices" :key="r.id" class="table-row gp-cols">
+              <div class="col cell-strong ellipsis" :title="r.group_name">{{ r.group_name }}</div>
+              <div class="col cell-muted ellipsis" :title="r.model_name">{{ r.model_name }}</div>
+              <div class="col col-num cell-mono">{{ r.discount }}</div>
+              <div class="col col-action">
+                <a-button type="text" size="small" @click="openGroupPrice(r)">编辑</a-button>
+                <a-popconfirm content="确定删除该分组折扣？" @ok="handleDelGP(r.id)">
+                  <a-button type="text" size="small" status="danger">删除</a-button>
+                </a-popconfirm>
+              </div>
+            </div>
+            <div v-if="groupPrices.length === 0" class="table-empty">暂无分组折扣</div>
+          </div>
+        </div>
       </a-tab-pane>
     </a-tabs>
 
@@ -114,35 +127,6 @@ const loading = ref(false)
 const modelPrices = ref([])
 const groupPrices = ref([])
 
-// Column layout per arco-design table#scroll convention:
-//  - the first (most important) column has NO width so it absorbs the
-//    remaining horizontal space when the viewport is wider than the fixed
-//    columns, making the table stretch to fill its container;
-//  - the other columns keep fixed widths so they stay predictable;
-//  - scroll.x is a numeric minimum table width (no scroll.minWidth, which
-//    would override the component's CSS min-width:100% and create a blank
-//    trailing column). The table element ends up at max(scroll.x, 100% of
-//    container), so on wide screens it fills the container and on narrow
-//    screens it scrolls horizontally.
-const mpColumns = [
-  { title: '模型', dataIndex: 'model_name' },
-  { title: '输入价格', dataIndex: 'input_price', width: 110 },
-  { title: '输出价格', dataIndex: 'output_price', width: 110 },
-  { title: '缓存价格', dataIndex: 'cached_price', width: 110 },
-  { title: '请求价格', dataIndex: 'per_request_price', width: 110 },
-  { title: '方式', slotName: 'billing', width: 90 },
-  { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
-]
-const mpScroll = { x: 800 }
-
-const gpColumns = [
-  { title: '分组', dataIndex: 'group_name' },
-  { title: '模型', dataIndex: 'model_name', width: 200 },
-  { title: '折扣', dataIndex: 'discount', width: 110 },
-  { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
-]
-const gpScroll = { x: 600 }
-
 const mpVisible = ref(false), mpEditing = ref(false), mpSaving = ref(false)
 const mpForm = reactive({ model_name: '', input_price: 0, output_price: 0, cached_price: 0, per_request_price: 0, billing_type: 'token' })
 
@@ -195,4 +179,106 @@ onMounted(() => { loadData() })
 .setting-container { padding: 4px 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .section-header h3 { font-size: 16px; font-weight: 600; color: var(--color-text-1); margin: 0; padding: 0; }
+
+/* 自定义表格（与渠道列表一致）：外层裁剪圆角，内层横向滚动 */
+.table-wrap {
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.table-body {
+  overflow-x: auto;
+}
+.table-row {
+  display: grid;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-fill-3);
+}
+.table-row:last-child {
+  border-bottom: none;
+}
+.mp-cols {
+  grid-template-columns: minmax(200px, 1fr) 120px 120px 120px 120px 90px 180px;
+  min-width: 900px;
+}
+.gp-cols {
+  grid-template-columns: minmax(180px, 1fr) 260px 130px 180px;
+  min-width: 720px;
+}
+.table-head {
+  height: 40px;
+  background: var(--color-fill-1);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-3);
+}
+.table-row:not(.table-head) {
+  min-height: 52px;
+  transition: background 0.15s;
+}
+.table-row:not(.table-head):hover {
+  background: var(--color-fill-1);
+}
+
+/* 单元格 */
+.col {
+  font-size: 13px;
+  color: var(--color-text-2);
+  min-width: 0;
+  padding-right: 16px;
+}
+.col:last-child {
+  padding-right: 0;
+}
+.col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* 操作列固定在右侧 */
+.col-action {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+  position: sticky;
+  right: 0;
+  background: var(--color-bg-2);
+  box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.12);
+  padding-left: 16px;
+}
+.col-action :deep(.arco-btn) {
+  padding: 0 6px;
+}
+.table-head .col-action {
+  background: var(--color-fill-1);
+}
+.table-row:not(.table-head):hover .col-action {
+  background: var(--color-fill-1);
+}
+
+.cell-strong {
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+.cell-muted {
+  color: var(--color-text-3);
+}
+.cell-mono {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+.table-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--color-text-4);
+  font-size: 13px;
+}
 </style>
