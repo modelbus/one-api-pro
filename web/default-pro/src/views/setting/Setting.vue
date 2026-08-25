@@ -39,9 +39,13 @@ function onMenuClick(key) {
 <style scoped>
 .setting-layout { height: 100%; }
 .setting-card { height: 100%; display: flex; padding: 0; }
-.setting-card :deep(.arco-card-body) { display: flex; padding: 0; width: 100%; }
+.setting-card :deep(.arco-card-body) { display: flex; padding: 0; width: 100%; min-width: 0; }
 .setting-sidebar { width: 160px; flex-shrink: 0; border-right: 1px solid var(--color-border-2); padding: 20px 0; }
 .sidebar-title { padding: 0 20px 16px; font-size: 16px; font-weight: 700; color: var(--color-text-1); }
 .setting-menu { border: none; }
-.setting-content { flex: 1; padding: 24px 28px; overflow-y: auto; overflow-x: hidden; min-width: 0; }
+/* min-width:0 lets the flex item shrink below its content's intrinsic
+ * min-width so that inner overflow-x:auto containers (e.g. the pricing
+ * tables) can actually scroll instead of being pushed past the viewport
+ * and clipped by an outer arco-layout overflow-x:hidden rule. */
+.setting-content { flex: 1; padding: 15px; overflow-y: auto; overflow-x: hidden; min-width: 0; }
 </style>

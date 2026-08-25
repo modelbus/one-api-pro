@@ -249,7 +249,7 @@ watch(() => route.path, (path) => { selectedKeys.value = [path] })
 .sidebar-menu { border-right: none; }
 .menu-divider { height: 1px; background: var(--color-border-2); margin: 16px 16px; }
 
-.main-area { background: var(--color-fill-2); }
+.main-area { background: var(--color-fill-2); min-width: 0; overflow-x: hidden; }
 
 .top-navbar {
   display: flex;
@@ -266,7 +266,7 @@ watch(() => route.path, (path) => { selectedKeys.value = [path] })
 .user-trigger { cursor: pointer; padding: 4px 8px; border-radius: 4px; }
 .user-trigger:hover { background: var(--color-fill-2); }
 
-.content-area { padding: 20px; overflow-y: auto; }
+.content-area { padding: 20px; overflow-y: auto; min-width: 0; overflow-x: hidden; }
 
 .admin-footer {
   text-align: center;
