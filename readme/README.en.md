@@ -174,6 +174,14 @@ A complete plan & subscription system: token- or request-based billing, period-b
 |:---:|:---:|
 | ![Plan management](../docs/Demo-Plan.png) | ![Subscription management](../docs/Demo-Subscribe.png) |
 
+### 💳 Orders & Real Payments
+
+Every subscription checkout leaves a full **order audit trail** (order number, user, plan snapshot JSON, amount, payment channel, status, paid-at timestamp, provider trade number) supporting two order types — subscription and top-up. Native integrations for **WeChat Pay Native** (PC QR) and **Alipay Face-to-Face** (TradePrecreate) ship out of the box, with `bank` / `offline` / `free` reserved for admin-side channels. Upgrade pricing is calculated automatically from remaining days, and an "operate in stack mode" toggle is hot-switchable from **Settings → Operations → Plan** to keep the old subscription running alongside the new one.
+
+| Order center | Payment config |
+|:---:|:---:|
+| ![Order center](../docs/Demo-Order.png) | ![Payment config](../docs/Demo-Payment.png) |
+
 ### 🌐 Decentralized Active-Active Cluster
 
 Each node runs independent MySQL + Redis. Application-layer events keep data in sync across nodes — no shared database required, naturally supporting low-latency access from any region.
@@ -796,17 +804,21 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/m
 - [x] **Precise cost accounting** — independent Prompt / Completion / Cached pricing, stacked group discounts.
 - [x] **Multi-level permissions** — Guest / User / Admin / Root, upstream API authorization loophole fixed.
 - [x] **OpenAI-compatible API** — `models` / `chat` / `completions` / `embeddings` / `images` / `audio` / `moderations`.
+- [x] **Subscription checkout & upgrade flow** — native `POST /api/order/plan` creates the subscription order, supports `stack` (additive) and `price_diff` (upgrade) modes, auto-computes the upgrade price from remaining days, and rejects same-tier / downgrade attempts.
+- [x] **Order audit & order center** — new `orders` table (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no) persists every checkout / admin grant. Frontend `/plans` and `/orders` pages render the full lifecycle.
+- [x] **Real payment integration (gopay)** — native WeChat Pay Native (PC QR) and Alipay Face-to-Face (TradePrecreate); async callbacks at `/api/payment/{wechat,alipay}/notify` complete the verify → mark paid → activate loop.
+- [x] **Payment / plan-operations settings** — two new sub-tabs under **Operations Settings**: `Plan` (price_diff vs stack upgrade toggle) and `Payment` (independent enable/disable + cert upload + notify URL per channel: WeChat / Alipay / Bank).
 
 ### 🔄 In Progress
 
-- [ ] Automatic channel diagnostics and intelligent routing optimization.
+- [ ] **Richer channel diagnostics & intelligent routing** — `CooldownFilter`, `FallbackFilter` and the `monitor`'s auto-disable on low success rate are already in place. Remaining: standalone channel-health dashboard, per-node ping endpoint, and a manual-review workflow.
 - [ ] Richer usage analytics reports and exports.
 - [ ] Improved i18n coverage.
 
 ### 🔭 Planned
 
-- [ ] **Alipay / WeChat Pay native integration** — direct Alipay Face-to-Face, WeChat Pay Native / H5, top-ups settle automatically.
-- [ ] **Token Plan** — flexible subscription Token plans with auto-renewal and tiered upgrades.
+- [ ] **More payment channels** — Apple Pay, UnionPay, Stripe, etc.; async refund API + automated refund ledger.
+- [ ] **Online quota top-up** — users can top up their account balance from the personal area; this stays independent of subscription plans.
 - [ ] **Finance-system integration** — sync top-ups, consumption and refunds with mainstream finance / reconciliation platforms.
 - [ ] **Token-low alerting** — multi-channel notifications when account / token Token balance drops below threshold.
 - [ ] **Audit logs & reports** — full operation audit trail and visual reports for compliance.
