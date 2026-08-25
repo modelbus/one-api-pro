@@ -59,7 +59,7 @@ const routes = [
         { path: 'plan', name: 'PlanSetting', component: () => import('@/views/setting/PlanSetting.vue'), meta: { title: '套餐管理' } },
         { path: 'personal', name: 'PersonalSetting', component: () => import('@/views/setting/PersonalSetting.vue'), meta: { title: '个人设置' } },
       ] },
-      { path: 'topup', name: 'TopUp', component: () => import('@/views/topup/TopUp.vue'), meta: { title: '充值' } },
+      { path: 'redeem', name: 'Redeem', component: () => import('@/views/redeem/Redeem.vue'), meta: { title: '兑换' } },
       { path: 'chat', name: 'Chat', component: () => import('@/views/chat/Chat.vue'), meta: { title: '对话' } },
     ],
   },
