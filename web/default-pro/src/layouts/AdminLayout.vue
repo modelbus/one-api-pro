@@ -31,6 +31,14 @@
           <template #icon><icon-archive /></template>
           {{ $t('menu.topup') }}
         </a-menu-item>
+        <a-menu-item key="/plans">
+          <template #icon><icon-gift /></template>
+          套餐
+        </a-menu-item>
+        <a-menu-item key="/orders">
+          <template #icon><icon-storage /></template>
+          订单
+        </a-menu-item>
         <a-menu-item key="/log">
           <template #icon><icon-file /></template>
           {{ $t('menu.log') }}
@@ -53,14 +61,6 @@
           <a-menu-item key="/subscription">
             <template #icon><icon-calendar /></template>
             {{ $t('menu.subscription') }}
-          </a-menu-item>
-          <a-menu-item key="/plans">
-            <template #icon><icon-gift /></template>
-            套餐
-          </a-menu-item>
-          <a-menu-item key="/orders">
-            <template #icon><icon-storage /></template>
-            订单
           </a-menu-item>
           <a-menu-item key="/setting">
             <template #icon><icon-settings /></template>

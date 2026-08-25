@@ -180,9 +180,7 @@ func SetApiRouter(router *gin.Engine) {
 		settingRoute := apiRouter.Group("/setting")
 		{
 			settingRoute.GET("/payment", middleware.RootAuth(), controller.GetPaymentSettings)
-			settingRoute.PUT("/payment/wechat", middleware.RootAuth(), controller.PutPaymentMethod)
-			settingRoute.PUT("/payment/alipay", middleware.RootAuth(), controller.PutPaymentMethod)
-			settingRoute.PUT("/payment/bank", middleware.RootAuth(), controller.PutPaymentMethod)
+			settingRoute.PUT("/payment/:method", middleware.RootAuth(), controller.PutPaymentMethod)
 			settingRoute.GET("/plan", middleware.RootAuth(), controller.GetPlanSettings)
 			settingRoute.PUT("/plan", middleware.RootAuth(), controller.PutPlanSettings)
 		}

@@ -156,6 +156,13 @@ func CreatePlanOrder(in CreatePlanOrderInput) (*CreatePlanOrderOutput, error) {
 		if currentPlan.Plan != nil {
 			currentPlanInfo = currentPlan.Plan
 		}
+		// Block same-tier and downgrades regardless of mode.
+		if currentPlanInfo != nil && plan.Sort < currentPlanInfo.Sort {
+			return nil, errors.New("不能降级到低级别套餐")
+		}
+		if currentPlanInfo != nil && plan.Sort == currentPlanInfo.Sort {
+			return nil, errors.New("您已经订阅了同级别的套餐")
+		}
 		if upgradeMode == OrderUpgradeModeStack {
 			// Stack mode: keep current plan untouched, just create a new one.
 			mode = OrderUpgradeModeStack
@@ -165,10 +172,6 @@ func CreatePlanOrder(in CreatePlanOrderInput) (*CreatePlanOrderOutput, error) {
 			if currentPlanInfo != nil && plan.Sort > currentPlanInfo.Sort {
 				mode = OrderUpgradeModePriceDiff
 				amount = CalculateUpgradePrice(currentPlanInfo, currentPlan.EndTime, now, plan)
-			} else if currentPlanInfo != nil && plan.Sort == currentPlanInfo.Sort {
-				return nil, errors.New("您已经订阅了同级别的套餐")
-			} else {
-				return nil, errors.New("不能降级到低级别套餐")
 			}
 		}
 	}
