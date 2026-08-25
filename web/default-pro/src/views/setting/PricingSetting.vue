@@ -114,28 +114,31 @@ const loading = ref(false)
 const modelPrices = ref([])
 const groupPrices = ref([])
 
-// Per arco-design table#scroll convention: provide a numeric scroll.x that
-// exceeds the natural width of the columns, plus minWidth on each column so
-// the cells shrink gracefully when the viewport is wider than the table and
-// push the table past scroll.x when the viewport is narrower.
+// Per the arco-design table#scroll demo (see __demo__/scroll.md in the
+// upstream repo): columns have NO width or minWidth set on the data columns
+// so they auto-size to fit the table container. Only the right-side "操作"
+// column uses a fixed width + fixed: 'right'. scroll.x uses the 100%
+// percentage form (>= 2.18.0) so the table element always matches the
+// container width — no blank space on the right when the viewport is
+// wider than the sum of fixed column widths.
 const mpColumns = [
-  { title: '模型', dataIndex: 'model_name', minWidth: 160 },
-  { title: '输入价格', dataIndex: 'input_price', minWidth: 110 },
-  { title: '输出价格', dataIndex: 'output_price', minWidth: 110 },
-  { title: '缓存价格', dataIndex: 'cached_price', minWidth: 110 },
-  { title: '请求价格', dataIndex: 'per_request_price', minWidth: 110 },
-  { title: '方式', slotName: 'billing', minWidth: 90 },
+  { title: '模型', dataIndex: 'model_name' },
+  { title: '输入价格', dataIndex: 'input_price', width: 110 },
+  { title: '输出价格', dataIndex: 'output_price', width: 110 },
+  { title: '缓存价格', dataIndex: 'cached_price', width: 110 },
+  { title: '请求价格', dataIndex: 'per_request_price', width: 110 },
+  { title: '方式', slotName: 'billing', width: 90 },
   { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
 ]
-const mpScroll = { x: 900, minWidth: 900 }
+const mpScroll = { x: '100%' }
 
 const gpColumns = [
-  { title: '分组', dataIndex: 'group_name', minWidth: 140 },
-  { title: '模型', dataIndex: 'model_name', minWidth: 180 },
-  { title: '折扣', dataIndex: 'discount', minWidth: 110 },
+  { title: '分组', dataIndex: 'group_name' },
+  { title: '模型', dataIndex: 'model_name', width: 200 },
+  { title: '折扣', dataIndex: 'discount', width: 110 },
   { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
 ]
-const gpScroll = { x: 620, minWidth: 620 }
+const gpScroll = { x: '100%' }
 
 const mpVisible = ref(false), mpEditing = ref(false), mpSaving = ref(false)
 const mpForm = reactive({ model_name: '', input_price: 0, output_price: 0, cached_price: 0, per_request_price: 0, billing_type: 'token' })
