@@ -1,12 +1,20 @@
 <template>
   <a-spin :loading="loading" class="setting-container">
-    <a-tabs v-model:active-key="tab" size="large">
+    <a-tabs v-model:active-key="tab" size="large" class="pricing-tabs">
       <a-tab-pane key="model" title="模型定价">
         <div class="section-header">
           <h3>模型定价</h3>
           <a-button type="primary" @click="openModelPrice()"><template #icon><icon-plus /></template>添加</a-button>
         </div>
-        <a-table :columns="mpColumns" :data="modelPrices" :pagination="false" row-key="id" size="medium" :scroll="{ x: 790 }">
+        <a-table
+          :columns="mpColumns"
+          :data="modelPrices"
+          :pagination="false"
+          row-key="id"
+          size="medium"
+          :scroll="mpScroll"
+          :scrollbar="true"
+        >
           <template #billing="{ record }">
             <a-tag :color="record.billing_type==='token'?'blue':'green'" size="small">{{ record.billing_type==='token'?'Token':'请求' }}</a-tag>
           </template>
@@ -26,7 +34,15 @@
           <h3>分组折扣</h3>
           <a-button type="primary" @click="openGroupPrice()"><template #icon><icon-plus /></template>添加</a-button>
         </div>
-        <a-table :columns="gpColumns" :data="groupPrices" :pagination="false" row-key="id" size="medium" :scroll="{ x: 550 }">
+        <a-table
+          :columns="gpColumns"
+          :data="groupPrices"
+          :pagination="false"
+          row-key="id"
+          size="medium"
+          :scroll="gpScroll"
+          :scrollbar="true"
+        >
           <template #actions="{ record }">
             <a-space>
               <a-button type="text" size="small" @click="openGroupPrice(record)">编辑</a-button>
@@ -98,21 +114,28 @@ const loading = ref(false)
 const modelPrices = ref([])
 const groupPrices = ref([])
 
+// Per arco-design table#scroll convention: provide a numeric scroll.x that
+// exceeds the natural width of the columns, plus minWidth on each column so
+// the cells shrink gracefully when the viewport is wider than the table and
+// push the table past scroll.x when the viewport is narrower.
 const mpColumns = [
-  { title: '模型', dataIndex: 'model_name', width: 160 },
-  { title: '输入价格', dataIndex: 'input_price', width: 100 },
-  { title: '输出价格', dataIndex: 'output_price', width: 100 },
-  { title: '缓存价格', dataIndex: 'cached_price', width: 100 },
-  { title: '请求价格', dataIndex: 'per_request_price', width: 100 },
-  { title: '方式', slotName: 'billing', width: 80 },
-  { title: '操作', slotName: 'actions', width: 150, fixed: 'right' },
+  { title: '模型', dataIndex: 'model_name', minWidth: 160 },
+  { title: '输入价格', dataIndex: 'input_price', minWidth: 110 },
+  { title: '输出价格', dataIndex: 'output_price', minWidth: 110 },
+  { title: '缓存价格', dataIndex: 'cached_price', minWidth: 110 },
+  { title: '请求价格', dataIndex: 'per_request_price', minWidth: 110 },
+  { title: '方式', slotName: 'billing', minWidth: 90 },
+  { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
 ]
+const mpScroll = { x: 900, minWidth: 900 }
+
 const gpColumns = [
-  { title: '分组', dataIndex: 'group_name', width: 140 },
-  { title: '模型', dataIndex: 'model_name', width: 160 },
-  { title: '折扣', dataIndex: 'discount', width: 100 },
-  { title: '操作', slotName: 'actions', width: 150, fixed: 'right' },
+  { title: '分组', dataIndex: 'group_name', minWidth: 140 },
+  { title: '模型', dataIndex: 'model_name', minWidth: 180 },
+  { title: '折扣', dataIndex: 'discount', minWidth: 110 },
+  { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
 ]
+const gpScroll = { x: 620, minWidth: 620 }
 
 const mpVisible = ref(false), mpEditing = ref(false), mpSaving = ref(false)
 const mpForm = reactive({ model_name: '', input_price: 0, output_price: 0, cached_price: 0, per_request_price: 0, billing_type: 'token' })
@@ -166,4 +189,23 @@ onMounted(() => { loadData() })
 .setting-container { padding: 4px 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .section-header h3 { font-size: 16px; font-weight: 600; color: var(--color-text-1); margin: 0; padding: 0; }
+</style>
+
+<!--
+  Per arco-design's a-table#scroll convention, we set numeric scroll.x on
+  each table. However, the surrounding a-tabs sets overflow:hidden on
+  .arco-tabs-content / .arco-tabs-content-item, which clips the table's
+  horizontal scroll container before the user can interact with it. We
+  override that here so the table's own scrollbar stays interactive inside
+  the active tab pane. The .arco-tabs wrapper retains its overflow:hidden
+  so the inactive tab pane content stays hidden.
+-->
+<style>
+.pricing-tabs .arco-tabs-content,
+.pricing-tabs .arco-tabs-content-item {
+  overflow: visible;
+}
+.pricing-tabs .arco-tabs-content-item-active {
+  overflow: visible;
+}
 </style>
