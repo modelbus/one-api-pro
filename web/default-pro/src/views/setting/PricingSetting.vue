@@ -1,6 +1,6 @@
 <template>
   <a-spin :loading="loading" class="setting-container">
-    <a-tabs v-model:active-key="tab" size="large" class="pricing-tabs">
+    <a-tabs v-model:active-key="tab" size="large">
       <a-tab-pane key="model" title="模型定价">
         <div class="section-header">
           <h3>模型定价</h3>
@@ -13,7 +13,7 @@
           row-key="id"
           size="medium"
           :scroll="mpScroll"
-          :scrollbar="true"
+          :scrollbar="false"
         >
           <template #billing="{ record }">
             <a-tag :color="record.billing_type==='token'?'blue':'green'" size="small">{{ record.billing_type==='token'?'Token':'请求' }}</a-tag>
@@ -41,7 +41,7 @@
           row-key="id"
           size="medium"
           :scroll="gpScroll"
-          :scrollbar="true"
+          :scrollbar="false"
         >
           <template #actions="{ record }">
             <a-space>
@@ -114,13 +114,16 @@ const loading = ref(false)
 const modelPrices = ref([])
 const groupPrices = ref([])
 
-// Per the arco-design table#scroll demo (see __demo__/scroll.md in the
-// upstream repo): columns have NO width or minWidth set on the data columns
-// so they auto-size to fit the table container. Only the right-side "操作"
-// column uses a fixed width + fixed: 'right'. scroll.x uses the 100%
-// percentage form (>= 2.18.0) so the table element always matches the
-// container width — no blank space on the right when the viewport is
-// wider than the sum of fixed column widths.
+// Column layout per arco-design table#scroll convention:
+//  - the first (most important) column has NO width so it absorbs the
+//    remaining horizontal space when the viewport is wider than the fixed
+//    columns, making the table stretch to fill its container;
+//  - the other columns keep fixed widths so they stay predictable;
+//  - scroll.x is a numeric minimum table width (no scroll.minWidth, which
+//    would override the component's CSS min-width:100% and create a blank
+//    trailing column). The table element ends up at max(scroll.x, 100% of
+//    container), so on wide screens it fills the container and on narrow
+//    screens it scrolls horizontally.
 const mpColumns = [
   { title: '模型', dataIndex: 'model_name' },
   { title: '输入价格', dataIndex: 'input_price', width: 110 },
@@ -130,7 +133,7 @@ const mpColumns = [
   { title: '方式', slotName: 'billing', width: 90 },
   { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
 ]
-const mpScroll = { x: '100%' }
+const mpScroll = { x: 800 }
 
 const gpColumns = [
   { title: '分组', dataIndex: 'group_name' },
@@ -138,7 +141,7 @@ const gpColumns = [
   { title: '折扣', dataIndex: 'discount', width: 110 },
   { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
 ]
-const gpScroll = { x: '100%' }
+const gpScroll = { x: 600 }
 
 const mpVisible = ref(false), mpEditing = ref(false), mpSaving = ref(false)
 const mpForm = reactive({ model_name: '', input_price: 0, output_price: 0, cached_price: 0, per_request_price: 0, billing_type: 'token' })
@@ -192,23 +195,4 @@ onMounted(() => { loadData() })
 .setting-container { padding: 4px 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .section-header h3 { font-size: 16px; font-weight: 600; color: var(--color-text-1); margin: 0; padding: 0; }
-</style>
-
-<!--
-  Per arco-design's a-table#scroll convention, we set numeric scroll.x on
-  each table. However, the surrounding a-tabs sets overflow:hidden on
-  .arco-tabs-content / .arco-tabs-content-item, which clips the table's
-  horizontal scroll container before the user can interact with it. We
-  override that here so the table's own scrollbar stays interactive inside
-  the active tab pane. The .arco-tabs wrapper retains its overflow:hidden
-  so the inactive tab pane content stays hidden.
--->
-<style>
-.pricing-tabs .arco-tabs-content,
-.pricing-tabs .arco-tabs-content-item {
-  overflow: visible;
-}
-.pricing-tabs .arco-tabs-content-item-active {
-  overflow: visible;
-}
 </style>
