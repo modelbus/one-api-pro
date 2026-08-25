@@ -54,6 +54,7 @@ const routes = [
         { path: 'system', name: 'SystemSetting', component: () => import('@/views/setting/SystemSetting.vue'), meta: { title: '系统设置' } },
         { path: 'cluster', name: 'ClusterSetting', component: () => import('@/views/setting/ClusterSetting.vue'), meta: { title: '集群设置' } },
         { path: 'operation', name: 'OperationSetting', component: () => import('@/views/setting/OperationSetting.vue'), meta: { title: '运营设置' } },
+        { path: 'payment', name: 'PaymentSetting', component: () => import('@/views/setting/PaymentSetting.vue'), meta: { title: '支付设置' } },
         { path: 'pricing', name: 'PricingSetting', component: () => import('@/views/setting/PricingSetting.vue'), meta: { title: '定价管理' } },
         { path: 'plan', name: 'PlanSetting', component: () => import('@/views/setting/PlanSetting.vue'), meta: { title: '套餐管理' } },
         { path: 'personal', name: 'PersonalSetting', component: () => import('@/views/setting/PersonalSetting.vue'), meta: { title: '个人设置' } },
