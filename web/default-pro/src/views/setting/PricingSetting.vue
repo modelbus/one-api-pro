@@ -188,7 +188,7 @@ onMounted(() => { loadData() })
 </script>
 
 <style scoped>
-.setting-container { padding: 4px 0; }
+.setting-container { width: 100%; padding: 4px 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .section-header h3 { font-size: 16px; font-weight: 600; color: var(--color-text-1); margin: 0; padding: 0; }
 </style>
