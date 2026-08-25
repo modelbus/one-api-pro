@@ -22,3 +22,4 @@ web/README.md
 /web/*/node_modules
 dist
 one-api-pro
+.release-body.md
