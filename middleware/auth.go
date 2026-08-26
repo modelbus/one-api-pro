@@ -143,6 +143,10 @@ func TokenAuth() func(c *gin.Context) {
 
 		// set channel id for proxy relay
 		if channelId := c.Param("channelid"); channelId != "" {
+			if !model.IsAdmin(token.UserId) {
+				abortWithMessage(c, http.StatusForbidden, "普通用户不支持指定渠道")
+				return
+			}
 			c.Set(ctxkey.SpecificChannelId, channelId)
 		}
 
