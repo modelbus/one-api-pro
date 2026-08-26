@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/helper"
@@ -119,6 +120,30 @@ func (channel *Channel) GetBaseURL() string {
 		return ""
 	}
 	return *channel.BaseURL
+}
+
+func (channel *Channel) ContainsGroup(group string) bool {
+	if group == "" {
+		return true
+	}
+	for _, g := range strings.Split(channel.Group, ",") {
+		if strings.TrimSpace(g) == group {
+			return true
+		}
+	}
+	return false
+}
+
+func (channel *Channel) ContainsModel(modelName string) bool {
+	if modelName == "" {
+		return true
+	}
+	for _, m := range strings.Split(channel.Models, ",") {
+		if strings.TrimSpace(m) == modelName {
+			return true
+		}
+	}
+	return false
 }
 
 func (channel *Channel) GetModelMapping() map[string]string {
