@@ -52,45 +52,28 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-amd64 .
           CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-arm64 .
 
-      - name: Read CHANGELOG
-        id: changelog
+      - name: Verify CHANGELOG exists
         env:
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
           SRC="CHANGELOG/${TAG}.md"
-          DEST=".release-body.md"
-          if [ -f "$SRC" ]; then
-            cp "$SRC" "$DEST"
-            echo "changelog_file=$DEST" >> "$GITHUB_OUTPUT"
-            echo "has_changelog=true" >> "$GITHUB_OUTPUT"
-          else
-            : > "$DEST"
-            echo "changelog_file=$DEST" >> "$GITHUB_OUTPUT"
-            echo "has_changelog=false" >> "$GITHUB_OUTPUT"
+          if [ ! -f "$SRC" ]; then
+            echo "::error::CHANGELOG file not found: $SRC"
+            echo "Every released tag must have a matching CHANGELOG/<tag>.md before tagging."
+            echo "Create $SRC with the release notes, commit it, then re-tag or delete and re-push the tag."
+            exit 1
           fi
 
       - name: Release
-        if: steps.changelog.outputs.has_changelog == 'true'
+        env:
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          body_path: ${{ steps.changelog.outputs.changelog_file }}
+          body_path: CHANGELOG/${{ github.event.inputs.tag || github.ref_name }}.md
           files: |
             dist/one-api-pro-linux-amd64
             dist/one-api-pro-linux-arm64
             dist/one-api-pro-windows-amd64.exe
             dist/one-api-pro-darwin-amd64
             dist/one-api-pro-darwin-arm64
-
-      - name: Release (fallback to auto-generated notes)
-        if: steps.changelog.outputs.has_changelog != 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            dist/one-api-pro-linux-amd64
-            dist/one-api-pro-linux-arm64
-            dist/one-api-pro-windows-amd64.exe
-            dist/one-api-pro-darwin-amd64
-            dist/one-api-pro-darwin-arm64
-          generate_release_notes: true
