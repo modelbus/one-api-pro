@@ -43,6 +43,15 @@ func Distribute() func(c *gin.Context) {
 				abortWithMessage(c, http.StatusForbidden, "该渠道已被禁用")
 				return
 			}
+			if !channel.ContainsGroup(userGroup) {
+				abortWithMessage(c, http.StatusForbidden, "当前分组无权使用该渠道")
+				return
+			}
+			requestModel = c.GetString(ctxkey.RequestModel)
+			if requestModel != "" && !channel.ContainsModel(requestModel) {
+				abortWithMessage(c, http.StatusForbidden, "该渠道不支持请求的模型")
+				return
+			}
 		} else {
 			requestModel = c.GetString(ctxkey.RequestModel)
 			var err error
