@@ -8,7 +8,21 @@
 
     <!-- 套餐卡片网格 -->
     <a-spin :loading="loading" dot tip="加载中..." class="plans-spin">
-    <div class="plans-grid">
+    <div v-if="!loading && planList.length === 0" class="empty-state">
+      <div class="empty-illustration">
+        <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="14" y="22" width="52" height="44" rx="6" stroke="#D1D1D6" stroke-width="2" fill="#FFFFFF"/>
+          <rect x="20" y="32" width="22" height="3" rx="1.5" fill="#D1D1D6"/>
+          <rect x="20" y="40" width="40" height="3" rx="1.5" fill="#E5E5E7"/>
+          <rect x="20" y="48" width="32" height="3" rx="1.5" fill="#E5E5E7"/>
+          <circle cx="56" cy="56" r="10" fill="#F7F8FA" stroke="#D1D1D6" stroke-width="2"/>
+          <line x1="50" y1="56" x2="62" y2="56" stroke="#D1D1D6" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p class="empty-text">暂无可用套餐</p>
+      <p class="empty-desc">请联系管理员配置套餐后再来查看</p>
+    </div>
+    <div v-else class="plans-grid">
       <div
         v-for="plan in planList"
         :key="plan.id"
@@ -418,6 +432,25 @@ onMounted(() => { loadPlans() })
 }
 .upgrade-banner strong { font-weight: 700; }
 .banner-icon { font-size: 18px; }
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+  color: #86868B;
+}
+.empty-illustration { margin-bottom: 16px; display: flex; justify-content: center; }
+.empty-text {
+  font-size: 15px;
+  color: #1D1D1F;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.empty-desc {
+  font-size: 13px;
+  color: #86868B;
+  margin: 0;
+}
 
 /* 套餐卡片网格 */
 .plans-spin { display: block; width: 100%; min-height: 300px; }
