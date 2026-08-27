@@ -210,6 +210,7 @@ func GetAllUsers(c *gin.Context) {
 		if subs, ok := subMap[u.Id]; ok {
 			u.Plans = subs
 		}
+		u.AccessToken = ""
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -239,6 +240,7 @@ func SearchUsers(c *gin.Context) {
 		if subs, ok := subMap[u.Id]; ok {
 			u.Plans = subs
 		}
+		u.AccessToken = ""
 	}
 
 	c.JSON(http.StatusOK, gin.H{
