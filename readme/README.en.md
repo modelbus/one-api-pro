@@ -24,6 +24,18 @@
   <a href="../README.md">简体中文</a>
   &nbsp;·&nbsp;
   <a href="README.en.md">English</a>
+  &nbsp;·&nbsp;
+  <a href="README.zh-TW.md">繁體中文</a>
+  &nbsp;·&nbsp;
+  <a href="README.ja.md">日本語</a>
+  &nbsp;·&nbsp;
+  <a href="README.ru.md">Русский</a>
+  &nbsp;·&nbsp;
+  <a href="README.ko.md">한국어</a>
+  &nbsp;·&nbsp;
+  <a href="README.ar.md">العربية</a>
+  &nbsp;·&nbsp;
+  <a href="README.de.md">Deutsch</a>
 </p>
 
 ---
