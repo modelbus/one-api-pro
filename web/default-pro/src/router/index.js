@@ -28,6 +28,16 @@ const routes = [
     component: () => import('@/views/auth/PasswordResetConfirm.vue'),
   },
   {
+    path: '/terms',
+    name: 'TermsOfService',
+    component: () => import('@/views/TermsOfService.vue'),
+  },
+  {
+    path: '/privacy',
+    name: 'PrivacyPolicy',
+    component: () => import('@/views/PrivacyPolicy.vue'),
+  },
+  {
     path: '/oauth/github',
     name: 'GitHubOAuth',
     component: () => import('@/views/auth/GitHubOAuth.vue'),
@@ -88,7 +98,7 @@ router.beforeEach((to, from, next) => {
     return next()
   }
 
-  if (!isLoggedIn && !['/login', '/register', '/reset'].includes(to.path) && !to.path.startsWith('/reset/') && !to.path.startsWith('/oauth/')) {
+  if (!isLoggedIn && !['/login', '/register', '/reset', '/terms', '/privacy'].includes(to.path) && !to.path.startsWith('/reset/') && !to.path.startsWith('/oauth/')) {
     return next('/login')
   }
 

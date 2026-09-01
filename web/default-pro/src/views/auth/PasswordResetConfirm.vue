@@ -1,13 +1,17 @@
 <template>
   <AuthLayout>
-    <a-form :model="form" layout="vertical" size="large" @submit="handleSubmit">
+    <div class="auth-heading">
+      <h1 id="auth-title">重置密码</h1>
+      <p>设置您的新密码</p>
+    </div>
+    <a-form class="auth-form" :model="form" layout="vertical" size="large" @submit="handleSubmit" aria-labelledby="auth-title">
       <a-form-item field="password" hide-label>
-        <a-input-password v-model="form.password" placeholder="新密码" allow-clear>
+        <a-input-password v-model="form.password" placeholder="新密码" allow-clear aria-label="新密码">
           <template #prefix><icon-lock /></template>
         </a-input-password>
       </a-form-item>
       <a-form-item field="password2" hide-label>
-        <a-input-password v-model="form.password2" placeholder="确认新密码" allow-clear>
+        <a-input-password v-model="form.password2" placeholder="确认新密码" allow-clear aria-label="确认新密码">
           <template #prefix><icon-lock /></template>
         </a-input-password>
       </a-form-item>
@@ -19,7 +23,7 @@
       <div class="form-extra">
         <a-link @click="$router.push('/login')">返回登录</a-link>
       </div>
-      <div v-if="message" style="margin-top: 16px">
+      <div v-if="message" class="form-alert">
         <a-alert :type="success ? 'success' : 'error'" :show-icon="false">{{ message }}</a-alert>
       </div>
     </a-form>
@@ -64,5 +68,18 @@ async function handleSubmit() {
 </script>
 
 <style scoped>
-.form-extra { display: flex; justify-content: center; }
+.form-extra {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.form-extra :deep(.arco-link) {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.form-alert {
+  margin-top: 20px;
+}
 </style>
