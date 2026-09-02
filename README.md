@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="http://demo.one-api.pro"><img src="https://img.shields.io/badge/🚀%20Live%20Demo-demo.one--api.pro-165DFF.svg?style=for-the-badge" alt="Live Demo"></a>
+  👉 <strong>查看在线 Demo</strong>：<a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
 </p>
 
 <p align="center">
