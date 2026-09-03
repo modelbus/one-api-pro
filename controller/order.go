@@ -17,6 +17,70 @@ type CreatePlanOrderRequest struct {
 	PayMethod string `json:"pay_method"`
 }
 
+// payStatusSuccess / payStatusWarning are the user-facing pay.status
+// values returned alongside CreatePlanOrder / PayMyOrder. They let the
+// frontend decide whether to render the QR/redirect modal or surface a
+// warning without guessing from whether pay_url is empty.
+const (
+	payStatusSuccess = "success"
+	payStatusWarning = "warning"
+)
+
+// buildPayInfo initializes a payment for the given order and returns
+// the "pay" object that CreatePlanOrder / PayMyOrder embed in their
+// JSON response.
+//
+// status:
+//   - "success" — pay_url / qr_code is ready (or bank-transfer note is
+//     present); the frontend should render the payment modal.
+//   - "warning" — payment channel is not registered, disabled, or the
+//     SDK call failed; the order is still persisted and the warning
+//     text is included so the frontend can show a toast.
+func buildPayInfo(payMethod, orderNo string, amount float64, packageName string) gin.H {
+	if payMethod == model.OrderPayMethodBank {
+		return gin.H{
+			"status":  payStatusSuccess,
+			"pay_url": "",
+			"qr_code": "",
+			"note":    "请按订单详情中的账户信息完成转账，等待管理员确认",
+		}
+	}
+	ch, chErr := payment.New(payMethod)
+	if chErr != nil {
+		return gin.H{
+			"status":  payStatusWarning,
+			"pay_url": "",
+			"qr_code": "",
+			"warning": chErr.Error(),
+		}
+	}
+	enabled, _ := ch.IsEnabled()
+	if !enabled {
+		return gin.H{
+			"status":  payStatusWarning,
+			"pay_url": "",
+			"qr_code": "",
+			"warning": "该支付方式尚未启用",
+		}
+	}
+	r, prepErr := ch.PrePay(orderNo, amount, "TBUS-"+packageName)
+	if prepErr != nil {
+		return gin.H{
+			"status":  payStatusWarning,
+			"pay_url": "",
+			"qr_code": "",
+			"warning": prepErr.Error(),
+		}
+	}
+	return gin.H{
+		"status":    payStatusSuccess,
+		"pay_url":   r.PayURL,
+		"qr_code":   r.QRCode,
+		"expire_at": r.ExpireAt,
+		"trade_no":  r.TradeNo,
+	}
+}
+
 // CreatePlanOrder handles POST /api/order/plan (user self-service).
 // It validates the plan, runs the upgrade/stack logic, and (for
 // wechat / alipay) returns a pre-payment URL / QR. The order row
@@ -85,32 +149,7 @@ func CreatePlanOrder(c *gin.Context) {
 	// pre-payment URL. If the channel is disabled or the SDK call
 	// fails, the order is still persisted and the caller can show a
 	// "configure payment settings" hint.
-	var payInfo gin.H
-	if req.PayMethod != model.OrderPayMethodBank {
-		ch, chErr := payment.New(req.PayMethod)
-		if chErr != nil {
-			payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": chErr.Error()}
-		} else {
-			enabled, _ := ch.IsEnabled()
-			if !enabled {
-				payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": "该支付方式尚未启用"}
-			} else {
-				r, prepErr := ch.PrePay(out.Order.OrderNo, out.Amount, "TBUS-"+out.PackageName)
-				if prepErr != nil {
-					payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": prepErr.Error()}
-				} else {
-					payInfo = gin.H{
-						"pay_url":   r.PayURL,
-						"qr_code":   r.QRCode,
-						"expire_at": r.ExpireAt,
-						"trade_no":  r.TradeNo,
-					}
-				}
-			}
-		}
-	} else {
-		payInfo = gin.H{"pay_url": "", "qr_code": "", "note": "请按订单详情中的账户信息完成转账，等待管理员确认"}
-	}
+	payInfo := buildPayInfo(req.PayMethod, out.Order.OrderNo, out.Amount, out.PackageName)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":   true,
@@ -257,32 +296,7 @@ func PayMyOrder(c *gin.Context) {
 		packageName = p.Name
 	}
 
-	var payInfo gin.H
-	if payMethod != model.OrderPayMethodBank {
-		ch, chErr := payment.New(payMethod)
-		if chErr != nil {
-			payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": chErr.Error()}
-		} else {
-			enabled, _ := ch.IsEnabled()
-			if !enabled {
-				payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": "该支付方式尚未启用"}
-			} else {
-				r, prepErr := ch.PrePay(o.OrderNo, o.Amount, "TBUS-"+packageName)
-				if prepErr != nil {
-					payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": prepErr.Error()}
-				} else {
-					payInfo = gin.H{
-						"pay_url":   r.PayURL,
-						"qr_code":   r.QRCode,
-						"expire_at": r.ExpireAt,
-						"trade_no":  r.TradeNo,
-					}
-				}
-			}
-		}
-	} else {
-		payInfo = gin.H{"pay_url": "", "qr_code": "", "note": "请按订单详情中的账户信息完成转账，等待管理员确认"}
-	}
+	payInfo := buildPayInfo(payMethod, o.OrderNo, o.Amount, packageName)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":   true,
