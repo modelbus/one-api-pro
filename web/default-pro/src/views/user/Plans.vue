@@ -255,6 +255,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import { IconWechatpay, IconAlipayCircle } from '@arco-design/web-vue/es/icon'
 import QRCode from 'qrcode'
 import planApi from '@/api/plan'
 import orderApi from '@/api/order'
@@ -833,7 +834,6 @@ onMounted(() => { loadPlans() })
   font-weight: 500;
   color: #1D1D1F;
   transition: all 0.15s;
-  position: relative;
 }
 .pay-picker-item:hover:not(:disabled) {
   border-color: #C7C7CC;
@@ -847,6 +847,11 @@ onMounted(() => { loadPlans() })
 }
 .pay-picker-icon {
   flex-shrink: 0;
+  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 /* WeChat 官方色：#07C160 */
 .pay-picker-item.wechat .pay-picker-icon {
@@ -875,13 +880,17 @@ onMounted(() => { loadPlans() })
 .pay-picker-name {
   flex: 1;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
 }
 .pay-picker-check {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 12px;
+  flex-shrink: 0;
+  font-size: 14px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* 响应式 */
