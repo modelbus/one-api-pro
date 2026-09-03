@@ -57,7 +57,7 @@
             size="large"
             class="plan-btn"
             :disabled="isCurrentPlan(plan) || isLowerPlan(plan)"
-            @click="isCurrentPlan(plan) || isLowerPlan(plan) ? null : (currentPlan && !isExpired(currentPlan) ? handleUpgrade(plan) : handlePurchase(plan))"
+            @click="isCurrentPlan(plan) || isLowerPlan(plan) ? null : (currentPlan && !isExpired(currentPlan) ? onUpgradeClick(plan) : onPurchaseClick(plan))"
           >
             <template v-if="isCurrentPlan(plan)">当前套餐</template>
             <template v-else-if="isLowerPlan(plan)">暂不可用</template>
@@ -201,6 +201,7 @@ import { Message } from '@arco-design/web-vue'
 import QRCode from 'qrcode'
 import planApi from '@/api/plan'
 import orderApi from '@/api/order'
+import paymentApi from '@/api/payment'
 
 const router = useRouter()
 
@@ -221,6 +222,8 @@ const paymentPackageName = ref('')
 const qrcodeDataUrl = ref('')
 const upgrading = ref(false)
 const purchasing = ref(false)
+
+const NO_PAYMENT_MSG = '系统尚未开通任何支付通道，请设置后开启支付'
 
 const VALID_PLAN_NAMES = ['lite', 'air', 'pro', 'max']
 
@@ -313,6 +316,24 @@ function getUpgradeDiff() {
   return Math.max(0, diff)
 }
 
+// Pre-flight check: refuse to open the purchase/upgrade modal when the
+// admin has not enabled any payment channel. Returns true when it is
+// safe to continue.
+async function ensurePaymentEnabled() {
+  try {
+    const { data } = await paymentApi.status()
+    const anyEnabled = data?.data?.any_enabled
+    if (!anyEnabled) {
+      Message.error(NO_PAYMENT_MSG)
+      return false
+    }
+    return true
+  } catch (e) {
+    Message.error('无法获取支付通道状态，请稍后重试')
+    return false
+  }
+}
+
 function handleUpgrade(plan) {
   const currentSort = currentPlan.value?.sort ?? 0
   if (currentSort >= plan.sort) {
@@ -326,6 +347,16 @@ function handleUpgrade(plan) {
 function handlePurchase(plan) {
   selectedPlan.value = plan
   purchaseModalVisible.value = true
+}
+
+async function onUpgradeClick(plan) {
+  if (!(await ensurePaymentEnabled())) return
+  handleUpgrade(plan)
+}
+
+async function onPurchaseClick(plan) {
+  if (!(await ensurePaymentEnabled())) return
+  handlePurchase(plan)
 }
 
 async function generateQRCode(url) {
@@ -359,10 +390,10 @@ async function confirmUpgrade() {
     upgradeModalVisible.value = false
     const data = res?.data
     if (!data?.success) {
-      Message.error(data?.message || '创建订单失败')
+      // Surface the backend error (e.g. "no payment channel enabled").
+      Message.error(data?.message || NO_PAYMENT_MSG)
       return
     }
-    const order = data.order
     const pay = data.pay || {}
     const url = pay.pay_url || pay.qr_code
     if (url) {
@@ -389,7 +420,8 @@ async function confirmPurchase() {
     purchaseModalVisible.value = false
     const data = res?.data
     if (!data?.success) {
-      Message.error(data?.message || '创建订单失败')
+      // Surface the backend error (e.g. "no payment channel enabled").
+      Message.error(data?.message || NO_PAYMENT_MSG)
       return
     }
     const pay = data.pay || {}
