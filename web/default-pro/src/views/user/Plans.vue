@@ -252,7 +252,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
 import { IconWechatpay, IconAlipayCircle } from '@arco-design/web-vue/es/icon'
@@ -287,12 +287,15 @@ const selectedPayMethod = ref('wechat')
 const availablePayMethods = ref([]) // names like 'wechat' | 'alipay'
 const lastPayMethod = ref('wechat') // remembers the last choice for the QR modal title
 
-const paymentModalTitle = computed(() =>
-  lastPayMethod.value === 'alipay' ? '支付宝扫码支付' : '微信扫码支付',
-)
-const paymentTip = computed(() =>
-  lastPayMethod.value === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付',
-)
+// paymentModalTitle / paymentTip are overridden by openPaymentModal /
+// openBankTransferModal so the modal can show different copy for bank
+// transfer vs WeChat/Alipay.
+const paymentModalTitle = ref('')
+const paymentTip = ref('')
+function refreshDefaultPaymentCopy() {
+  paymentModalTitle.value = lastPayMethod.value === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
+  paymentTip.value = lastPayMethod.value === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+}
 
 const NO_PAYMENT_MSG = '系统尚未开通任何支付通道，请设置后开启支付'
 
@@ -457,8 +460,60 @@ async function openPaymentModal(codeUrl, amount, packageName, payMethod) {
   paymentAmount.value = amount
   paymentPackageName.value = packageName
   lastPayMethod.value = payMethod || selectedPayMethod.value
+  refreshDefaultPaymentCopy()
   await generateQRCode(codeUrl)
   paymentModalVisible.value = true
+}
+
+// Show the payment modal in "transfer note" mode (no QR code) — used
+// when the user picked bank transfer and the backend returned a note
+// instead of a pre-payment URL.
+function openBankTransferModal(amount, packageName, note, payMethod) {
+  paymentAmount.value = amount
+  paymentPackageName.value = packageName
+  lastPayMethod.value = payMethod || selectedPayMethod.value
+  qrcodeDataUrl.value = ''
+  paymentTip.value = note || '请按订单详情中的账户信息完成转账，等待管理员确认'
+  paymentModalTitle.value = '转账信息'
+  paymentModalVisible.value = true
+}
+
+// Inspect the response of /api/order/plan (and /api/order/self/:id/pay)
+// and route the UI to either the QR/redirect modal, the bank-transfer
+// note modal, or a toast. Crucially, we never auto-navigate to /orders
+// when the backend reports a warning — that was the old (broken)
+// behaviour the new pay.status field exists to fix.
+function handlePaymentResult(data, plan, payMethod) {
+  const pay = data?.pay || {}
+  const status = pay.status
+  const url = pay.pay_url || pay.qr_code
+  const amount = data?.amount || plan?.price
+  const name = data?.plan_name || plan?.name
+
+  if (status === 'success' && url) {
+    openPaymentModal(url, amount, name, payMethod)
+    return
+  }
+  if (status === 'success' && pay.note) {
+    openBankTransferModal(amount, name, pay.note, payMethod)
+    return
+  }
+  if (status === 'warning') {
+    // Channel problem — let the user know, but don't drag them away
+    // from the plans page.
+    Message.error(pay.warning || '获取支付信息失败，请稍后重试')
+    return
+  }
+  // Unknown / missing status — fall back to legacy behaviour so old
+  // backends keep working, but still avoid an unsolicited redirect to
+  // /orders.
+  if (url) {
+    openPaymentModal(url, amount, name, payMethod)
+  } else if (pay.note) {
+    openBankTransferModal(amount, name, pay.note, payMethod)
+  } else {
+    Message.error(pay.warning || '获取支付信息失败，请稍后重试')
+  }
 }
 
 async function confirmUpgrade() {
@@ -469,21 +524,14 @@ async function confirmUpgrade() {
       plan_id: targetPlan.value.id,
       pay_method: selectedPayMethod.value,
     })
-    upgradeModalVisible.value = false
     const data = res?.data
     if (!data?.success) {
       // Surface the backend error (e.g. "no payment channel enabled").
       Message.error(data?.message || NO_PAYMENT_MSG)
       return
     }
-    const pay = data.pay || {}
-    const url = pay.pay_url || pay.qr_code
-    if (url) {
-      openPaymentModal(url, data.amount || targetPlan.value.price, data.plan_name || targetPlan.value.name, selectedPayMethod.value)
-    } else {
-      Message.warning(pay.warning || '获取支付二维码失败，请稍后到订单中心查看')
-      router.push('/orders')
-    }
+    upgradeModalVisible.value = false
+    handlePaymentResult(data, targetPlan.value, selectedPayMethod.value)
   } catch (e) {
     Message.error(e.response?.data?.message || '升级失败')
   } finally {
@@ -499,21 +547,14 @@ async function confirmPurchase() {
       plan_id: selectedPlan.value.id,
       pay_method: selectedPayMethod.value,
     })
-    purchaseModalVisible.value = false
     const data = res?.data
     if (!data?.success) {
       // Surface the backend error (e.g. "no payment channel enabled").
       Message.error(data?.message || NO_PAYMENT_MSG)
       return
     }
-    const pay = data.pay || {}
-    const url = pay.pay_url || pay.qr_code
-    if (url) {
-      openPaymentModal(url, data.amount || selectedPlan.value.price, data.plan_name || selectedPlan.value.name, selectedPayMethod.value)
-    } else {
-      Message.warning(pay.warning || '获取支付二维码失败，请稍后到订单中心查看')
-      router.push('/orders')
-    }
+    purchaseModalVisible.value = false
+    handlePaymentResult(data, selectedPlan.value, selectedPayMethod.value)
   } catch (e) {
     Message.error(e.response?.data?.message || '创建订单失败')
   } finally {
