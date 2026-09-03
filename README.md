@@ -59,6 +59,7 @@
 - [📖 接口文档](#-接口文档)
 - [📦 部署](#-部署)
   - [🔨 手动部署](#-手动部署)
+  - [🐳 Docker 部署](#-docker-部署)
   - [🏢 多机部署](#-多机部署)
   - [🌐 集群部署（去中心化多活）](#-集群部署去中心化多活)
 - [🗺️ 开发计划](#%EF%B8%8F-开发计划)
@@ -435,6 +436,175 @@ chmod u+x one-api-pro
 #### 3. 访问
 
 访问 [http://localhost:3000/](http://localhost:3000/) 并登录。初始账号用户名为 `root`，密码为 `123456`。
+
+### 🐳 Docker 部署
+
+镜像自动发布到 GitHub Container Registry：`ghcr.io/modelbus/one-api-pro`，每个 tag 都会同时构建并推送 `linux/amd64` 与 `linux/arm64` 两个架构的镜像。
+
+> 适合不想手动编译、需要在服务器快速部署、或使用 K8s / docker-compose 编排的场景。
+
+#### 镜像地址
+
+| 版本 | 镜像 |
+| --- | --- |
+| 最新稳定版 | `ghcr.io/modelbus/one-api-pro:latest` |
+| 指定版本 | `ghcr.io/modelbus/one-api-pro:v0.1.0` |
+| 大版本 | `ghcr.io/modelbus/one-api-pro:0` |
+
+#### 挂载目录约定
+
+容器内有两个推荐挂载点，**强烈建议都挂载**：
+
+| 容器路径 | 用途 | 容器内默认值 |
+| --- | --- | --- |
+| `/app/config` | 配置文件目录（放 `.env` 文件，entrypoint 会自动加载） | — |
+| `/app/data` | 运行时数据（SQLite 数据库、日志） | — |
+
+可以通过环境变量 `CONFIG_DIR` 自定义配置目录位置。
+
+#### 快速开始（SQLite 单文件）
+
+```bash
+mkdir -p ./one-api-pro/config ./one-api-pro/data
+
+docker run -d --name one-api-pro --restart unless-stopped \
+  -p 3000:3000 \
+  -v $(pwd)/one-api-pro/config:/app/config \
+  -v $(pwd)/one-api-pro/data:/app/data \
+  ghcr.io/modelbus/one-api-pro:latest
+```
+
+访问 `http://localhost:3000`，数据落在 `./one-api-pro/data`，配置（可选）落在 `./one-api-pro/config`。
+
+#### 使用配置文件
+
+把 `.env` 放到 `./one-api-pro/config/.env`，**无需修改任何 docker 命令**，entrypoint 会在容器启动时自动作为 `--env` 参数传入 one-api-pro。
+
+完整的环境变量列表参见根目录的 `.env.example`，示例配置：
+
+```ini
+# ./one-api-pro/config/.env
+PORT=3000
+SQL_DSN=root:123456@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local
+SESSION_SECRET=please-change-me-to-a-random-string
+REDIS_CONN_STRING=redis://redis:6379
+THEME=default
+```
+
+修改后重启容器生效：
+
+```bash
+docker restart one-api-pro
+```
+
+#### 修改端口
+
+三种方式等价，可任意组合使用：
+
+```bash
+# 方式 1：环境变量（最高优先级）
+docker run -p 8080:8080 -e PORT=8080 ... ghcr.io/modelbus/one-api-pro:latest
+
+# 方式 2：写到 .env
+echo "PORT=8080" >> ./one-api-pro/config/.env
+
+# 方式 3：CLI 参数
+docker run -p 8080:8080 ... ghcr.io/modelbus/one-api-pro:latest --port 8080
+```
+
+#### 切换数据库
+
+默认使用 SQLite（无需任何配置）。如需切换到 MySQL 或 PostgreSQL，设置 `SQL_DSN` 即可：
+
+```bash
+docker run -d --name one-api-pro \
+  -p 3000:3000 \
+  -e SQL_DSN='root:123456@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
+  -v $(pwd)/one-api-pro/config:/app/config \
+  -v $(pwd)/one-api-pro/data:/app/data \
+  ghcr.io/modelbus/one-api-pro:latest
+```
+
+或把 `SQL_DSN` 写进 `./one-api-pro/config/.env`。
+
+#### 命令行参数
+
+容器内支持本地二进制全部参数（详见 `one-api-pro --help`）：
+
+| 参数 | 默认 | 说明 |
+| --- | --- | --- |
+| `--port <n>` | 3000 | 监听端口（也可通过 `PORT` 环境变量设置） |
+| `--log-dir <path>` | `/app/data/logs` | 日志目录 |
+| `--env <path>` | 自动从 `/app/config/.env` 加载 | 指定 `.env` 文件路径 |
+| `--version` | — | 打印版本号并退出 |
+| `--help` | — | 打印帮助信息 |
+
+所有参数都可通过 `docker run` 末尾追加方式传入：
+
+```bash
+docker run --rm ghcr.io/modelbus/one-api-pro:latest --version
+docker run --rm ghcr.io/modelbus/one-api-pro:latest --help
+```
+
+#### docker-compose 示例
+
+```yaml
+# docker-compose.yml
+services:
+  one-api-pro:
+    image: ghcr.io/modelbus/one-api-pro:latest
+    container_name: one-api-pro
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Shanghai   # 让日志时间戳匹配你的时区
+```
+
+启动：
+
+```bash
+docker compose up -d
+```
+
+#### 调试模式
+
+直接进入容器 shell：
+
+```bash
+docker run -it --rm \
+  -v $(pwd)/one-api-pro/config:/app/config \
+  -v $(pwd)/one-api-pro/data:/app/data \
+  --entrypoint sh \
+  ghcr.io/modelbus/one-api-pro:latest
+```
+
+#### 升级
+
+```bash
+docker pull ghcr.io/modelbus/one-api-pro:latest
+docker stop one-api-pro && docker rm one-api-pro
+# 然后重新执行上面的 docker run 命令，配置和数据卷不变
+```
+
+docker compose 用户：
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+#### 自定义构建（可选）
+
+仓库根目录的 `Dockerfile` 与 `docker-entrypoint.sh` 完全公开，可按需修改后自行构建：
+
+```bash
+docker build -t my-one-api-pro:custom .
+```
+
+镜像使用 **多阶段构建**：先构建 Vue 3 前端（`node:20-alpine`），再编译 Go 二进制（`golang:1.22-alpine`，`CGO_ENABLED=0` 静态链接），最终打包到 `alpine:latest` 运行时，体积小、安全性高、跨发行版兼容。
 
 ### 🏢 多机部署
 1. 所有服务器 `SESSION_SECRET` 设置一样的值。
