@@ -1,0 +1,25 @@
+.git
+.github
+node_modules
+**/node_modules
+dist
+logs
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+one-api-pro
+one-api-pro.db
+one-api-pro.service
+CHANGELOG
+readme
+docs
+*.md
+!README.md
+.DS_Store
+
+# 已废弃的前端主题（.gitignore 也已屏蔽）
+web/air
+web/berry
+web/default
