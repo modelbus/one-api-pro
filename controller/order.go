@@ -22,6 +22,10 @@ type CreatePlanOrderRequest struct {
 // wechat / alipay) returns a pre-payment URL / QR. The order row
 // stays at status=0 (pending) until the payment channel's async
 // notification arrives.
+//
+// If the admin has not enabled any payment channel, the request is
+// rejected with no order created — the user must be told to ask the
+// admin to enable a channel first.
 func CreatePlanOrder(c *gin.Context) {
 	userId := c.GetInt("id")
 	if userId == 0 {
@@ -54,6 +58,15 @@ func CreatePlanOrder(c *gin.Context) {
 			"success": false,
 			"message": "自助下单仅支持 wechat / alipay / bank",
 		})
+		return
+	}
+
+	// Refuse to create the order when no payment channel is configured.
+	// The order row is intentionally NOT persisted in this case so the
+	// /api/order/self list stays clean.
+	anyEnabled, _, _ := payment.AnyChannelEnabled()
+	if !anyEnabled {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": noPaymentEnabledMsg})
 		return
 	}
 
@@ -100,13 +113,13 @@ func CreatePlanOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"success":  true,
-		"message":  "",
-		"order":    out.Order,
-		"amount":   out.Amount,
+		"success":   true,
+		"message":   "",
+		"order":     out.Order,
+		"amount":    out.Amount,
 		"plan_name": out.PackageName,
-		"mode":     out.Mode,
-		"pay":      payInfo,
+		"mode":      out.Mode,
+		"pay":       payInfo,
 	})
 }
 
@@ -168,6 +181,117 @@ func CancelMyOrder(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "订单已取消"})
+}
+
+// PayMyOrderRequest is the body of POST /api/order/self/:id/pay.
+type PayMyOrderRequest struct {
+	PayMethod string `json:"pay_method"`
+}
+
+// PayMyOrder handles POST /api/order/self/:id/pay (user, ownership
+// enforced). It re-issues the pre-payment URL/QR for an existing
+// pending order, optionally switching the pay_method first.
+//
+// Returns the same response shape as CreatePlanOrder so the frontend
+// can reuse its payment modal.
+func PayMyOrder(c *gin.Context) {
+	userId := c.GetInt("id")
+	if userId == 0 {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "未登录"})
+		return
+	}
+	id, _ := strconv.Atoi(c.Param("id"))
+	var req PayMyOrderRequest
+	_ = c.ShouldBindJSON(&req) // body is optional
+
+	o, err := model.GetOrderById(id)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "订单不存在"})
+		return
+	}
+	if o.UserId != userId {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "无权访问此订单"})
+		return
+	}
+	if o.Status != model.OrderStatusPending {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "订单当前不可支付"})
+		return
+	}
+
+	// Pick the pay_method to use. The request may override the one
+	// stored at order-creation time.
+	payMethod := req.PayMethod
+	if payMethod == "" {
+		payMethod = o.PayMethod
+	}
+	if !model.IsValidPayMethod(payMethod) {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "不支持的支付方式"})
+		return
+	}
+	switch payMethod {
+	case model.OrderPayMethodWechat, model.OrderPayMethodAlipay, model.OrderPayMethodBank:
+		// ok
+	default:
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "自助下单仅支持 wechat / alipay / bank",
+		})
+		return
+	}
+
+	// Refuse if no channel is enabled at all.
+	anyEnabled, _, _ := payment.AnyChannelEnabled()
+	if !anyEnabled {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": noPaymentEnabledMsg})
+		return
+	}
+
+	// Persist the chosen pay_method if it changed.
+	if payMethod != o.PayMethod {
+		o.PayMethod = payMethod
+		_ = o.Update()
+	}
+
+	packageName := ""
+	if p := model.GetPlanByOrderPlanInfo(o.PlanInfo); p != nil {
+		packageName = p.Name
+	}
+
+	var payInfo gin.H
+	if payMethod != model.OrderPayMethodBank {
+		ch, chErr := payment.New(payMethod)
+		if chErr != nil {
+			payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": chErr.Error()}
+		} else {
+			enabled, _ := ch.IsEnabled()
+			if !enabled {
+				payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": "该支付方式尚未启用"}
+			} else {
+				r, prepErr := ch.PrePay(o.OrderNo, o.Amount, "TBUS-"+packageName)
+				if prepErr != nil {
+					payInfo = gin.H{"pay_url": "", "qr_code": "", "warning": prepErr.Error()}
+				} else {
+					payInfo = gin.H{
+						"pay_url":   r.PayURL,
+						"qr_code":   r.QRCode,
+						"expire_at": r.ExpireAt,
+						"trade_no":  r.TradeNo,
+					}
+				}
+			}
+		}
+	} else {
+		payInfo = gin.H{"pay_url": "", "qr_code": "", "note": "请按订单详情中的账户信息完成转账，等待管理员确认"}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"message":   "",
+		"order":     o,
+		"amount":    o.Amount,
+		"plan_name": packageName,
+		"pay":       payInfo,
+	})
 }
 
 // ---------- Admin handlers ----------
