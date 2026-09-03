@@ -129,16 +129,89 @@
         </div>
       </div>
     </div>
+
+    <!-- 支付方式选择弹窗 -->
+    <a-modal
+      v-model:visible="payModalVisible"
+      :footer="false"
+      :mask-closable="true"
+      title="选择支付方式"
+      width="420px"
+    >
+      <div class="pay-method-body">
+        <div class="pay-method-row">
+          <span class="pay-method-label">套餐</span>
+          <span class="pay-method-value">{{ payTarget?.planName }}</span>
+        </div>
+        <div class="pay-method-row">
+          <span class="pay-method-label">金额</span>
+          <span class="pay-method-amount">¥{{ payTarget?.amount }}</span>
+        </div>
+        <div class="pay-method-list">
+          <button
+            v-for="m in payMethods"
+            :key="m.name"
+            class="pay-method-item"
+            :class="{ active: selectedPayMethod === m.name }"
+            @click="selectedPayMethod = m.name"
+          >
+            <span class="pay-method-icon">{{ methodIcon(m.name) }}</span>
+            <span class="pay-method-name">{{ m.label }}</span>
+            <span v-if="selectedPayMethod === m.name" class="pay-method-check">✓</span>
+          </button>
+          <div v-if="payMethods.length === 0" class="pay-method-empty">
+            暂无可用的支付方式
+          </div>
+        </div>
+        <div class="pay-method-footer">
+          <a-button @click="payModalVisible = false">取消</a-button>
+          <a-button type="primary" :loading="paySubmitting" :disabled="!selectedPayMethod" @click="confirmPayMethod">
+            确认支付
+          </a-button>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 支付二维码弹窗 -->
+    <a-modal
+      v-model:visible="qrModalVisible"
+      :footer="false"
+      :mask-closable="true"
+      :title="qrModalTitle"
+      width="420px"
+      class="payment-modal"
+    >
+      <div class="payment-modal-body">
+        <div class="qrcode-wrap">
+          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" alt="支付二维码" class="qrcode-img" />
+          <div v-else class="qrcode-loading">正在生成支付二维码...</div>
+        </div>
+        <div class="payment-tip">{{ qrModalTip }}</div>
+        <div v-if="qrModalNote" class="payment-tip-sub">{{ qrModalNote }}</div>
+        <div class="payment-order-info">
+          <div class="payment-info-row">
+            <span>套餐</span>
+            <span class="payment-info-value">{{ qrPackageName }}</span>
+          </div>
+          <div class="payment-info-row">
+            <span>金额</span>
+            <span class="payment-info-price">¥{{ qrAmount }}</span>
+          </div>
+        </div>
+        <div class="payment-actions">
+          <a-button long @click="qrModalVisible = false">关闭</a-button>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { useRouter } from 'vue-router'
+import QRCode from 'qrcode'
 import orderApi from '@/api/order'
-
-const router = useRouter()
+import paymentApi from '@/api/payment'
 
 const activeTab = ref('all')
 const detailVisible = ref(false)
@@ -154,6 +227,8 @@ const tabs = [
 ]
 
 const STATUS_STR = { 0: 'pending', 1: 'paid', 2: 'cancelled', 3: 'refunded' }
+
+const NO_PAYMENT_MSG = '系统尚未开通任何支付通道，请设置后开启支付'
 
 const filteredOrders = computed(() => {
   if (activeTab.value === 'all') return orders.value
@@ -178,6 +253,15 @@ function payMethodText(m) {
     case 'offline': return '线下'
     case 'free': return '免费'
     default: return m || '-'
+  }
+}
+
+function methodIcon(name) {
+  switch (name) {
+    case 'wechat': return '💚'
+    case 'alipay': return '💙'
+    case 'bank': return '🏦'
+    default: return '💳'
   }
 }
 
@@ -235,9 +319,105 @@ function viewOrder(record) {
   detailVisible.value = true
 }
 
-function payOrder(record) {
-  Message.loading({ content: '跳转支付中…', duration: 1500 })
-  router.push(`/plans?order=${record.orderNo}`)
+// Payment flow state
+const payModalVisible = ref(false)
+const payTarget = ref(null)       // { id, planName, amount }
+const payMethods = ref([])        // [{ name, label, enabled }]
+const selectedPayMethod = ref('')
+const paySubmitting = ref(false)
+
+const qrModalVisible = ref(false)
+const qrModalTitle = ref('扫码支付')
+const qrModalTip = ref('请扫码完成支付')
+const qrModalNote = ref('')
+const qrcodeDataUrl = ref('')
+const qrAmount = ref(0)
+const qrPackageName = ref('')
+
+async function loadPaymentStatus() {
+  try {
+    const { data } = await paymentApi.status()
+    const d = data?.data || {}
+    payMethods.value = (d.methods || []).filter(m => m.enabled)
+    return !!d.any_enabled
+  } catch (e) {
+    payMethods.value = []
+    return false
+  }
+}
+
+async function payOrder(record) {
+  // Pre-flight: refuse the action entirely when no payment channel is
+  // enabled. This avoids redirecting the user to the (misleading)
+  // plans page.
+  const anyEnabled = await loadPaymentStatus()
+  if (!anyEnabled) {
+    Message.error(NO_PAYMENT_MSG)
+    return
+  }
+  payTarget.value = {
+    id: record.id,
+    planName: record.planName,
+    amount: record.amount,
+  }
+  // Default to the order's existing method if it's still enabled,
+  // otherwise the first enabled method.
+  const exists = payMethods.value.find(m => m.name === record.payMethod)
+  selectedPayMethod.value = exists ? exists.name : (payMethods.value[0]?.name || '')
+  payModalVisible.value = true
+}
+
+async function confirmPayMethod() {
+  if (!payTarget.value || !selectedPayMethod.value) return
+  paySubmitting.value = true
+  try {
+    const res = await orderApi.payMyOrder(payTarget.value.id, {
+      pay_method: selectedPayMethod.value,
+    })
+    const data = res?.data
+    if (!data?.success) {
+      Message.error(data?.message || '发起支付失败')
+      return
+    }
+    payModalVisible.value = false
+    const pay = data.pay || {}
+    const url = pay.pay_url || pay.qr_code
+    if (url) {
+      qrModalTitle.value = selectedPayMethod.value === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
+      qrModalTip.value = selectedPayMethod.value === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+      qrModalNote.value = '（目前仅展示二维码支付）'
+      qrAmount.value = data.amount || payTarget.value.amount
+      qrPackageName.value = data.plan_name || payTarget.value.planName
+      try {
+        qrcodeDataUrl.value = await QRCode.toDataURL(url, {
+          width: 220,
+          margin: 2,
+          color: { dark: '#000000', light: '#ffffff' },
+        })
+      } catch (e) {
+        qrcodeDataUrl.value = ''
+      }
+      qrModalVisible.value = true
+      // Refresh the order list so the row updates (e.g. once the
+      // payment channel marks the order paid asynchronously).
+      loadOrders()
+    } else if (pay.note) {
+      // Offline / bank transfer — keep modal visible but show note.
+      qrModalTitle.value = '转账信息'
+      qrModalTip.value = pay.note
+      qrModalNote.value = ''
+      qrAmount.value = data.amount || payTarget.value.amount
+      qrPackageName.value = data.plan_name || payTarget.value.planName
+      qrcodeDataUrl.value = ''
+      qrModalVisible.value = true
+    } else {
+      Message.warning(pay.warning || '获取支付二维码失败，请稍后重试')
+    }
+  } catch (e) {
+    Message.error(e.response?.data?.message || '发起支付失败')
+  } finally {
+    paySubmitting.value = false
+  }
 }
 
 onMounted(() => { loadOrders() })
@@ -396,4 +576,102 @@ onMounted(() => { loadOrders() })
 .detail-row:last-child { border-bottom: none; }
 .detail-label { font-size: 13px; color: #86868B; }
 .detail-value { font-size: 13px; color: #1D1D1F; font-weight: 500; }
+
+/* 支付方式选择 */
+.pay-method-body { padding: 4px 0; }
+.pay-method-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+.pay-method-label { font-size: 13px; color: #86868B; }
+.pay-method-value { font-size: 14px; color: #1D1D1F; font-weight: 500; }
+.pay-method-amount { font-size: 18px; font-weight: 700; color: #007AFF; }
+
+.pay-method-list {
+  margin: 12px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pay-method-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #E5E5E7;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 14px;
+  color: #1D1D1F;
+  text-align: left;
+}
+.pay-method-item:hover {
+  border-color: #007AFF;
+  background: #F0F7FF;
+}
+.pay-method-item.active {
+  border-color: #007AFF;
+  background: #F0F7FF;
+  box-shadow: 0 0 0 1px #007AFF inset;
+}
+.pay-method-icon { font-size: 20px; }
+.pay-method-name { flex: 1; font-weight: 500; }
+.pay-method-check { color: #007AFF; font-weight: 700; }
+.pay-method-empty {
+  text-align: center;
+  color: #86868B;
+  font-size: 13px;
+  padding: 20px 0;
+}
+.pay-method-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+/* 二维码弹窗 */
+.payment-modal-body {
+  padding: 8px 0;
+  text-align: center;
+}
+.payment-order-info {
+  background: #F9FAFB;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.payment-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.payment-info-row:last-child { margin-bottom: 0; }
+.payment-info-value { color: #1D1D1F; font-weight: 600; }
+.payment-info-price { color: #007AFF; font-weight: 700; font-size: 16px; }
+.qrcode-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  min-height: 220px;
+}
+.qrcode-img {
+  width: 220px;
+  height: 220px;
+  border: 1px solid #E5E5E7;
+  border-radius: 8px;
+  display: block;
+}
+.qrcode-loading { color: #86868B; font-size: 14px; }
+.payment-tip { font-size: 15px; font-weight: 600; color: #1D1D1F; margin-bottom: 4px; }
+.payment-tip-sub { font-size: 12px; color: #86868B; margin-bottom: 20px; }
+.payment-actions { display: flex; gap: 12px; }
 </style>
