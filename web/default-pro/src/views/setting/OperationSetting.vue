@@ -23,7 +23,7 @@
                 <a-col :span="6"><a-form-item label="额度提醒阈值"><a-input-number v-model="form.QuotaRemindThreshold" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
               </a-row>
               <a-row :gutter="[32, 8]">
-                <a-col :span="6"><a-form-item label="自动禁用低成功率渠道"><a-switch v-model="form.AutomaticDisableChannelEnabled" @change="saveSwitch('AutomaticDisableChannelEnabled')" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item label="渠道出错自动禁用"><a-switch v-model="form.AutomaticDisableChannelEnabled" @change="saveSwitch('AutomaticDisableChannelEnabled')" /></a-form-item></a-col>
                 <a-col :span="6"><a-form-item label="自动启用恢复渠道"><a-switch v-model="form.AutomaticEnableChannelEnabled" @change="saveSwitch('AutomaticEnableChannelEnabled')" /></a-form-item></a-col>
                 <a-col :span="6"><a-form-item label="启用消费日志"><a-switch v-model="form.LogConsumeEnabled" @change="saveSwitch('LogConsumeEnabled')" /></a-form-item></a-col>
               </a-row>
