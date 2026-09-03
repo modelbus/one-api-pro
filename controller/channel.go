@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"encoding/json"
+	"io"
+
 	"github.com/gin-gonic/gin"
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/helper"
@@ -146,8 +149,7 @@ func DeleteDisabledChannel(c *gin.Context) {
 }
 
 func UpdateChannel(c *gin.Context) {
-	channel := model.Channel{}
-	err := c.ShouldBindJSON(&channel)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -155,7 +157,25 @@ func UpdateChannel(c *gin.Context) {
 		})
 		return
 	}
-	err = channel.Update()
+	channel := model.Channel{}
+	if err := json.Unmarshal(body, &channel); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	// Determine which JSON keys were actually present in the payload so that
+	// Update() only touches those columns. A partial request like {id, status}
+	// must not wipe the channel's other fields to empty.
+	provided := map[string]bool{}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(body, &raw); err == nil {
+		for key := range raw {
+			provided[key] = true
+		}
+	}
+	err = channel.Update(provided)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
