@@ -174,9 +174,7 @@ export default {
       placeholder: '请输入兑换码',
       submit: '立即兑换',
       hint: '兑换码通常为 16 位字母数字组合，如：TBUS-XXXX-XXXX-XXXX',
-      successTitle: '兑换成功！',
-      successDesc: '您已成功兑换 {amount} 额度',
-      viewPlans: '前往套餐',
+      successInline: '兑换成功，已到账 {amount} 额度',
     },
     dashboard: {
       title: '仪表盘',
@@ -386,9 +384,7 @@ export default {
       placeholder: 'Enter redemption code',
       submit: 'Redeem Now',
       hint: 'Redemption codes are usually 16 alphanumeric chars, e.g. TBUS-XXXX-XXXX-XXXX',
-      successTitle: 'Redeemed!',
-      successDesc: 'Successfully redeemed {amount} credits',
-      viewPlans: 'View Plans',
+      successInline: 'Redeemed successfully — {amount} credits added',
     },
     dashboard: {
       title: 'Dashboard',
