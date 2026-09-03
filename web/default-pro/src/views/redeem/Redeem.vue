@@ -14,12 +14,13 @@
           :placeholder="$t('redeem.placeholder')"
           size="large"
           class="redeem-input"
-          :status="error ? 'error' : ''"
+          :status="error ? 'error' : (success ? 'success' : '')"
           allow-clear
           :max-length="128"
           @press-enter="handleRedeem"
         />
         <div v-if="error" class="redeem-error">{{ error }}</div>
+        <div v-else-if="success" class="redeem-success">{{ success }}</div>
         <a-button
           type="primary"
           size="large"
@@ -38,7 +39,7 @@
       <a-spin :loading="quotaLoading" style="width: 100%;">
         <div class="quota-info-row">
           <div class="quota-info-label">{{ $t('redeem.currentQuota') }}</div>
-          <div class="quota-info-value">{{ formatNumber(quota) }}</div>
+          <div :class="['quota-info-value', 'quota-info-value-current', { flash: quotaFlash }]" :key="quotaFlashKey">{{ formatNumber(quota) }}</div>
         </div>
         <div class="quota-info-row" v-if="quotaUsed > 0 || quotaTotal > 0">
           <div class="quota-info-label">{{ $t('redeem.usage') }}</div>
@@ -48,41 +49,24 @@
         </div>
       </a-spin>
     </div>
-
-    <!-- 兑换成功弹窗 -->
-    <div v-if="success" class="modal-overlay" @click.self="success = false">
-      <div class="modal success-modal">
-        <div class="modal-icon">✅</div>
-        <div class="modal-title">{{ $t('redeem.successTitle') }}</div>
-        <div class="modal-desc">{{ $t('redeem.successDesc', { amount: redeemedAmount }) }}</div>
-        <div class="modal-footer">
-          <a-button @click="success = false">{{ $t('common.close') }}</a-button>
-          <a-button type="primary" @click="goPlans">{{ $t('redeem.viewPlans') }}</a-button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Message } from '@arco-design/web-vue'
 import api from '@/api'
-
-const router = useRouter()
 
 const code = ref('')
 const loading = ref(false)
 const error = ref('')
-const success = ref(false)
+const success = ref('')
 
 const quotaLoading = ref(true)
 const quota = ref(0)
 const quotaUsed = ref(0)
 const quotaTotal = ref(0)
-
-const redeemedAmount = ref(0)
+const quotaFlash = ref(false)
+const quotaFlashKey = ref(0)
 
 const numberFormatter = new Intl.NumberFormat('en-US')
 
@@ -105,7 +89,7 @@ async function fetchQuota() {
     if (data?.success && data.data) {
       quota.value = data.data.quota ?? data.data.remain_quota ?? 0
       quotaUsed.value = data.data.used_quota ?? 0
-      quotaTotal.value = (quota.value + quotaUsed.value) || 0
+      quotaTotal.value = (Number(quota.value) + Number(quotaUsed.value)) || 0
     }
   } catch (e) {
     // silent
@@ -114,20 +98,32 @@ async function fetchQuota() {
   }
 }
 
+function flashQuota() {
+  quotaFlashKey.value++
+  quotaFlash.value = true
+  setTimeout(() => { quotaFlash.value = false }, 700)
+}
+
 async function handleRedeem() {
-  error.value = validateCode(code.value)
-  if (error.value) return
+  error.value = ''
+  success.value = ''
+  const v = validateCode(code.value)
+  if (v) {
+    error.value = v
+    return
+  }
 
   loading.value = true
-  error.value = ''
   try {
     const { data } = await api.post('/api/user/topup', { key: code.value.trim() })
     if (data?.success) {
-      redeemedAmount.value = data.data ?? 0
-      success.value = true
+      const amount = data.data ?? 0
+      success.value = `兑换成功，已到账 ${formatNumber(amount)} 额度`
       code.value = ''
+      // Re-fetch quota so the "当前额度/已使用" panel reflects the
+      // new balance immediately and the number visibly increases.
       await fetchQuota()
-      Message.success('兑换成功')
+      flashQuota()
     } else {
       error.value = data?.message || '兑换失败'
     }
@@ -136,11 +132,6 @@ async function handleRedeem() {
   } finally {
     loading.value = false
   }
-}
-
-function goPlans() {
-  success.value = false
-  router.push('/plans')
 }
 
 onMounted(fetchQuota)
@@ -191,6 +182,12 @@ onMounted(fetchQuota)
   margin-bottom: 12px;
   text-align: left;
 }
+.redeem-success {
+  color: #00b42a;
+  font-size: 13px;
+  margin-bottom: 12px;
+  text-align: left;
+}
 .redeem-btn {
   width: 100%;
   border-radius: 8px;
@@ -226,51 +223,23 @@ onMounted(fetchQuota)
   color: var(--color-text-3);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
+  transition: color 0.2s;
+}
+.quota-info-value-current {
+  font-size: 15px;
+  color: #00b42a;
+  font-weight: 600;
+}
+.quota-info-value-current.flash {
+  animation: quota-flash 0.6s ease-out;
+}
+@keyframes quota-flash {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
 }
 .quota-divider {
   margin: 0 6px;
   color: var(--color-text-4);
-}
-
-/* 成功弹窗 */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-.modal {
-  background: #fff;
-  border-radius: 16px;
-  padding: 32px;
-  width: 360px;
-  max-width: 90vw;
-}
-.success-modal {
-  text-align: center;
-}
-.modal-icon {
-  font-size: 56px;
-  margin-bottom: 16px;
-}
-.modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--color-text-1);
-  margin-bottom: 8px;
-}
-.modal-desc {
-  font-size: 14px;
-  color: var(--color-text-3);
-  margin-bottom: 24px;
-}
-.modal-footer {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
 }
 </style>
