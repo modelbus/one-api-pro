@@ -152,10 +152,10 @@
             v-for="m in payMethods"
             :key="m.name"
             class="pay-method-item"
-            :class="{ active: selectedPayMethod === m.name }"
+            :class="[m.name, { active: selectedPayMethod === m.name }]"
             @click="selectedPayMethod = m.name"
           >
-            <span class="pay-method-icon">{{ methodIcon(m.name) }}</span>
+            <component :is="methodIconComponent(m.name)" :size="28" class="pay-method-icon" />
             <span class="pay-method-name">{{ m.label }}</span>
             <span v-if="selectedPayMethod === m.name" class="pay-method-check">✓</span>
           </button>
@@ -209,6 +209,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
+import { IconWechatpay, IconAlipayCircle, IconSafe } from '@arco-design/web-vue/es/icon'
 import QRCode from 'qrcode'
 import orderApi from '@/api/order'
 import paymentApi from '@/api/payment'
@@ -256,12 +257,13 @@ function payMethodText(m) {
   }
 }
 
-function methodIcon(name) {
+// Returns an Arco icon component matching the pay method so the brand
+// color (CSS-driven via currentColor) shows up in the picker.
+function methodIconComponent(name) {
   switch (name) {
-    case 'wechat': return '💚'
-    case 'alipay': return '💙'
-    case 'bank': return '🏦'
-    default: return '💳'
+    case 'wechat': return IconWechatpay
+    case 'alipay': return IconAlipayCircle
+    default: return IconSafe
   }
 }
 
@@ -591,38 +593,66 @@ onMounted(() => { loadOrders() })
 
 .pay-method-list {
   margin: 12px 0 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 .pay-method-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #E5E5E7;
+  padding: 14px 10px;
+  border: 1.5px solid #E5E5E7;
   border-radius: 10px;
   background: #fff;
   cursor: pointer;
   transition: all 0.15s;
   font-size: 14px;
   color: #1D1D1F;
-  text-align: left;
+  position: relative;
+  font-weight: 500;
 }
 .pay-method-item:hover {
-  border-color: #007AFF;
-  background: #F0F7FF;
+  border-color: #C7C7CC;
 }
-.pay-method-item.active {
-  border-color: #007AFF;
-  background: #F0F7FF;
-  box-shadow: 0 0 0 1px #007AFF inset;
+/* WeChat 官方色：#07C160 */
+.pay-method-item.wechat .pay-method-icon { color: #07C160; }
+.pay-method-item.wechat.active {
+  border-color: #07C160;
+  background: rgba(7, 193, 96, 0.04);
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.12);
 }
-.pay-method-icon { font-size: 20px; }
-.pay-method-name { flex: 1; font-weight: 500; }
-.pay-method-check { color: #007AFF; font-weight: 700; }
+.pay-method-item.wechat.active .pay-method-check { color: #07C160; }
+/* Alipay 官方色：#1677FF */
+.pay-method-item.alipay .pay-method-icon { color: #1677FF; }
+.pay-method-item.alipay.active {
+  border-color: #1677FF;
+  background: rgba(22, 119, 255, 0.04);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+.pay-method-item.alipay.active .pay-method-check { color: #1677FF; }
+/* Other / bank */
+.pay-method-item.bank .pay-method-icon { color: #5856D6; }
+.pay-method-item.bank.active {
+  border-color: #5856D6;
+  background: rgba(88, 86, 214, 0.04);
+  box-shadow: 0 0 0 2px rgba(88, 86, 214, 0.12);
+}
+.pay-method-item.bank.active .pay-method-check { color: #5856D6; }
+
+.pay-method-icon { flex-shrink: 0; }
+.pay-method-name { flex: 1; text-align: left; }
+.pay-method-check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
 .pay-method-empty {
+  grid-column: 1 / -1;
   text-align: center;
   color: #86868B;
   font-size: 13px;
