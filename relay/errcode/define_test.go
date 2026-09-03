@@ -58,11 +58,11 @@ func TestShouldRetry(t *testing.T) {
 	if !ShouldRetry(ActionCooldown) {
 		t.Error("ShouldRetry(ActionCooldown) = false, want true")
 	}
+	if !ShouldRetry(ActionDisable) {
+		t.Error("ShouldRetry(ActionDisable) = false, want true")
+	}
 	if ShouldRetry(ActionPassthrough) {
 		t.Error("ShouldRetry(ActionPassthrough) = true, want false")
-	}
-	if ShouldRetry(ActionDisable) {
-		t.Error("ShouldRetry(ActionDisable) = true, want false")
 	}
 }
 

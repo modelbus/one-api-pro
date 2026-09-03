@@ -71,6 +71,12 @@ func GetDefaultConfig(statusCode int) StatusCodeConfig {
 	return cfg
 }
 
+// ShouldRetry reports whether the given error action should be followed by a
+// retry on another channel. "disable" is retryable too: a channel that errors
+// with 401/402/403 (invalid key / insufficient quota / forbidden) should be
+// disabled AND the request should transparently fail over to another channel
+// (or, when all same-model channels are exhausted, a fallback channel) instead
+// of surfacing the raw error to the client.
 func ShouldRetry(action string) bool {
-	return action == ActionRetry || action == ActionCooldown
+	return action == ActionRetry || action == ActionCooldown || action == ActionDisable
 }
