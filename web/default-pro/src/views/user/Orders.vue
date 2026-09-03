@@ -611,7 +611,6 @@ onMounted(() => { loadOrders() })
   transition: all 0.15s;
   font-size: 14px;
   color: #1D1D1F;
-  position: relative;
   font-weight: 500;
 }
 .pay-method-item:hover {
@@ -642,14 +641,28 @@ onMounted(() => { loadOrders() })
 }
 .pay-method-item.bank.active .pay-method-check { color: #5856D6; }
 
-.pay-method-icon { flex-shrink: 0; }
-.pay-method-name { flex: 1; text-align: left; }
+.pay-method-icon {
+  flex-shrink: 0;
+  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.pay-method-name {
+  flex: 1;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+}
 .pay-method-check {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 12px;
+  flex-shrink: 0;
+  font-size: 14px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 .pay-method-empty {
   grid-column: 1 / -1;
