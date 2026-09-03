@@ -369,6 +369,66 @@ async function payOrder(record) {
   payModalVisible.value = true
 }
 
+// Build the QR / redirect modal for an online payment channel.
+async function openQrModal(url, payMethod) {
+  qrModalTitle.value = payMethod === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
+  qrModalTip.value = payMethod === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+  qrModalNote.value = ''
+  qrcodeDataUrl.value = ''
+  try {
+    qrcodeDataUrl.value = await QRCode.toDataURL(url, {
+      width: 220,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    })
+  } catch (e) {
+    qrcodeDataUrl.value = ''
+  }
+  qrModalVisible.value = true
+}
+
+// Build the "transfer info" modal for bank / offline payments.
+function openBankNoteModal(note) {
+  qrModalTitle.value = '转账信息'
+  qrModalTip.value = note
+  qrModalNote.value = ''
+  qrcodeDataUrl.value = ''
+  qrModalVisible.value = true
+}
+
+// Inspect the response of /api/order/self/:id/pay and route the UI.
+// Mirrors the logic in Plans.vue — driven by pay.status so we never
+// silently drop the user into the orders page when the payment
+// channel has a problem.
+function handlePayMyOrderResult(data) {
+  const pay = data?.pay || {}
+  const status = pay.status
+  const url = pay.pay_url || pay.qr_code
+  qrAmount.value = data?.amount || payTarget.value?.amount
+  qrPackageName.value = data?.plan_name || payTarget.value?.planName
+
+  if (status === 'success' && url) {
+    openQrModal(url, selectedPayMethod.value)
+    return
+  }
+  if (status === 'success' && pay.note) {
+    openBankNoteModal(pay.note)
+    return
+  }
+  if (status === 'warning') {
+    Message.error(pay.warning || '发起支付失败，请稍后重试')
+    return
+  }
+  // Backwards-compat fallback when pay.status is absent (older backends).
+  if (url) {
+    openQrModal(url, selectedPayMethod.value)
+  } else if (pay.note) {
+    openBankNoteModal(pay.note)
+  } else {
+    Message.error(pay.warning || '发起支付失败，请稍后重试')
+  }
+}
+
 async function confirmPayMethod() {
   if (!payTarget.value || !selectedPayMethod.value) return
   paySubmitting.value = true
@@ -382,38 +442,11 @@ async function confirmPayMethod() {
       return
     }
     payModalVisible.value = false
-    const pay = data.pay || {}
-    const url = pay.pay_url || pay.qr_code
-    if (url) {
-      qrModalTitle.value = selectedPayMethod.value === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
-      qrModalTip.value = selectedPayMethod.value === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
-      qrModalNote.value = '（目前仅展示二维码支付）'
-      qrAmount.value = data.amount || payTarget.value.amount
-      qrPackageName.value = data.plan_name || payTarget.value.planName
-      try {
-        qrcodeDataUrl.value = await QRCode.toDataURL(url, {
-          width: 220,
-          margin: 2,
-          color: { dark: '#000000', light: '#ffffff' },
-        })
-      } catch (e) {
-        qrcodeDataUrl.value = ''
-      }
-      qrModalVisible.value = true
-      // Refresh the order list so the row updates (e.g. once the
-      // payment channel marks the order paid asynchronously).
+    handlePayMyOrderResult(data)
+    // Refresh the order list so the row updates (e.g. once the
+    // payment channel marks the order paid asynchronously).
+    if (data?.pay?.status === 'success') {
       loadOrders()
-    } else if (pay.note) {
-      // Offline / bank transfer — keep modal visible but show note.
-      qrModalTitle.value = '转账信息'
-      qrModalTip.value = pay.note
-      qrModalNote.value = ''
-      qrAmount.value = data.amount || payTarget.value.amount
-      qrPackageName.value = data.plan_name || payTarget.value.planName
-      qrcodeDataUrl.value = ''
-      qrModalVisible.value = true
-    } else {
-      Message.warning(pay.warning || '获取支付二维码失败，请稍后重试')
     }
   } catch (e) {
     Message.error(e.response?.data?.message || '发起支付失败')
