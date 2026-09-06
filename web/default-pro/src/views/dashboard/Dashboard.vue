@@ -677,22 +677,25 @@ async function loadTopupSettings() {
 
 async function onRechargeClick() {
   // 每次点击都强制重新拉取最新设置，避免缓存导致管理员刚刚开启充值但页面未刷新
-  await loadTopupSettings()
-  if (!topupSettings.value) {
-    Message.warning('无法读取充值配置，请稍后重试')
-    return
+  try {
+    await loadTopupSettings()
+    if (!topupSettings.value) {
+      Message.warning('无法读取充值配置，请稍后重试')
+      return
+    }
+    if (!topupSettings.value.enabled) {
+      Message.warning('充值功能未开启，请联系管理员在「设置-充值」中开启')
+      return
+    }
+    const presetsEmpty = !topupSettings.value.presets || topupSettings.value.presets.length === 0
+    if (presetsEmpty && !topupSettings.value.allow_custom) {
+      Message.warning('管理员尚未配置充值金额')
+      return
+    }
+    topupModalVisible.value = true
+  } catch (e) {
+    Message.error('充值功能异常，请稍后重试')
   }
-  if (!topupSettings.value.enabled) {
-    Message.warning('充值功能未开启，请联系管理员在「设置-充值」中开启')
-    return
-  }
-  const presetsEmpty = !topupSettings.value.presets || topupSettings.value.presets.length === 0
-  if (presetsEmpty && !topupSettings.value.allow_custom) {
-    Message.warning('管理员尚未配置充值金额')
-    return
-  }
-  // 强制设为 true 并 open（v0.0.10 2026-09-07 修复：原来赋 false 时 v-model 不会重新触发）
-  topupModalVisible.value = true
 }
 
 function formatAmount(n) { return Number(n || 0).toFixed(2) }
