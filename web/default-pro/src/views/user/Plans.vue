@@ -299,8 +299,6 @@ function refreshDefaultPaymentCopy() {
 
 const NO_PAYMENT_MSG = '系统尚未开通任何支付通道，请设置后开启支付'
 
-const VALID_PLAN_NAMES = ['lite', 'air', 'pro', 'max']
-
 async function loadPlans() {
   loading.value = true
   try {
@@ -313,11 +311,7 @@ async function loadPlans() {
     // axios exposes the parsed body as response.data.
     currentPlan.value = current?.data?.data || null
     const list = Array.isArray(allPlans?.data?.data) ? allPlans.data.data : []
-    const filtered = list.filter(p => {
-      const name = (p.name || '').toLowerCase().trim()
-      return VALID_PLAN_NAMES.includes(name)
-    })
-    planList.value = filtered.map((item, index) => ({
+    planList.value = list.map((item, index) => ({
       id: item.id,
       name: item.name,
       price: item.price,
