@@ -192,11 +192,18 @@ A complete plan & subscription system: token- or request-based billing, period-b
 
 ### 💳 Orders & Real Payments
 
-Every subscription checkout leaves a full **order audit trail** (order number, user, plan snapshot JSON, amount, payment channel, status, paid-at timestamp, provider trade number) supporting two order types — subscription and top-up. Native integrations for **WeChat Pay Native** (PC QR) and **Alipay Face-to-Face** (TradePrecreate) ship out of the box, with `bank` / `offline` / `free` reserved for admin-side channels. Upgrade pricing is calculated automatically from remaining days, and an "operate in stack mode" toggle is hot-switchable from **Settings → Operations → Plan** to keep the old subscription running alongside the new one.
+Every subscription checkout leaves a full **order audit trail** (order number, user, plan snapshot JSON, amount, payment channel, status, paid-at timestamp, provider trade number) supporting two order types — subscription and top-up. Native integrations for **WeChat Pay Native** (PC QR) and **Alipay Face-to-Face** (TradePrecreate) ship out of the box, with `bank` / `offline` / `free` reserved for admin-side channels. Upgrade pricing is calculated automatically from remaining days, and the upgrade-mode toggle (stack vs price_diff) is hot-switchable from **Settings → Plan Operations**. The order center table now includes an **Order type** column that distinguishes a subscription vs top-up row; the async payment notification handler `processNotify` dispatches on `order.Type` to either activate the plan or credit the top-up quota.
 
-| Order center | Payment config |
-|:---:|:---:|
-| ![Order center](../docs/Demo-Order.png) | ![Payment config](../docs/Demo-Payment.png) |
+### 💰 Online Top-up (Quota Balance)
+
+The console's **My balance** card now supports **online quota top-up**: it reuses the same WeChat / Alipay payment channels and opens a `TopupModal` for the user to pick an amount (preset chips + custom amount), with quota credited asynchronously after the channel confirms. Configurable under **Settings → Top-up**:
+
+- **Master switch** — `topup.enabled`; when off, the dashboard top-up entry is disabled.
+- **Preset amounts** — `topup.presets`; admins predefine `{amount, bonus_quota}` rows that render as chips.
+- **Custom amount** — `topup.allow_custom`; when on, an extra **Custom** chip appears at the end of the list, and the input box is revealed only after the user clicks it.
+- **Exchange rate** — `topup.exchange_rate`, default `1` (1 CNY = 1 quota); applies only to custom amounts; preset amounts use their own `bonus_quota`.
+
+Order type = 2 (`OrderTypeTopup`) is written to the same `orders` table with prefix `TP`. Activation is idempotent (already-paid orders return without re-crediting) and runs `IncreaseUserQuota` + `RecordTopupLog` on success.
 
 ### 🌐 Decentralized Active-Active Cluster
 
@@ -821,20 +828,23 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/m
 - [x] **Multi-level permissions** — Guest / User / Admin / Root, upstream API authorization loophole fixed.
 - [x] **OpenAI-compatible API** — `models` / `chat` / `completions` / `embeddings` / `images` / `audio` / `moderations`.
 - [x] **Subscription checkout & upgrade flow** — native `POST /api/order/plan` creates the subscription order, supports `stack` (additive) and `price_diff` (upgrade) modes, auto-computes the upgrade price from remaining days, and rejects same-tier / downgrade attempts.
-- [x] **Order audit & order center** — new `orders` table (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no) persists every checkout / admin grant. Frontend `/plans` and `/orders` pages render the full lifecycle.
-- [x] **Real payment integration (gopay)** — native WeChat Pay Native (PC QR) and Alipay Face-to-Face (TradePrecreate); async callbacks at `/api/payment/{wechat,alipay}/notify` complete the verify → mark paid → activate loop.
+- [x] **Order audit & order center** — new `orders` table (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no) persists every checkout / admin grant. Frontend `/plans` and `/orders` pages render the full lifecycle; the order center table includes an **Order type** column that distinguishes a subscription vs top-up row.
+- [x] **Real payment integration (gopay)** — native WeChat Pay Native (PC QR) and Alipay Face-to-Face (TradePrecreate); async callbacks at `/api/payment/{wechat,alipay}/notify` complete the verify → mark paid → activate loop. The notification handler `processNotify` dispatches on `order.Type` to either activate the plan or credit the top-up quota.
 - [x] **Payment / plan-operations settings** — two new sub-tabs under **Operations Settings**: `Plan` (price_diff vs stack upgrade toggle) and `Payment` (independent enable/disable + cert upload + notify URL per channel: WeChat / Alipay / Bank).
+- [x] **Online quota top-up** — users top up their account balance from the console's **My balance** card; reuses the same WeChat / Alipay payment channels. New `OrderTypeTopup=2` shares the `orders` table, order-number prefix `TP`, activation is idempotent; `ActivateTopupByOrder` calls `IncreaseUserQuota` and writes `RecordTopupLog`.
+- [x] **Top-up settings center** — new **Settings → Top-up** tab replaces the previous `plan.allow_topup` placeholder; configures the master switch, preset amounts, allow-custom flag, and the exchange rate (default 1:1); reuses existing payment settings and the `system_settings` table.
 
 ### 🔄 In Progress
 
 - [ ] **Richer channel diagnostics & intelligent routing** — `CooldownFilter`, `FallbackFilter` and the `monitor`'s auto-disable on low success rate are already in place. Remaining: standalone channel-health dashboard, per-node ping endpoint, and a manual-review workflow.
 - [ ] Richer usage analytics reports and exports.
 - [ ] Improved i18n coverage.
+- [ ] **Top-up refund loop** — top-up orders with `status=3` currently only mark refunded without reversing quota; awaiting the unified admin order-management feature.
 
 ### 🔭 Planned
 
 - [ ] **More payment channels** — Apple Pay, UnionPay, Stripe, etc.; async refund API + automated refund ledger.
-- [ ] **Online quota top-up** — users can top up their account balance from the personal area; this stays independent of subscription plans.
+- [ ] **Unified admin order management** — admin order-center CRUD, bulk operations, status filters, visual refund ledger.
 - [ ] **Finance-system integration** — sync top-ups, consumption and refunds with mainstream finance / reconciliation platforms.
 - [ ] **Token-low alerting** — multi-channel notifications when account / token Token balance drops below threshold.
 - [ ] **Audit logs & reports** — full operation audit trail and visual reports for compliance.
