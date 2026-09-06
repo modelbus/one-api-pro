@@ -192,11 +192,18 @@ One Api Pro 是**企業級 AI API 閘道**，以 Go 語言 + Vue 3 全新打造�
 
 ### 💳 訂單與真實支付
 
-每次套餐下單都會留下一條**完整的訂單稽核紀錄**（訂單編號、使用者、套餐快照 JSON、金額、支付方式、狀態、支付時間、通道流水號），支援套餐／加值兩種訂單類型，原生接入 **微信支付 Native**（PC 掃碼）與**支付寶面對面支付**（TradePrecreate），並預置銀行／線下／免費三種管理端通道。套餐升級差價按剩餘天數比例自動計算，疊加模式下新舊套餐並行生效，全部規則可在「營運 → 套餐營運」子 Tab 中熱切換。
+每次套餐下單都會留下一條**完整的訂單稽核紀錄**（訂單編號、使用者、套餐快照 JSON、金額、支付方式、狀態、支付時間、通道流水號），支援套餐／加值兩種訂單類型，原生接入 **微信支付 Native**（PC 掃碼）與**支付寶面對面支付**（TradePrecreate），並預置銀行／線下／免費三種管理端通道。套餐升級差價按剩餘天數比例自動計算，疊加模式下新舊套餐並行生效，全部規則可在「設定 → 套餐營運」子 Tab 中熱切換。訂單中心表格新增「訂單類型」欄位（套餐／加值 兩色 chip），支付回呼 `processNotify` 依 `order.Type` 分派到套餐啟用或加值入帳。
 
-| 訂單中心 | 支付設定 |
-|:---:|:---:|
-| ![訂單中心](../docs/Demo-Order.png) | ![支付設定](../docs/Demo-Payment.png) |
+### 💰 線上加值（餘額）
+
+控制台「我的餘額」卡片支援**線上加值餘額**：復用同一套微信／支付寶支付通道，彈出 `TopupModal` 讓使用者選擇金額（快捷 chip + 自訂金額），送出後非同步入帳。可在「設定 → 加值」Tab 中設定：
+
+- **總開關**：`topup.enabled`，關閉後控制台加值入口失效
+- **快捷金額**：`topup.presets`，管理員預先設定多組 `{金額, 獲得額度}`，前端以 chip 顯示
+- **自訂金額**：`topup.allow_custom`，開啟後使用者可輸入任意金額（最後一個 chip 為「自訂」，點擊後才顯示輸入框）
+- **換算比例**：`topup.exchange_rate`，預設 `1`（1 元 = 1 quota），僅作用於自訂金額；快捷金額依各自 preset 設定獨立入帳
+
+訂單類型 = 2（`OrderTypeTopup`）寫入同一張 `orders` 表，訂單編號前綴 `TP`，入帳冪等（已支付直接 return），啟用時同步執行 `IncreaseUserQuota` + `RecordTopupLog`。
 
 ### 🌐 去中心化多活集群
 
@@ -835,20 +842,23 @@ Admin 刪除節點時**不實際刪除**記錄，而是設定 `disabled = true`�
 - [x] **多級權限體系**：Guest / User / Admin / Root 四級，修復原版 API 權限漏洞
 - [x] **OpenAI 相容接口**：完整支援 models / chat / completions / embeddings / images / audio / moderations
 - [x] **套餐下單與升級流程**：原生 POST `/api/order/plan` 建立套餐訂閱訂單，支援 `stack`（疊加）與 `price_diff`（差價升級）兩種模式，差價按剩餘天數比例自動計算，含同級與降級校驗
-- [x] **訂單稽核與訂單中心**：新增 `orders` 表（type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no）持久化所有支付／管理開通流水，前端使用者側 `/plans` 與 `/orders` 頁面完整呈現
-- [x] **真實支付整合（gopay）**：原生接入微信支付 Native（PC 掃碼）與支付寶面對面支付（TradePrecreate），支付回呼走 `/api/payment/{wechat,alipay}/notify` 完成驗籤 + 訂單啟用閉環
+- [x] **訂單稽核與訂單中心**：新增 `orders` 表（type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no）持久化所有支付／管理開通流水，前端使用者側 `/plans` 與 `/orders` 頁面完整呈現；訂單中心表格新增「訂單類型」欄位區分套餐／加值
+- [x] **真實支付整合（gopay）**：原生接入微信支付 Native（PC 掃碼）與支付寶面對面支付（TradePrecreate），支付回呼走 `/api/payment/{wechat,alipay}/notify` 完成驗籤 + 訂單啟用閉環；支付通知 `processNotify` 依 `order.Type` 分派到套餐啟用或加值入帳
 - [x] **支付／套餐營運設定**：「營運設定」下新增「套餐營運」（差價升級 vs 疊加）與「支付」（微信／支付寶／銀行 三通道獨立開關 + 憑證上傳 + 通知 URL 設定），按需顯示表單
+- [x] **線上加值（餘額 / quota）**：使用者可在控制台「我的餘額」卡片點擊加值，復用同一套微信／支付寶支付通道；後端新增 `OrderTypeTopup=2` 復用 `orders` 表，訂單編號前綴 `TP`，入帳冪等；`ActivateTopupByOrder` 透過 `IncreaseUserQuota` 加額度並寫入 `RecordTopupLog`
+- [x] **加值設定中心**：「設定 → 加值」Tab 接管原「營運」Tab 中的 `plan.allow_topup`，新增總開關／快捷金額／是否允許自訂金額／自訂金額換算比例（預設 1:1），復用現有支付設定與 `system_settings` 表
 
 ### 🔄 進行中
 
 - [ ] **更豐富的通道診斷與智慧路由最佳化**：已具備自動冷卻（`CooldownFilter`）、託底降級（`FallbackFilter`）與低成功率自動停用（`monitor`），下一步補全獨立診斷面板／節點級 ping 與人工複核流程
 - [ ] 更豐富的用量分析報表與匯出
 - [ ] 多語言國際化（i18n）完善
+- [ ] **加值退款閉環**：目前加值訂單 `status=3` 僅標記，quota 不退回；待統一訂單管理功能上線後補齊
 
 ### 🔭 規劃中
 
 - [ ] **支付通道擴充**：Apple Pay、銀聯、Stripe 等；支援異步退款 API + 自動化退款流水
-- [ ] **餘額（quota）線上加值**：使用者可自助在「個人」區域為帳戶加值額度，與訂閱套餐按需互不干擾
+- [ ] **統一訂單管理（管理員視角）**：管理端訂單中心增刪改查、批次操作、依狀態篩選、視覺化退款流水
 - [ ] **與常見平台財務對接**：對接主流財務／對帳平台，自動同步加值、消費、退款等財務流水
 - [ ] **Token 餘量預警機制**：帳戶／令牌 Token 餘量低時自動預警，支援多通道通知
 - [ ] **日誌稽核與稽核報表**：完整的操作稽核日誌與視覺化稽核報表，滿足合規要求
