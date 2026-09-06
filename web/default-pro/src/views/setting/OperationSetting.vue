@@ -102,11 +102,6 @@
                     </a-radio-group>
                   </a-form-item>
                 </a-col>
-                <a-col :span="8">
-                  <a-form-item label="允许余额充值（仅占位）">
-                    <a-switch v-model="planSettings.allow_topup" />
-                  </a-form-item>
-                </a-col>
               </a-row>
               <a-form-item><a-button type="primary" @click="savePlanSettings">保存套餐运营设置</a-button></a-form-item>
             </a-form>
@@ -134,21 +129,20 @@ const form = reactive({
 })
 const errorNext = reactive({ passthrough: true, retry: true, disable: true, cooldown: true })
 
-// 套餐运营设置
-const planSettings = reactive({ upgrade_mode: 'price_diff', allow_topup: false })
+// 套餐运营设置（v0.0.10 移除 allow_topup，已迁移到 设置-充值）
+const planSettings = reactive({ upgrade_mode: 'price_diff' })
 async function loadPlanSettings() {
   try {
     const res = await settingApi.getPlan()
     const data = res?.data?.data
     if (res?.data?.success && data) {
       planSettings.upgrade_mode = data.upgrade_mode || 'price_diff'
-      planSettings.allow_topup = !!data.allow_topup
     }
   } catch (e) {}
 }
 async function savePlanSettings() {
   try {
-    const res = await settingApi.putPlan({ upgrade_mode: planSettings.upgrade_mode, allow_topup: planSettings.allow_topup })
+    const res = await settingApi.putPlan({ upgrade_mode: planSettings.upgrade_mode })
     if (res?.data?.success) Message.success('已保存')
     else Message.error(res?.data?.message || '保存失败')
   } catch (e) { Message.error('保存失败') }
