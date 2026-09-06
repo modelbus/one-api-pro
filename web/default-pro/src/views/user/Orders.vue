@@ -25,6 +25,7 @@
         <thead>
           <tr>
             <th>订单号</th>
+            <th>订单类型</th>
             <th>套餐</th>
             <th>金额</th>
             <th>创建时间</th>
@@ -35,6 +36,7 @@
         <tbody>
           <tr v-for="order in filteredOrders" :key="order.id">
             <td><span class="order-no">{{ order.orderNo }}</span></td>
+            <td><span class="order-type" :class="order.type === 2 ? 'type-topup' : 'type-plan'">{{ order.type === 2 ? '充值' : '套餐' }}</span></td>
             <td>{{ order.planName }}</td>
             <td><span class="amount">¥{{ order.amount }}</span></td>
             <td>{{ order.createdAt }}</td>
@@ -534,6 +536,16 @@ onMounted(() => { loadOrders() })
   font-size: 13px;
   color: #86868B;
 }
+.order-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.type-plan { background: rgba(0, 122, 255, 0.08); color: #007AFF; }
+.type-topup { background: rgba(255, 125, 0, 0.08); color: #ff7d00; }
 .amount { font-weight: 700; color: #007AFF; }
 
 .badge {
