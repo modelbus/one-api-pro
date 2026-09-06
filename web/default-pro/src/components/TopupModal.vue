@@ -16,17 +16,18 @@
       pay({url|note, payMethod, amount}) - 需要展示支付二维码/转账信息时
   -->
   <a-modal
-    :model-value="modelValue"
+    :visible="modelValue"
     :title="title"
     :footer="false"
     :mask-closable="true"
     :width="480"
     class="topup-modal"
     @cancel="close"
+    @update:visible="(v) => emit('update:modelValue', v)"
   >
     <div v-if="hasUsableConfig" class="topup-body">
-      <!-- 快捷金额 chips（仅当存在 preset 时显示） -->
-      <div v-if="settings.presets && settings.presets.length > 0" class="topup-section">
+      <!-- 快捷金额 chips + 可选的自定义金额 chip（仅开关开启时显示） -->
+      <div class="topup-section">
         <div class="topup-label">选择金额</div>
         <div class="topup-presets">
           <button
@@ -40,12 +41,22 @@
             <span class="preset-amount">¥{{ p.amount }}</span>
             <span class="preset-bonus">送 {{ formatNumber(p.bonus_quota) }}</span>
           </button>
+          <!-- 最后一个固定为「自定义金额」chip（前提：allow_custom=true） -->
+          <button
+            v-if="settings.allow_custom"
+            type="button"
+            class="preset-chip preset-custom"
+            :class="{ active: selectedIdx === CUSTOM_IDX }"
+            @click="selectCustom"
+          >
+            <span class="preset-amount">自定义</span>
+            <span class="preset-bonus">输入金额</span>
+          </button>
         </div>
       </div>
 
-      <!-- 自定义金额（开关开启时显示） -->
-      <div v-if="settings.allow_custom" class="topup-section">
-        <div class="topup-label">自定义金额</div>
+      <!-- 自定义金额输入框：仅当选中「自定义」chip 时出现 -->
+      <div v-if="isCustomSelected" class="topup-section">
         <a-input-number
           v-model="customAmount"
           :min="0.01"
@@ -122,7 +133,11 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue', 'success', 'error', 'pay'])
 
-// 选中状态：-1 表示自定义；>=0 表示 preset 索引
+// 选中状态：
+//   selectedIdx === CUSTOM_IDX(-1)  表示选中「自定义金额」chip
+//   selectedIdx >= 0                 表示选中第 N 个 preset chip
+// 当 allow_custom=false 时 CUSTOM_IDX 不可达，selectedIdx 必定 >= 0。
+const CUSTOM_IDX = -1
 const selectedIdx = ref(0)
 const customAmount = ref(null)
 const submitting = ref(false)
@@ -136,19 +151,26 @@ const hasUsableConfig = computed(() => {
   return hasPresets || props.settings.allow_custom
 })
 
+// 是否当前选中了「自定义金额」chip
+const isCustomSelected = computed(() => selectedIdx.value === CUSTOM_IDX)
+
 // 计算属性
 const canSubmit = computed(() => {
   if (!selectedPayMethod.value) return false
-  if (selectedIdx.value >= 0) return true
-  return customAmount.value && Number(customAmount.value) > 0
+  if (isCustomSelected.value) {
+    return customAmount.value && Number(customAmount.value) > 0
+  }
+  return selectedIdx.value >= 0
 })
 
 const finalPayAmount = computed(() => {
+  if (isCustomSelected.value) {
+    return customAmount.value && Number(customAmount.value) > 0
+      ? Number(customAmount.value)
+      : 0
+  }
   if (selectedIdx.value >= 0 && props.settings?.presets?.[selectedIdx.value]) {
     return props.settings.presets[selectedIdx.value].amount
-  }
-  if (customAmount.value && Number(customAmount.value) > 0) {
-    return Number(customAmount.value)
   }
   return 0
 })
@@ -165,9 +187,14 @@ function selectPreset(idx) {
   customAmount.value = null
 }
 
+function selectCustom() {
+  selectedIdx.value = CUSTOM_IDX
+}
+
 function onCustomChange() {
+  // 用户在输入框里改了金额，自动保持 CUSTOM_IDX 选中态
   if (customAmount.value && Number(customAmount.value) > 0) {
-    selectedIdx.value = -1
+    selectedIdx.value = CUSTOM_IDX
   }
 }
 
@@ -197,10 +224,10 @@ async function onConfirm() {
   submitting.value = true
   try {
     const payload = { pay_method: selectedPayMethod.value }
-    if (selectedIdx.value >= 0 && props.settings?.presets?.[selectedIdx.value]) {
-      payload.preset_amount = props.settings.presets[selectedIdx.value].amount
-    } else {
+    if (isCustomSelected.value) {
       payload.amount = Number(customAmount.value)
+    } else if (selectedIdx.value >= 0 && props.settings?.presets?.[selectedIdx.value]) {
+      payload.preset_amount = props.settings.presets[selectedIdx.value].amount
     }
     const res = await topupApi.createOrder(payload)
     const data = res?.data
@@ -273,6 +300,7 @@ watch(() => props.modelValue, async (v) => {
   background: rgba(0, 122, 255, 0.04);
   box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.12);
 }
+.preset-custom .preset-amount { color: #007AFF; }
 .preset-amount { font-size: 18px; font-weight: 700; color: #1D1D1F; }
 .preset-bonus { font-size: 11px; color: #86868B; }
 .topup-hint { font-size: 12px; color: #86868B; margin-top: 6px; }
