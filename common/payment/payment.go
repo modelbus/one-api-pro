@@ -85,10 +85,61 @@ func HasChannel(payMethod string) bool {
 	return ok
 }
 
-// PaymentNew is a thin wrapper used by external callers (controllers) to
-// obtain a registered channel by pay_method.
-func PaymentNew(payMethod string) (Channel, error) {
-	return New(payMethod)
+// PaymentMethod describes one payment channel's enabled status for
+// user-facing display. Methods that are not registered are omitted.
+type PaymentMethod struct {
+	Name    string `json:"name"`
+	Label   string `json:"label"`
+	Enabled bool   `json:"enabled"`
+}
+
+// PaymentMethodLabel returns a human-readable label for a pay_method.
+func PaymentMethodLabel(name string) string {
+	switch name {
+	case model.OrderPayMethodWechat:
+		return "微信支付"
+	case model.OrderPayMethodAlipay:
+		return "支付宝"
+	case model.OrderPayMethodBank:
+		return "银行转账"
+	case model.OrderPayMethodOffline:
+		return "线下支付"
+	default:
+		return name
+	}
+}
+
+// AnyChannelEnabled returns true when at least one of the registered
+// channels reports IsEnabled()==true. It is used to short-circuit the
+// user-facing purchase flow when the admin has not configured any
+// payment method.
+func AnyChannelEnabled() (bool, []PaymentMethod, error) {
+	candidates := []string{
+		model.OrderPayMethodWechat,
+		model.OrderPayMethodAlipay,
+		model.OrderPayMethodBank,
+	}
+	out := make([]PaymentMethod, 0, len(candidates))
+	any := false
+	for _, name := range candidates {
+		if !HasChannel(name) {
+			continue
+		}
+		ch, err := New(name)
+		if err != nil {
+			continue
+		}
+		enabled, _ := ch.IsEnabled()
+		out = append(out, PaymentMethod{
+			Name:    name,
+			Label:   PaymentMethodLabel(name),
+			Enabled: enabled,
+		})
+		if enabled {
+			any = true
+		}
+	}
+	return any, out, nil
 }
 
 // SettingsBool is a small helper that reads a JSON-encoded setting value

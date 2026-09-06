@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/modelbus/one-api-pro/common"
 	"github.com/modelbus/one-api-pro/common/config"
+	"github.com/modelbus/one-api-pro/common/logger"
 	"github.com/modelbus/one-api-pro/controller"
 	"github.com/modelbus/one-api-pro/middleware"
 	"net/http"
@@ -15,7 +16,11 @@ import (
 )
 
 func SetWebRouter(router *gin.Engine, buildFS embed.FS) {
-	indexPageData, _ := buildFS.ReadFile(fmt.Sprintf("web/build/%s/index.html", config.Theme))
+	indexPath := fmt.Sprintf("web/build/%s/index.html", config.Theme)
+	indexPageData, err := buildFS.ReadFile(indexPath)
+	if err != nil {
+		logger.SysError(fmt.Sprintf("theme %q is not embedded (missing %s): %v; admin UI will return an empty page", config.Theme, indexPath, err))
+	}
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(middleware.GlobalWebRateLimit())
 	router.Use(middleware.Cache())

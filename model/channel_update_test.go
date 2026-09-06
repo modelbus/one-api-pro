@@ -30,6 +30,26 @@ func intPtr(v int) *int          { return &v }
 func uintPtr(v uint) *uint       { return &v }
 func stringPtrSliceEmpty() *string { s := ""; return &s }
 
+// allFieldsPresent mirrors a full edit modal payload: every mutable JSON key
+// is sent, so Update() writes all of them.
+func allFieldsPresent() map[string]bool {
+	return map[string]bool{
+		"type":              true,
+		"name":              true,
+		"key":               true,
+		"status":            true,
+		"base_url":          true,
+		"models":            true,
+		"group":             true,
+		"model_mapping":     true,
+		"priority":          true,
+		"max_concurrency":   true,
+		"rpm":               true,
+		"is_fallback":       true,
+		"fallback_priority": true,
+	}
+}
+
 func TestChannelUpdate_PersistsAllFallbackFields(t *testing.T) {
 	defer setupIsolatedDB(t)()
 
@@ -71,7 +91,7 @@ func TestChannelUpdate_PersistsAllFallbackFields(t *testing.T) {
 		IsFallback:       boolPtr(true),
 		FallbackPriority: int64Ptr(7),
 	}
-	if err := edit.Update(); err != nil {
+	if err := edit.Update(allFieldsPresent()); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -131,7 +151,7 @@ func TestChannelUpdate_ToggleFallbackOff(t *testing.T) {
 		IsFallback:       boolPtr(false),
 		FallbackPriority: int64Ptr(0),
 	}
-	if err := edit.Update(); err != nil {
+	if err := edit.Update(allFieldsPresent()); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -188,7 +208,7 @@ func TestChannelUpdate_PreservesUntouchedFields(t *testing.T) {
 		IsFallback:       boolPtr(true),
 		FallbackPriority: int64Ptr(99),
 	}
-	if err := edit.Update(); err != nil {
+	if err := edit.Update(allFieldsPresent()); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -258,7 +278,11 @@ func TestChannelUpdate_PreservesNilPointerFields(t *testing.T) {
 		IsFallback:       boolPtr(true),
 		FallbackPriority: int64Ptr(8),
 	}
-	if err := edit.Update(); err != nil {
+	provided := map[string]bool{
+		"id": true, "type": true, "name": true, "key": true, "status": true,
+		"models": true, "group": true, "is_fallback": true, "fallback_priority": true,
+	}
+	if err := edit.Update(provided); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -331,7 +355,12 @@ func TestChannelUpdate_FrontendPayload(t *testing.T) {
 		IsFallback:       boolPtr(true),
 		FallbackPriority: int64Ptr(11),
 	}
-	if err := body.Update(); err != nil {
+	provided := map[string]bool{
+		"id": true, "type": true, "name": true, "key": true, "status": true,
+		"base_url": true, "models": true, "group": true, "model_mapping": true,
+		"is_fallback": true, "fallback_priority": true,
+	}
+	if err := body.Update(provided); err != nil {
 		t.Fatalf("Update: %v", err)
 	}
 
@@ -347,5 +376,78 @@ func TestChannelUpdate_FrontendPayload(t *testing.T) {
 	}
 	if got.GetFallbackPriority() != 11 {
 		t.Errorf("FallbackPriority=11 not persisted, got %d", got.GetFallbackPriority())
+	}
+}
+
+// TestChannelUpdate_PartialStatusToggle reproduces the reported bug:
+// Channel.vue toggles enable/disable by PUT /api/channel/ with body
+// {id, status}. The update must only change the `status` column and must NOT
+// wipe the channel's other fields (name/models/group/config/...) to empty.
+func TestChannelUpdate_PartialStatusToggle(t *testing.T) {
+	defer setupIsolatedDB(t)()
+
+	original := &Channel{
+		Id:               6,
+		Type:             1,
+		Name:             "KeptName",
+		Key:              "sk-keep",
+		Status:           ChannelStatusEnabled,
+		BaseURL:          strPtr("https://api.example.com"),
+		Models:           "gpt-4",
+		Group:            "vip,default",
+		Config:           `{"region":"us"}`,
+		CooldownSeconds:  30,
+		Balance:          12.5,
+		ModelMapping:     stringPtrSliceEmpty(),
+		Priority:         int64Ptr(2),
+		MaxConcurrency:   intPtr(4),
+		RPM:              intPtr(100),
+		IsFallback:       boolPtr(false),
+		FallbackPriority: int64Ptr(0),
+	}
+	if err := DB.Create(original).Error; err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	// Only {id, status} is sent by the toggle button.
+	body := &Channel{Id: 6, Status: ChannelStatusManuallyDisabled}
+	provided := map[string]bool{"id": true, "status": true}
+	if err := body.Update(provided); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+
+	var got Channel
+	if err := DB.First(&got, 6).Error; err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if got.Status != ChannelStatusManuallyDisabled {
+		t.Errorf("Status not updated to %d, got %d", ChannelStatusManuallyDisabled, got.Status)
+	}
+	if got.Name != "KeptName" {
+		t.Errorf("Name clobbered to %q", got.Name)
+	}
+	if got.Models != "gpt-4" {
+		t.Errorf("Models clobbered to %q", got.Models)
+	}
+	if got.Group != "vip,default" {
+		t.Errorf("Group clobbered to %q", got.Group)
+	}
+	if got.Config != `{"region":"us"}` {
+		t.Errorf("Config clobbered to %q", got.Config)
+	}
+	if got.CooldownSeconds != 30 {
+		t.Errorf("CooldownSeconds clobbered to %d", got.CooldownSeconds)
+	}
+	if got.Balance != 12.5 {
+		t.Errorf("Balance clobbered to %v", got.Balance)
+	}
+	if got.Key != "sk-keep" {
+		t.Errorf("Key clobbered to %q", got.Key)
+	}
+	if got.GetBaseURL() != "https://api.example.com" {
+		t.Errorf("BaseURL clobbered to %q", got.GetBaseURL())
+	}
+	if got.GetPriority() != 2 {
+		t.Errorf("Priority clobbered to %d", got.GetPriority())
 	}
 }

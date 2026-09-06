@@ -169,64 +169,86 @@ func (channel *Channel) Insert() error {
 	return err
 }
 
-func (channel *Channel) Update() error {
+func (channel *Channel) Update(provided map[string]bool) error {
 	var err error
-	// Build a map of mutable fields. Only fields that are non-nil pointer
-	// values (or non-pointer) are included, so untouched columns are NOT
-	// overwritten with NULL. This fixes a regression where Update() silently
-	// dropped pointer-to-zero-value fields like *bool=false (is_fallback
-	// when toggled off) under GORM's default zero-value skip behavior.
+	// Build a map of mutable fields. A column is only written when the request
+	// body actually contained its JSON key (see `provided`). This keeps a
+	// partial payload like {id, status} from zeroing out untouched columns
+	// (name/models/group/config/balance/...) and lets `status` be updated.
+	// Pointer fields are still additionally gated on being non-nil so an
+	// omitted field is never persisted as NULL.
 	updates := map[string]interface{}{}
-	if true {
+	if provided["type"] {
 		updates["type"] = channel.Type
+	}
+	if provided["name"] {
 		updates["name"] = channel.Name
+	}
+	if provided["models"] {
 		updates["models"] = channel.Models
+	}
+	if provided["group"] {
 		updates["group"] = channel.Group
+	}
+	if provided["cooldown_seconds"] {
 		updates["cooldown_seconds"] = channel.CooldownSeconds
+	}
+	if provided["config"] {
 		updates["config"] = channel.Config
+	}
+	if provided["last_error"] {
 		updates["last_error"] = channel.LastError
+	}
+	if provided["last_error_time"] {
 		updates["last_error_time"] = channel.LastErrorTime
 	}
-	if channel.Weight != nil {
+	if provided["status"] {
+		updates["status"] = channel.Status
+	}
+	if provided["weight"] && channel.Weight != nil {
 		updates["weight"] = *channel.Weight
 	}
-	if channel.BaseURL != nil {
+	if provided["base_url"] && channel.BaseURL != nil {
 		updates["base_url"] = *channel.BaseURL
 	}
-	if channel.Other != nil {
+	if provided["other"] && channel.Other != nil {
 		updates["other"] = *channel.Other
 	}
 	// Key is a non-pointer string. The list endpoint Omit("key") so the
 	// frontend never sees the real value; it always sends key="". Only persist
 	// it when the caller actually provided one.
-	if channel.Key != "" {
+	if provided["key"] && channel.Key != "" {
 		updates["key"] = channel.Key
 	}
-	updates["balance"] = channel.Balance
-	if channel.BalanceUpdatedTime != 0 {
+	if provided["balance"] {
+		updates["balance"] = channel.Balance
+	}
+	if provided["balance_updated_time"] && channel.BalanceUpdatedTime != 0 {
 		updates["balance_updated_time"] = channel.BalanceUpdatedTime
 	}
-	if channel.ModelMapping != nil {
+	if provided["model_mapping"] && channel.ModelMapping != nil {
 		updates["model_mapping"] = *channel.ModelMapping
 	}
-	if channel.Priority != nil {
+	if provided["priority"] && channel.Priority != nil {
 		updates["priority"] = *channel.Priority
 	}
-	if channel.SystemPrompt != nil {
+	if provided["system_prompt"] && channel.SystemPrompt != nil {
 		updates["system_prompt"] = *channel.SystemPrompt
 	}
-	if channel.MaxConcurrency != nil {
+	if provided["max_concurrency"] && channel.MaxConcurrency != nil {
 		updates["max_concurrency"] = *channel.MaxConcurrency
 	}
-	if channel.RPM != nil {
+	if provided["rpm"] && channel.RPM != nil {
 		updates["rpm"] = *channel.RPM
 	}
-	// New fallback fields — always send (frontend always sends them).
-	if channel.IsFallback != nil {
+	if provided["is_fallback"] && channel.IsFallback != nil {
 		updates["is_fallback"] = *channel.IsFallback
 	}
-	if channel.FallbackPriority != nil {
+	if provided["fallback_priority"] && channel.FallbackPriority != nil {
 		updates["fallback_priority"] = *channel.FallbackPriority
+	}
+	if len(updates) == 0 {
+		return nil
 	}
 	err = DB.Model(channel).Updates(updates).Error
 	if err != nil {

@@ -80,6 +80,37 @@ type MockPayRequest struct {
 	Status  int    `json:"status"` // 1=paid, 3=refunded
 }
 
+// GetPaymentStatus handles GET /api/payment/status (public).
+// Returns the enabled status of every registered payment channel so
+// the user-facing pages can decide whether to show the purchase UI or
+// short-circuit with an error message.
+//
+// Response shape:
+//
+//	{
+//	  "success": true,
+//	  "data": {
+//	    "any_enabled": bool,
+//	    "methods": [{ "name": "wechat", "label": "微信支付", "enabled": true }, ...]
+//	  }
+//	}
+func GetPaymentStatus(c *gin.Context) {
+	anyEnabled, methods, _ := payment.AnyChannelEnabled()
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"any_enabled": anyEnabled,
+			"methods":     methods,
+		},
+	})
+}
+
+// noPaymentEnabledMsg is the user-facing error returned by both
+// CreatePlanOrder and PayMyOrder when the admin has not enabled any
+// payment channel.
+const noPaymentEnabledMsg = "系统尚未开通任何支付通道，请设置后开启支付"
+
 // MockPay handles POST /api/payment/mock/notify (root).
 // Used by tests / manual operations to mark an order paid without
 // going through a real payment channel.

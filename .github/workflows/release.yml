@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,10 +44,8 @@ jobs:
           cd ..
 
       - name: Build binaries
-        env:
-          VERSION: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          LDFLAGS="-s -w -X github.com/modelbus/one-api-pro/common.Version=${VERSION}"
+          LDFLAGS="-s -w -X github.com/modelbus/one-api-pro/common.Version=${TAG}"
           mkdir -p dist
           CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-linux-amd64 .
           CGO_ENABLED=0 GOOS=linux   GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-linux-arm64 .
@@ -52,9 +53,28 @@ jobs:
           CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-amd64 .
           CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o dist/one-api-pro-darwin-arm64 .
 
+      - name: Normalize tag (auto-prefix v)
+        id: tag
+        run: |
+          raw="${{ env.TAG }}"
+          case "$raw" in
+            v*) normalized="$raw" ;;
+            *)   normalized="v$raw" ;;
+          esac
+          if [ -z "$raw" ]; then
+            echo "::error::Tag is empty. Pass a tag via push (v*) or workflow_dispatch input."
+            exit 1
+          fi
+          if ! [[ "$normalized" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
+            echo "::error::Tag '$raw' (normalized to '$normalized') does not look like a semver tag (vX.Y.Z)."
+            exit 1
+          fi
+          echo "normalized=$normalized" >> "$GITHUB_OUTPUT"
+          echo "Resolved release tag: $normalized"
+
       - name: Verify CHANGELOG exists
         env:
-          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+          TAG: ${{ steps.tag.outputs.normalized }}
         run: |
           SRC="CHANGELOG/${TAG}.md"
           if [ ! -f "$SRC" ]; then
@@ -65,12 +85,11 @@ jobs:
           fi
 
       - name: Release
-        env:
-          TAG: ${{ github.event.inputs.tag || github.ref_name }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          body_path: CHANGELOG/${{ github.event.inputs.tag || github.ref_name }}.md
+          tag_name: ${{ steps.tag.outputs.normalized }}
+          name: ${{ steps.tag.outputs.normalized }}
+          body_path: CHANGELOG/${{ steps.tag.outputs.normalized }}.md
           files: |
             dist/one-api-pro-linux-amd64
             dist/one-api-pro-linux-arm64

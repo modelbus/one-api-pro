@@ -64,6 +64,9 @@ func main() {
 	// Initialize options
 	model.InitOptionMap()
 	logger.SysLog(fmt.Sprintf("using theme %s", config.Theme))
+	if err := common.ValidateEmbeddedTheme(buildFS, "web/build", config.Theme); err != nil {
+		logger.SysError(err.Error())
+	}
 	if common.RedisEnabled {
 		// for compatibility with old versions
 		config.MemoryCacheEnabled = true

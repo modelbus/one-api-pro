@@ -57,7 +57,7 @@
             size="large"
             class="plan-btn"
             :disabled="isCurrentPlan(plan) || isLowerPlan(plan)"
-            @click="isCurrentPlan(plan) || isLowerPlan(plan) ? null : (currentPlan && !isExpired(currentPlan) ? handleUpgrade(plan) : handlePurchase(plan))"
+            @click="isCurrentPlan(plan) || isLowerPlan(plan) ? null : (currentPlan && !isExpired(currentPlan) ? onUpgradeClick(plan) : onPurchaseClick(plan))"
           >
             <template v-if="isCurrentPlan(plan)">当前套餐</template>
             <template v-else-if="isLowerPlan(plan)">暂不可用</template>
@@ -122,6 +122,34 @@
           ⚠️ 升级后将立即激活新套餐，当前套餐将自动取消
         </div>
 
+        <div class="pay-picker">
+          <div class="pay-picker-label">支付方式</div>
+          <div class="pay-picker-list">
+            <button
+              type="button"
+              class="pay-picker-item wechat"
+              :class="{ active: selectedPayMethod === 'wechat' }"
+              :disabled="!availablePayMethods.includes('wechat')"
+              @click="selectedPayMethod = 'wechat'"
+            >
+              <icon-wechatpay :size="28" class="pay-picker-icon" />
+              <span class="pay-picker-name">微信支付</span>
+              <span v-if="selectedPayMethod === 'wechat'" class="pay-picker-check">✓</span>
+            </button>
+            <button
+              type="button"
+              class="pay-picker-item alipay"
+              :class="{ active: selectedPayMethod === 'alipay' }"
+              :disabled="!availablePayMethods.includes('alipay')"
+              @click="selectedPayMethod = 'alipay'"
+            >
+              <icon-alipay-circle :size="28" class="pay-picker-icon" />
+              <span class="pay-picker-name">支付宝支付</span>
+              <span v-if="selectedPayMethod === 'alipay'" class="pay-picker-check">✓</span>
+            </button>
+          </div>
+        </div>
+
         <div class="upgrade-footer">
           <a-button @click="upgradeModalVisible = false">取消</a-button>
           <a-button type="primary" :loading="upgrading" @click="confirmUpgrade">确认升级</a-button>
@@ -152,6 +180,35 @@
             <span class="purchase-value">{{ selectedPlan.description }}</span>
           </div>
         </div>
+
+        <div class="pay-picker">
+          <div class="pay-picker-label">支付方式</div>
+          <div class="pay-picker-list">
+            <button
+              type="button"
+              class="pay-picker-item wechat"
+              :class="{ active: selectedPayMethod === 'wechat' }"
+              :disabled="!availablePayMethods.includes('wechat')"
+              @click="selectedPayMethod = 'wechat'"
+            >
+              <icon-wechatpay :size="28" class="pay-picker-icon" />
+              <span class="pay-picker-name">微信支付</span>
+              <span v-if="selectedPayMethod === 'wechat'" class="pay-picker-check">✓</span>
+            </button>
+            <button
+              type="button"
+              class="pay-picker-item alipay"
+              :class="{ active: selectedPayMethod === 'alipay' }"
+              :disabled="!availablePayMethods.includes('alipay')"
+              @click="selectedPayMethod = 'alipay'"
+            >
+              <icon-alipay-circle :size="28" class="pay-picker-icon" />
+              <span class="pay-picker-name">支付宝支付</span>
+              <span v-if="selectedPayMethod === 'alipay'" class="pay-picker-check">✓</span>
+            </button>
+          </div>
+        </div>
+
         <div class="purchase-footer">
           <a-button @click="purchaseModalVisible = false">取消</a-button>
           <a-button type="primary" :loading="purchasing" @click="confirmPurchase">确认购买</a-button>
@@ -164,17 +221,17 @@
       v-model:visible="paymentModalVisible"
       :footer="false"
       :mask-closable="true"
-      title="微信扫码支付"
+      :title="paymentModalTitle"
       width="420px"
       class="payment-modal"
     >
       <div class="payment-modal-body">
         <div class="qrcode-wrap">
-          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" alt="微信支付二维码" class="qrcode-img" />
+          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" :alt="paymentModalTitle" class="qrcode-img" />
           <div v-else class="qrcode-loading">正在生成支付二维码...</div>
         </div>
-        <div class="payment-tip">请使用微信扫码支付</div>
-        <div class="payment-tip-sub">（目前只支持微信支付）</div>
+        <div class="payment-tip">{{ paymentTip }}</div>
+        <div class="payment-tip-sub">（请在 5 分钟内完成支付）</div>
         <div class="payment-order-info">
           <div class="payment-info-row">
             <span>套餐</span>
@@ -198,9 +255,11 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message } from '@arco-design/web-vue'
+import { IconWechatpay, IconAlipayCircle } from '@arco-design/web-vue/es/icon'
 import QRCode from 'qrcode'
 import planApi from '@/api/plan'
 import orderApi from '@/api/order'
+import paymentApi from '@/api/payment'
 
 const router = useRouter()
 
@@ -221,6 +280,24 @@ const paymentPackageName = ref('')
 const qrcodeDataUrl = ref('')
 const upgrading = ref(false)
 const purchasing = ref(false)
+
+// Payment method picker state. Defaults to WeChat; reset to the
+// first available method whenever a new modal is opened.
+const selectedPayMethod = ref('wechat')
+const availablePayMethods = ref([]) // names like 'wechat' | 'alipay'
+const lastPayMethod = ref('wechat') // remembers the last choice for the QR modal title
+
+// paymentModalTitle / paymentTip are overridden by openPaymentModal /
+// openBankTransferModal so the modal can show different copy for bank
+// transfer vs WeChat/Alipay.
+const paymentModalTitle = ref('')
+const paymentTip = ref('')
+function refreshDefaultPaymentCopy() {
+  paymentModalTitle.value = lastPayMethod.value === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
+  paymentTip.value = lastPayMethod.value === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+}
+
+const NO_PAYMENT_MSG = '系统尚未开通任何支付通道，请设置后开启支付'
 
 const VALID_PLAN_NAMES = ['lite', 'air', 'pro', 'max']
 
@@ -313,6 +390,34 @@ function getUpgradeDiff() {
   return Math.max(0, diff)
 }
 
+// Pre-flight check: refuse to open the purchase/upgrade modal when the
+// admin has not enabled any payment channel. Returns true when it is
+// safe to continue. Side-effect: refreshes `availablePayMethods` so
+// the picker only shows enabled methods.
+async function ensurePaymentEnabled() {
+  try {
+    const { data } = await paymentApi.status()
+    const d = data?.data || {}
+    const anyEnabled = !!d.any_enabled
+    if (!anyEnabled) {
+      Message.error(NO_PAYMENT_MSG)
+      return false
+    }
+    availablePayMethods.value = (d.methods || [])
+      .filter(m => m.enabled && (m.name === 'wechat' || m.name === 'alipay'))
+      .map(m => m.name)
+    // Default-select the first available method if the current
+    // selection is no longer enabled (e.g. admin disabled WeChat).
+    if (!availablePayMethods.value.includes(selectedPayMethod.value)) {
+      selectedPayMethod.value = availablePayMethods.value[0] || 'wechat'
+    }
+    return true
+  } catch (e) {
+    Message.error('无法获取支付通道状态，请稍后重试')
+    return false
+  }
+}
+
 function handleUpgrade(plan) {
   const currentSort = currentPlan.value?.sort ?? 0
   if (currentSort >= plan.sort) {
@@ -328,6 +433,16 @@ function handlePurchase(plan) {
   purchaseModalVisible.value = true
 }
 
+async function onUpgradeClick(plan) {
+  if (!(await ensurePaymentEnabled())) return
+  handleUpgrade(plan)
+}
+
+async function onPurchaseClick(plan) {
+  if (!(await ensurePaymentEnabled())) return
+  handlePurchase(plan)
+}
+
 async function generateQRCode(url) {
   try {
     qrcodeDataUrl.value = await QRCode.toDataURL(url, {
@@ -340,12 +455,65 @@ async function generateQRCode(url) {
   }
 }
 
-async function openPaymentModal(codeUrl, amount, packageName) {
+async function openPaymentModal(codeUrl, amount, packageName, payMethod) {
   paymentCodeUrl.value = codeUrl
   paymentAmount.value = amount
   paymentPackageName.value = packageName
+  lastPayMethod.value = payMethod || selectedPayMethod.value
+  refreshDefaultPaymentCopy()
   await generateQRCode(codeUrl)
   paymentModalVisible.value = true
+}
+
+// Show the payment modal in "transfer note" mode (no QR code) — used
+// when the user picked bank transfer and the backend returned a note
+// instead of a pre-payment URL.
+function openBankTransferModal(amount, packageName, note, payMethod) {
+  paymentAmount.value = amount
+  paymentPackageName.value = packageName
+  lastPayMethod.value = payMethod || selectedPayMethod.value
+  qrcodeDataUrl.value = ''
+  paymentTip.value = note || '请按订单详情中的账户信息完成转账，等待管理员确认'
+  paymentModalTitle.value = '转账信息'
+  paymentModalVisible.value = true
+}
+
+// Inspect the response of /api/order/plan (and /api/order/self/:id/pay)
+// and route the UI to either the QR/redirect modal, the bank-transfer
+// note modal, or a toast. Crucially, we never auto-navigate to /orders
+// when the backend reports a warning — that was the old (broken)
+// behaviour the new pay.status field exists to fix.
+function handlePaymentResult(data, plan, payMethod) {
+  const pay = data?.pay || {}
+  const status = pay.status
+  const url = pay.pay_url || pay.qr_code
+  const amount = data?.amount || plan?.price
+  const name = data?.plan_name || plan?.name
+
+  if (status === 'success' && url) {
+    openPaymentModal(url, amount, name, payMethod)
+    return
+  }
+  if (status === 'success' && pay.note) {
+    openBankTransferModal(amount, name, pay.note, payMethod)
+    return
+  }
+  if (status === 'warning') {
+    // Channel problem — let the user know, but don't drag them away
+    // from the plans page.
+    Message.error(pay.warning || '获取支付信息失败，请稍后重试')
+    return
+  }
+  // Unknown / missing status — fall back to legacy behaviour so old
+  // backends keep working, but still avoid an unsolicited redirect to
+  // /orders.
+  if (url) {
+    openPaymentModal(url, amount, name, payMethod)
+  } else if (pay.note) {
+    openBankTransferModal(amount, name, pay.note, payMethod)
+  } else {
+    Message.error(pay.warning || '获取支付信息失败，请稍后重试')
+  }
 }
 
 async function confirmUpgrade() {
@@ -354,23 +522,16 @@ async function confirmUpgrade() {
   try {
     const res = await orderApi.createPlan({
       plan_id: targetPlan.value.id,
-      pay_method: 'wechat',
+      pay_method: selectedPayMethod.value,
     })
-    upgradeModalVisible.value = false
     const data = res?.data
     if (!data?.success) {
-      Message.error(data?.message || '创建订单失败')
+      // Surface the backend error (e.g. "no payment channel enabled").
+      Message.error(data?.message || NO_PAYMENT_MSG)
       return
     }
-    const order = data.order
-    const pay = data.pay || {}
-    const url = pay.pay_url || pay.qr_code
-    if (url) {
-      openPaymentModal(url, data.amount || targetPlan.value.price, data.plan_name || targetPlan.value.name)
-    } else {
-      Message.warning(pay.warning || '获取支付二维码失败，请稍后到订单中心查看')
-      router.push('/orders')
-    }
+    upgradeModalVisible.value = false
+    handlePaymentResult(data, targetPlan.value, selectedPayMethod.value)
   } catch (e) {
     Message.error(e.response?.data?.message || '升级失败')
   } finally {
@@ -384,22 +545,16 @@ async function confirmPurchase() {
   try {
     const res = await orderApi.createPlan({
       plan_id: selectedPlan.value.id,
-      pay_method: 'wechat',
+      pay_method: selectedPayMethod.value,
     })
-    purchaseModalVisible.value = false
     const data = res?.data
     if (!data?.success) {
-      Message.error(data?.message || '创建订单失败')
+      // Surface the backend error (e.g. "no payment channel enabled").
+      Message.error(data?.message || NO_PAYMENT_MSG)
       return
     }
-    const pay = data.pay || {}
-    const url = pay.pay_url || pay.qr_code
-    if (url) {
-      openPaymentModal(url, data.amount || selectedPlan.value.price, data.plan_name || selectedPlan.value.name)
-    } else {
-      Message.warning(pay.warning || '获取支付二维码失败，请稍后到订单中心查看')
-      router.push('/orders')
-    }
+    purchaseModalVisible.value = false
+    handlePaymentResult(data, selectedPlan.value, selectedPayMethod.value)
   } catch (e) {
     Message.error(e.response?.data?.message || '创建订单失败')
   } finally {
@@ -688,6 +843,95 @@ onMounted(() => { loadPlans() })
   justify-content: flex-end;
   gap: 12px;
   padding-top: 4px;
+}
+
+/* 支付方式选择（购买 / 升级弹窗通用） */
+.pay-picker {
+  margin: 16px 0 20px;
+}
+.pay-picker-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7280;
+  margin-bottom: 10px;
+  letter-spacing: 0.3px;
+}
+.pay-picker-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pay-picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 1.5px solid #E5E5E7;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1D1D1F;
+  transition: all 0.15s;
+}
+.pay-picker-item:hover:not(:disabled) {
+  border-color: #C7C7CC;
+}
+.pay-picker-item.active {
+  border-width: 1.5px;
+}
+.pay-picker-item:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pay-picker-icon {
+  flex-shrink: 0;
+  font-size: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+/* WeChat 官方色：#07C160 */
+.pay-picker-item.wechat .pay-picker-icon {
+  color: #07C160;
+}
+.pay-picker-item.wechat.active {
+  border-color: #07C160;
+  background: rgba(7, 193, 96, 0.04);
+  box-shadow: 0 0 0 2px rgba(7, 193, 96, 0.12);
+}
+.pay-picker-item.wechat.active .pay-picker-check {
+  color: #07C160;
+}
+/* Alipay 官方色：#1677FF */
+.pay-picker-item.alipay .pay-picker-icon {
+  color: #1677FF;
+}
+.pay-picker-item.alipay.active {
+  border-color: #1677FF;
+  background: rgba(22, 119, 255, 0.04);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+.pay-picker-item.alipay.active .pay-picker-check {
+  color: #1677FF;
+}
+.pay-picker-name {
+  flex: 1;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+}
+.pay-picker-check {
+  flex-shrink: 0;
+  font-size: 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* 响应式 */
