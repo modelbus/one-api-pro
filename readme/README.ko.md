@@ -192,11 +192,18 @@ One Api Pro는 **엔터프라이즈급 AI API Gateway**로, Go 언어 + Vue 3로
 
 ### 💳 주문 및 실제 결제
 
-플랜을 주문할 때마다 **완전한 주문 감사 기록** (주문 번호, 사용자, 플랜 스냅샷 JSON, 금액, 결제 수단, 상태, 결제 시간, 채널 거래 번호)이 남습니다. 플랜 / 충전 두 가지 주문 유형을 지원하며, **WeChat Pay Native** (PC QR)와 **Alipay Face-to-Face** (TradePrecreate)를 네이티브로 연동하고, 은행 / 오프라인 / 무료 세 가지 관리자 채널을 미리 구성해 두었습니다. 플랜 업그레이드 차액은 남은 일수 비율로 자동 계산되며, 중첩 모드에서는 신규·기존 플랜이 병행 적용됩니다. 모든 규칙은 「운영 → 플랜 운영」 하위 탭에서 핫스왑으로 전환할 수 있습니다.
+플랜을 주문할 때마다 **완전한 주문 감사 기록** (주문 번호, 사용자, 플랜 스냅샷 JSON, 금액, 결제 수단, 상태, 결제 시간, 채널 거래 번호)이 남습니다. 플랜 / 충전 두 가지 주문 유형을 지원하며, **WeChat Pay Native** (PC QR)와 **Alipay Face-to-Face** (TradePrecreate)를 네이티브로 연동하고, 은행 / 오프라인 / 무료 세 가지 관리자 채널을 미리 구성해 두었습니다. 플랜 업그레이드 차액은 남은 일수 비율로 자동 계산되며, 중첩 모드에서는 신규·기존 플랜이 병행 적용됩니다. 모든 규칙은 「설정 → 플랜 운영」 하위 탭에서 핫스왑으로 전환할 수 있습니다. 주문 센터 테이블에 「주문 유형」 컬럼(플랜 / 충전 2색 chip)을 추가하고, 결제 콜백 `processNotify`는 `order.Type`에 따라 플랜 활성화 또는 충전 입금으로 분기합니다.
 
-| 주문 센터 | 결제 구성 |
-|:---:|:---:|
-| ![주문 센터](../docs/Demo-Order.png) | ![결제 구성](../docs/Demo-Payment.png) |
+### 💰 온라인(잔액)
+
+콘솔의 「내 잔액」 카드에서 **온라인으로 잔액을 충전**할 수 있습니다. 동일한 WeChat / Alipay 결제 채널을 재사용하며, `TopupModal`에서 금액(빠른 선택 chip + 사용자 지정 금액)을 선택하고 제출하면 비동기로 잔액에 반영됩니다. 「설정 → 충전」 탭에서 다음을 설정할 수 있습니다:
+
+- **총 스위치**: `topup.enabled`, 끄면 대시보드의 충전 입구가 비활성화됩니다
+- **빠른 금액**: `topup.presets`, 관리자가 `{금액, 획득 quota}` 그룹을 미리 정의하면 프론트端에서 chip으로 표시
+- **사용자 지정 금액**: `topup.allow_custom`, 켜면 목록 끝에 「사용자 지정」 chip이 추가되며, 클릭해야만 입력란이 표시됩니다
+- **환산 비율**: `topup.exchange_rate`, 기본값 `1`(1위안 = 1 quota), 사용자 지정 금액에만 적용되며 빠른 금액은 각 preset의 `bonus_quota`로 독립 입금
+
+주문 유형 = 2(`OrderTypeTopup`)는 동일한 `orders` 테이블에 기록되며 주문 번호 접두사는 `TP`, 입금은 멱등(결제 완료 시 즉시 return)이고 활성화 시 `IncreaseUserQuota` + `RecordTopupLog`을 실행합니다.
 
 ### 🌐 분산 다중 활성 클러스터
 
@@ -835,20 +842,23 @@ Admin이 노드를 삭제할 때 **물리적으로 삭제하지 않고** `disabl
 - [x] **다단계 권한 체계**: Guest / User / Admin / Root 4단계, 기존 API 권한 취약점 수정
 - [x] **OpenAI 호환 인터페이스**: models / chat / completions / embeddings / images / audio / moderations 완전 지원
 - [x] **플랜 주문 및 업그레이드 절차**: 네이티브 `POST /api/order/plan`으로 플랜 구독 주문 생성, `stack`(중첩)과 `price_diff`(차액 업그레이드) 두 가지 모드 지원, 차액은 남은 일수 비율로 자동 계산, 동일 등급 및 다운그레이드 검증 포함
-- [x] **주문 감사 및 주문 센터**: 신규 `orders` 테이블 (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no)로 모든 결제/관리 승인 흐름을 영속화, 프론트엔드 사용자측 `/plans` 및 `/orders` 페이지에 완전히 표시
-- [x] **실제 결제 통합 (gopay)**: WeChat Pay Native (PC QR)와 Alipay Face-to-Face (TradePrecreate) 네이티브 연동, 결제 콜백은 `/api/payment/{wechat,alipay}/notify`로 서명 검증 + 주문 활성화 폐루프 완성
+- [x] **주문 감사 및 주문 센터**: 신규 `orders` 테이블 (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no)로 모든 결제/관리 승인 흐름을 영속화, 프론트엔드 사용자측 `/plans` 및 `/orders` 페이지에 완전히 표시; 주문 센터 테이블에 「주문 유형」 컬럼을 추가하여 플랜과 충전을 구분
+- [x] **실제 결제 통합 (gopay)**: WeChat Pay Native (PC QR)와 Alipay Face-to-Face (TradePrecreate) 네이티브 연동, 결제 콜백은 `/api/payment/{wechat,alipay}/notify`로 서명 검증 + 주문 활성화 폐루프 완성; 결제 콜백 `processNotify`는 `order.Type`에 따라 플랜 활성화 또는 충전 입금으로 분기
 - [x] **결제 / 플랜 운영 설정**: 「운영 설정」 아래에 「플랜 운영」(차액 업그레이드 vs 중첩) 및 「결제」(위챗 / 알리페이 / 은행 3채널 독립 스위치 + 인증서 업로드 + 알림 URL 구성), 필요에 따라 폼 표시
+- [x] **온라인(잔액 / quota)**: 사용자가 콘솔 「내 잔액」 카드에서 충전 가능, 동일한 WeChat / Alipay 결제 채널을 재사용; 백엔드에 `OrderTypeTopup=2`를 추가하여 `orders` 테이블을 재활용하고 주문 번호 접두사는 `TP`, 입금은 멱등; `ActivateTopupByOrder`가 `IncreaseUserQuota`를 호출하고 `RecordTopupLog`를 기록
+- [x] **충전 설정 센터**: 「설정 → 충전」 탭이 기존 `plan.allow_topup`을 대체하여 총 스위치 / 빠른 금액 / 사용자 지정 금액 허용 / 환산 비율(기본 1:1)을 설정 가능, 기존 결제 설정과 `system_settings` 테이블을 재사용
 
 ### 🔄 진행 중
 
 - [ ] **더 풍부한 채널 진단 및 지능형 라우팅 최적화**: 자동 쿨다운(`CooldownFilter`), 폴백 다운그레이드(`FallbackFilter`) 및 저성공률 자동 비활성화(`monitor`)는 이미 준비됨, 다음 단계로 독립 진단 패널 / 노드 수준 ping 및 사람 검토 절차 완성
 - [ ] 더 풍부한 사용량 분석 리포트 및 내보내기
 - [ ] 다국어 국제화(i18n) 완성
+- [ ] **충전 환불 폐루프**: 현재 충전 주문의 `status=3`은 표시만 되고 quota는 복구되지 않음; 통합 주문 관리 기능이 출시된 후 보완 예정
 
 ### 🔭 계획 중
 
 - [ ] **결제 채널 확장**: Apple Pay, UnionPay, Stripe 등; 비동기 환불 API + 자동화 환불 흐름
-- [ ] **잔액(quota) 온라인 충전**: 사용자가 「개인」 영역에서 계정 할당량을 직접 충전 가능, 구독 플랜과 필요에 따라 서로 간섭 없음
+- [ ] **관리자端 통합 주문 관리**: 관리자 주문 센터 CRUD / 일괄 작업 / 상태별 필터 / 시각적 환불 흐름
 - [ ] **일반 플랫폼 재무 연동**: 주요 재무 / 대조 플랫폼 연동, 충전·소비·환불 등 재무 흐름 자동 동기화
 - [ ] **Token 잔량 경고 메커니즘**: 계정 / 토큰 Token 잔량이 낮을 때 자동 경고, 다중 채널 알림 지원
 - [ ] **로그 감사 및 감사 리포트**: 완전한 작업 감사 로그와 시각화 감사 리포트, 규정 요구 충족
