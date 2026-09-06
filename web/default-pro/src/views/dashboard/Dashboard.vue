@@ -254,6 +254,42 @@
         </div>
       </a-col>
     </a-row>
+
+    <!-- 充值弹窗（v0.0.10 2026-09-06 新增） -->
+    <TopupModal
+      v-model="topupModalVisible"
+      :settings="topupSettings"
+      @success="onTopupSuccess"
+      @pay="onTopupPay"
+    />
+
+    <!-- 充值支付二维码弹窗（v0.0.10 2026-09-06 新增） -->
+    <a-modal
+      v-model:visible="qrModalVisible"
+      :footer="false"
+      :mask-closable="true"
+      :title="qrModalTitle"
+      width="420px"
+      class="payment-modal"
+    >
+      <div class="payment-modal-body">
+        <div class="qrcode-wrap">
+          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" alt="支付二维码" class="qrcode-img" />
+          <div v-else class="qrcode-loading">{{ qrModalTitle === '转账信息' ? qrModalTip : '正在生成支付二维码...' }}</div>
+        </div>
+        <div v-if="qrModalTitle !== '转账信息'" class="payment-tip">{{ qrModalTip }}</div>
+        <div class="payment-tip-sub">（请在 5 分钟内完成支付）</div>
+        <div class="payment-order-info">
+          <div class="payment-info-row">
+            <span>充值金额</span>
+            <span class="payment-info-price">¥{{ qrAmount }}</span>
+          </div>
+        </div>
+        <div class="payment-actions">
+          <a-button long @click="qrModalVisible = false">关闭</a-button>
+        </div>
+      </div>
+    </a-modal>
   </div>
 </template>
 
@@ -266,11 +302,14 @@ import {
   IconCopy, IconLaunch,
 } from '@arco-design/web-vue/es/icon'
 import VChart from 'vue-echarts'
+import QRCode from 'qrcode'
 import 'echarts'
 import api from '@/api'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
 import ModelIcon from '@/components/ModelIcon.vue'
+import TopupModal from '@/components/TopupModal.vue'
+import settingApi from '@/api/setting'
 import { findProviderByName } from '@/constants/providers'
 
 const authStore = useAuthStore()
@@ -614,9 +653,61 @@ function copyLatestKey() {
   }
 }
 
-// 充值入口（功能暂未实现，仅保留按钮占位）
-function onRechargeClick() {
-  Message.info('充值功能即将上线')
+// 充值入口（v0.0.10 2026-09-06 接入在线充值弹窗）
+const topupModalVisible = ref(false)
+const topupSettings = ref(null)
+const qrModalVisible = ref(false)
+const qrcodeDataUrl = ref('')
+const qrModalTitle = ref('扫码支付')
+const qrModalTip = ref('请使用微信扫码支付')
+const qrAmount = ref(0)
+
+async function loadTopupSettings() {
+  try {
+    const { data } = await settingApi.getTopup()
+    if (data.success) topupSettings.value = data.data
+  } catch (e) {
+    topupSettings.value = null
+  }
+}
+
+async function onRechargeClick() {
+  // 先确保设置已加载
+  if (!topupSettings.value) await loadTopupSettings()
+  if (!topupSettings.value || !topupSettings.value.enabled) {
+    Message.warning('充值功能未开启')
+    return
+  }
+  const presetsEmpty = !topupSettings.value.presets || topupSettings.value.presets.length === 0
+  if (presetsEmpty && !topupSettings.value.allow_custom) {
+    Message.warning('管理员尚未配置充值金额')
+    return
+  }
+  topupModalVisible.value = true
+}
+
+function formatAmount(n) { return Number(n || 0).toFixed(2) }
+
+async function onTopupPay({ url, note, payMethod, amount }) {
+  qrAmount.value = formatAmount(amount)
+  if (url) {
+    qrModalTitle.value = payMethod === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
+    qrModalTip.value = payMethod === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+    try {
+      qrcodeDataUrl.value = await QRCode.toDataURL(url, { width: 220, margin: 2 })
+    } catch (e) { qrcodeDataUrl.value = '' }
+  } else if (note) {
+    qrModalTitle.value = '转账信息'
+    qrModalTip.value = note
+    qrcodeDataUrl.value = ''
+  }
+  qrModalVisible.value = true
+  loadSelf() // 刷新余额
+}
+
+function onTopupSuccess() {
+  // 下单成功，提示用户去订单中心查看（pay 弹窗稍后打开）
+  loadSelf()
 }
 
 // 获取当前用户余额（/api/user/self 返回 quota）
@@ -820,6 +911,7 @@ onMounted(async () => {
   if (!statusStore.loaded) await statusStore.fetchStatus()
   version.value = statusStore.status?.version || ''
   nextTick(() => loadDashboard())
+  loadTopupSettings()
 })
 </script>
 
