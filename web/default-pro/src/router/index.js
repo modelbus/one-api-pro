@@ -67,6 +67,7 @@ const routes = [
         { path: 'payment', name: 'PaymentSetting', component: () => import('@/views/setting/PaymentSetting.vue'), meta: { title: '支付设置' } },
         { path: 'pricing', name: 'PricingSetting', component: () => import('@/views/setting/PricingSetting.vue'), meta: { title: '定价管理' } },
         { path: 'plan', name: 'PlanSetting', component: () => import('@/views/setting/PlanSetting.vue'), meta: { title: '套餐管理' } },
+        { path: 'topup', name: 'TopupSetting', component: () => import('@/views/setting/TopupSetting.vue'), meta: { title: '充值设置' } },
         { path: 'personal', name: 'PersonalSetting', component: () => import('@/views/setting/PersonalSetting.vue'), meta: { title: '个人设置' } },
       ] },
       { path: 'redeem', name: 'Redeem', component: () => import('@/views/redeem/Redeem.vue'), meta: { title: '兑换' } },
