@@ -180,6 +180,16 @@ func SetApiRouter(router *gin.Engine) {
 		// whether to show the purchase UI.
 		apiRouter.GET("/payment/status", controller.GetPaymentStatus)
 
+		// 在线充值（topup）：用户自助下单 + 管理员设置
+		// 版本 v0.0.10  2026-09-06  新增
+		topupSelfRoute := apiRouter.Group("/topup")
+		topupSelfRoute.Use(middleware.UserAuth())
+		{
+			topupSelfRoute.POST("/order", controller.CreateTopupOrder)
+		}
+		apiRouter.GET("/setting/topup", middleware.RootAuth(), controller.GetTopupSettings)
+		apiRouter.PUT("/setting/topup", middleware.RootAuth(), controller.PutTopupSettings)
+
 		// Settings: payment + plan-operations.
 		settingRoute := apiRouter.Group("/setting")
 		{
