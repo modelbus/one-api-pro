@@ -665,17 +665,25 @@ const qrAmount = ref(0)
 async function loadTopupSettings() {
   try {
     const { data } = await settingApi.getTopup()
-    if (data.success) topupSettings.value = data.data
+    if (data.success && data.data) {
+      topupSettings.value = data.data
+    } else {
+      topupSettings.value = null
+    }
   } catch (e) {
     topupSettings.value = null
   }
 }
 
 async function onRechargeClick() {
-  // 先确保设置已加载
-  if (!topupSettings.value) await loadTopupSettings()
-  if (!topupSettings.value || !topupSettings.value.enabled) {
-    Message.warning('充值功能未开启')
+  // 每次点击都强制重新拉取最新设置，避免缓存导致管理员刚刚开启充值但页面未刷新
+  await loadTopupSettings()
+  if (!topupSettings.value) {
+    Message.warning('无法读取充值配置，请稍后重试')
+    return
+  }
+  if (!topupSettings.value.enabled) {
+    Message.warning('充值功能未开启，请联系管理员在「设置-充值」中开启')
     return
   }
   const presetsEmpty = !topupSettings.value.presets || topupSettings.value.presets.length === 0
@@ -683,6 +691,7 @@ async function onRechargeClick() {
     Message.warning('管理员尚未配置充值金额')
     return
   }
+  // 强制设为 true 并 open（v0.0.10 2026-09-07 修复：原来赋 false 时 v-model 不会重新触发）
   topupModalVisible.value = true
 }
 
