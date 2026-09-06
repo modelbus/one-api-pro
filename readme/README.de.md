@@ -192,11 +192,18 @@ Enthält ein vollständiges Paket- und Abonnementsystem: Abrechnung pro Token / 
 
 ### 💳 Bestellungen und echte Zahlungen
 
-Jede Paketbestellung hinterlässt einen **vollständigen Bestell-Auditdatensatz** (Bestellnummer, Benutzer, Paket-Snapshot als JSON, Betrag, Zahlungsmethode, Status, Zahlungszeit, Kanalseriennummer). Unterstützt werden die beiden Bestelltypen Paket / Aufladung. Nativ integriert sind **WeChat Pay Native** (PC-QR-Code) und **Alipay Face-to-Face Pay** (TradePrecreate); zusätzlich sind die drei Kanäle Bank / Offline / Frei für die Verwaltung vorkonfiguriert. Der Aufpreis beim Paket-Upgrade wird automatisch proportional zu den verbleibenden Tagen berechnet; im Additionsmodus laufen altes und neues Paket parallel. Alle Regeln lassen sich im Untertab „Paketbetrieb“ unter „Betrieb“ zur Laufzeit umschalten.
+Jede Paketbestellung hinterlässt einen **vollständigen Bestell-Auditdatensatz** (Bestellnummer, Benutzer, Paket-Snapshot als JSON, Betrag, Zahlungsmethode, Status, Zahlungszeit, Kanalseriennummer). Unterstützt werden die beiden Bestelltypen Paket / Aufladung. Nativ integriert sind **WeChat Pay Native** (PC-QR-Code) und **Alipay Face-to-Face Pay** (TradePrecreate); zusätzlich sind die drei Kanäle Bank / Offline / Frei für die Verwaltung vorkonfiguriert. Der Aufpreis beim Paket-Upgrade wird automatisch proportional zu den verbleibenden Tagen berechnet; im Additionsmodus laufen altes und neues Paket parallel. Alle Regeln lassen sich im Untertab „Paketbetrieb“ unter „Einstellungen“ zur Laufzeit umschalten. Die Bestellzentrum-Tabelle enthält nun eine Spalte **Bestelltyp** (zweifarbiger Chip für Paket / Aufladung); der Zahlungs-Callback `processNotify` verzweigt anhand von `order.Type` entweder auf die Paketaktivierung oder die Aufladung.
 
-| Bestellzentrum | Zahlungskonfiguration |
-|:---:|:---:|
-| ![Bestellzentrum](../docs/Demo-Order.png) | ![Zahlungskonfiguration](../docs/Demo-Payment.png) |
+### 💰 Online-Aufladung (Guthaben)
+
+Die Karte **Mein Guthaben** im Dashboard unterstützt jetzt die **Online-Aufladung des Guthabens**: dieselben WeChat- / Alipay-Zahlungskanäle werden wiederverwendet, ein `TopupModal` öffnet sich und der Nutzer wählt einen Betrag (Preset-Chips + benutzerdefinierter Betrag). Nach Bestätigung durch den Kanal wird das Guthaben asynchron gutgeschrieben. Konfigurierbar unter **Einstellungen → Aufladung**:
+
+- **Hauptschalter** — `topup.enabled`; ist er aus, wird der Aufladungs-Einstieg im Dashboard deaktiviert.
+- **Preset-Beträge** — `topup.presets`; Admins legen `{Betrag, Guthaben}`-Zeilen an, die als Chips angezeigt werden.
+- **Benutzerdefinierter Betrag** — `topup.allow_custom`; ist er aktiv, erscheint am Ende der Liste ein **Benutzerdefiniert**-Chip, und das Eingabefeld erscheint erst nach Klick darauf.
+- **Umrechnungskurs** — `topup.exchange_rate`, Standard `1` (1 CNY = 1 Guthaben); gilt nur für benutzerdefinierte Beträge; Preset-Beträge verwenden ihr eigenes `bonus_quota`.
+
+Bestelltyp = 2 (`OrderTypeTopup`) wird in dieselbe `orders`-Tabelle geschrieben, mit Bestellnummern-Präfix `TP`. Die Aktivierung ist idempotent (bereits bezahlte Bestellungen geben ohne erneute Gutschrift zurück) und führt `IncreaseUserQuota` + `RecordTopupLog` aus.
 
 ### 🌐 Dezentraler Active-Active-Cluster
 
@@ -835,20 +842,23 @@ Wenn nach der Bereitstellung eine leere Seite erscheint, siehe [#97](https://git
 - [x] **Mehrstufiges Rechtesystem**: die Ebenen Guest / User / Admin / Root; behebt die API-Berechtigungslücken des Originals.
 - [x] **OpenAI-kompatible Schnittstelle**: vollständige Unterstützung für models / chat / completions / embeddings / images / audio / moderations.
 - [x] **Bestell- und Upgrade-Ablauf für Pakete**: natives `POST /api/order/plan` erstellt die Bestellungen für das Paket-Abonnement; unterstützt `stack` (additiv) und `price_diff` (Aufpreis-Upgrade) – der Aufpreis wird automatisch über die verbleibenden Tage berechnet, inklusive Prüfung auf gleiche/absteigende Stufe.
-- [x] **Bestell-Audit und Bestellzentrum**: neue Tabelle `orders` (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no) speichert alle Zahlungs-/Admin-Freischaltungen; die Frontend-Seiten `/plans` und `/orders` bilden sie vollständig ab.
-- [x] **Reale Zahlungsintegration (gopay)**: nativ WeChat Pay Native (PC-QR-Code) und Alipay Face-to-Face Pay (TradePrecreate); die Zahlungs-Callbacks laufen über `/api/payment/{wechat,alipay}/notify` und schließen Verifikation + Bestellaktivierung.
+- [x] **Bestell-Audit und Bestellzentrum**: neue Tabelle `orders` (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no) speichert alle Zahlungs-/Admin-Freischaltungen; die Frontend-Seiten `/plans` und `/orders` bilden sie vollständig ab. Die Bestellzentrum-Tabelle enthält eine neue Spalte **Bestelltyp**, die Paket- und Aufladungsbestellungen unterscheidet.
+- [x] **Reale Zahlungsintegration (gopay)**: nativ WeChat Pay Native (PC-QR-Code) und Alipay Face-to-Face Pay (TradePrecreate); die Zahlungs-Callbacks laufen über `/api/payment/{wechat,alipay}/notify` und schließen Verifikation + Bestellaktivierung. Der Notification-Handler `processNotify` verzweigt anhand von `order.Type` entweder auf die Paketaktivierung oder die Aufladungs-Gutschrift.
 - [x] **Zahlungs-/Paketbetrieb-Einstellungen**: unter „Betriebseinstellungen“ neu hinzugekommen: „Paketbetrieb“ (Aufpreis-Upgrade vs. Additiv) und „Zahlung“ (WeChat / Alipay / Bank als drei unabhängige Schalter + Zertifikats-Upload + Benachrichtigungs-URL); Formulare erscheinen bedarfsweise.
+- [x] **Online-Aufladung des Guthabens (Quota)**: Nutzer laden ihr Konto über die Kachel „Mein Guthaben“ im Dashboard auf; dieselben WeChat- / Alipay-Zahlungskanäle werden wiederverwendet. Im Backend wird `OrderTypeTopup=2` mit der `orders`-Tabelle geteilt (Bestellnummern-Präfix `TP`), Aktivierung ist idempotent; `ActivateTopupByOrder` ruft `IncreaseUserQuota` auf und schreibt `RecordTopupLog`.
+- [x] **Aufladungs-Einstellungen**: der neue Tab **Einstellungen → Aufladung** ersetzt den bisherigen `plan.allow_topup`-Platzhalter; konfiguriert Hauptschalter, Preset-Beträge, benutzerdefinierten Betrag und Umrechnungskurs (Standard 1:1); nutzt die bestehenden Zahlungseinstellungen und die `system_settings`-Tabelle.
 
 ### 🔄 In Umsetzung
 
 - [ ] **Bessere Kanaldiagnose und intelligentere Routenoptimierung**: automatische Kühlung (`CooldownFilter`), Fallback-Degradierung (`FallbackFilter`) und automatische Deaktivierung bei niedriger Erfolgsrate (`monitor`) sind vorhanden; als Nächstes folgen ein eigenständiges Diagnose-Panel, Knoten-Ping und ein manueller Prüfablauf.
 - [ ] Umfangreichere Nutzungsanalyse-Berichte und Exporte.
 - [ ] Vervollständigung der Mehrsprachigkeit (i18n).
+- [ ] **Aufladungs-Erstattungsschleife**: aktuell werden Aufladungsbestellungen mit `status=3` nur markiert, ohne das Guthaben zurückzubuchen; folgt nach der Einführung der einheitlichen Bestellverwaltung.
 
 ### 🔭 Geplant
 
 - [ ] **Erweiterung der Zahlungskanäle**: Apple Pay, UnionPay, Stripe usw.; Unterstützung einer asynchronen Erstattungs-API + automatisierter Erstattungsbuchungen.
-- [ ] **Online-Aufladung des Guthabens (Quota)**: Benutzer können ihr Konto im Bereich „Persönlich“ selbst aufladen; unabhängig von Abonnement-Paketen.
+- [ ] **Einheitliche Bestellverwaltung (Admin-Sicht)**: CRUD im Admin-Bestellzentrum, Massenoperationen, Statusfilter, visuelle Erstattungschronik.
 - [ ] **Finanzanbindung an gängige Plattformen**: Anbindung an gängige Finanz-/Abstimmungsplattformen; automatische Synchronisation von Aufladungen, Verbrauch und Erstattungen.
 - [ ] **Warnmechanismus für niedrigen Token-Restbestand**: automatische Warnung bei niedrigem Token-Restbestand von Konto/Token; unterstützt Mehrkanal-Benachrichtigungen.
 - [ ] **Log-Audit und Audit-Berichte**: vollständige Betriebs-Audit-Logs und visualisierte Audit-Berichte zur Erfüllung von Compliance-Anforderungen.
