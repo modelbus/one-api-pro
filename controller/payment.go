@@ -13,9 +13,14 @@ import (
 )
 
 // processNotify reads the raw body, asks the channel to verify the
-// signature, marks the order paid and (re-)activates the subscription.
-// Returns the channel-specific success payload to write back (WeChat
-// needs XML, Alipay needs the literal string "success").
+// signature, marks the order paid and (re-)activates the subscription
+// or topup order. Returns the channel-specific success payload to
+// write back (WeChat needs XML, Alipay needs the literal string
+// "success").
+//
+// 版本: v0.0.10
+// 日期: 2026-09-06
+// 作者: opencode
 func processNotify(c *gin.Context, payMethod string) (string, error) {
 	ch, err := payment.New(payMethod)
 	if err != nil {
@@ -39,8 +44,17 @@ func processNotify(c *gin.Context, payMethod string) (string, error) {
 	if order.Amount > 0 && notif.Amount > 0 && notif.Amount != order.Amount {
 		return "", errors.New("amount mismatch")
 	}
-	if err := model.ActivatePackageByOrder(order, model.OrderUpgradeModeStack); err != nil {
-		return "", err
+	// 根据订单类型分发到不同的激活逻辑
+	// - type=1: 套餐订阅，激活套餐
+	// - type=2: 在线充值，给用户加 quota
+	if order.Type == model.OrderTypeTopup {
+		if err := model.ActivateTopupByOrder(order); err != nil {
+			return "", err
+		}
+	} else {
+		if err := model.ActivatePackageByOrder(order, model.OrderUpgradeModeStack); err != nil {
+			return "", err
+		}
 	}
 	switch payMethod {
 	case model.OrderPayMethodWechat:
@@ -131,11 +145,21 @@ func MockPay(c *gin.Context) {
 	}
 	switch req.Status {
 	case 1:
-		if err := model.ActivatePackageByOrder(order, model.OrderUpgradeModeStack); err != nil {
-			c.JSON(http.StatusOK, gin.H{"success": false, "message": "激活失败: " + err.Error()})
+		// 版本 v0.0.10 2026-09-06: 按订单类型分发到不同的激活路径
+		var activateErr error
+		var activateMsg string
+		if order.Type == model.OrderTypeTopup {
+			activateErr = model.ActivateTopupByOrder(order)
+			activateMsg = "订单已支付，余额已到账"
+		} else {
+			activateErr = model.ActivatePackageByOrder(order, model.OrderUpgradeModeStack)
+			activateMsg = "订单已支付，套餐已激活"
+		}
+		if activateErr != nil {
+			c.JSON(http.StatusOK, gin.H{"success": false, "message": "激活失败: " + activateErr.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"success": true, "message": "订单已支付，套餐已激活"})
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": activateMsg})
 	case 3:
 		if err := model.MarkOrderRefunded(order); err != nil {
 			c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})

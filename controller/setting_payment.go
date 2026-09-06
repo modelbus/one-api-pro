@@ -2,7 +2,6 @@ package controller
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -132,29 +131,31 @@ func PutPaymentMethod(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "已保存"})
 }
 
-// GetPlanSettings returns the plan-operations config (upgrade mode + topup switch).
+// GetPlanSettings returns the plan-operations config (upgrade mode only).
+// 版本: v0.0.10
+// 日期: 2026-09-06
+// 变更: 移除 allow_topup 字段（已迁移至 topup.* 设置，DB 行保留不动）
 func GetPlanSettings(c *gin.Context) {
 	mode := model.GetSystemSettingString(model.SystemSettingKeyPlanUpgradeMode)
 	if mode == "" {
 		mode = model.OrderUpgradeModePriceDiff
 	}
-	allowTopup := model.GetSystemSettingString(model.SystemSettingKeyPlanAllowTopup) == "true"
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
 			"upgrade_mode": mode,
-			"allow_topup":  allowTopup,
 		},
 	})
 }
 
 type putPlanSettingsReq struct {
 	UpgradeMode string `json:"upgrade_mode"`
-	AllowTopup  bool   `json:"allow_topup"`
 }
 
-// PutPlanSettings updates the plan-operations config.
+// PutPlanSettings updates the plan-operations config (upgrade mode only).
+// 版本: v0.0.10
+// 日期: 2026-09-06
 func PutPlanSettings(c *gin.Context) {
 	var req putPlanSettingsReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -168,12 +169,6 @@ func PutPlanSettings(c *gin.Context) {
 	if err := model.UpsertSystemSetting(model.SystemSettingKeyPlanUpgradeMode,
 		req.UpgradeMode,
 		model.SystemSettingCategoryPlan, "套餐升级模式"); err != nil {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	if err := model.UpsertSystemSetting(model.SystemSettingKeyPlanAllowTopup,
-		fmt.Sprintf("%t", req.AllowTopup),
-		model.SystemSettingCategoryPlan, "是否允许余额充值（仅占位）"); err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
