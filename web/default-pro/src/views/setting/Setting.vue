@@ -10,7 +10,7 @@
           <a-menu-item key="payment" v-if="authStore.isRoot"><template #icon><icon-alipay-circle /></template>支付</a-menu-item>
           <a-menu-item key="pricing" v-if="authStore.isRoot"><template #icon><icon-tags /></template>定价</a-menu-item>
           <a-menu-item key="plan" v-if="authStore.isRoot"><template #icon><icon-calendar /></template>套餐</a-menu-item>
-          <a-menu-item key="topup" v-if="authStore.isRoot"><template #icon><icon-redo /></template>充值</a-menu-item>
+          <a-menu-item key="topup" v-if="authStore.isRoot"><template #icon><icon-subscribe-add /></template>充值</a-menu-item>
           <a-menu-item key="personal"><template #icon><icon-user /></template>个人</a-menu-item>
         </a-menu>
       </div>
@@ -25,7 +25,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { IconSettings, IconStorage, IconTool, IconAlipayCircle, IconTags, IconCalendar, IconUser, IconRedo } from '@arco-design/web-vue/es/icon'
+import { IconSettings, IconStorage, IconTool, IconAlipayCircle, IconTags, IconCalendar, IconUser, IconSubscribeAdd } from '@arco-design/web-vue/es/icon'
 
 const router = useRouter()
 const route = useRoute()
