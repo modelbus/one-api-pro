@@ -156,9 +156,9 @@
             <span class="balance-num">{{ fmtQuota(balance) }}</span>
           </div>
           <div class="balance-actions">
-            <a class="balance-btn" @click="goTo('/redeem')">兑换</a>
-            <a class="balance-btn" @click="goTo('/subscription')">订阅</a>
-            <a class="balance-btn" @click="goTo('/redemption')">兑换码</a>
+            <a class="balance-btn" @click="$router.push('/redeem')">兑换</a>
+            <a class="balance-btn" @click="$router.push('/plans')">订阅</a>
+            <a class="balance-btn" @click="onRechargeClick">充值</a>
           </div>
         </div>
 
@@ -614,9 +614,9 @@ function copyLatestKey() {
   }
 }
 
-// 充值/订阅入口（保留入口，暂不跳转）
-function goTo() {
-  /* 占位，暂无跳转 */
+// 充值入口（功能暂未实现，仅保留按钮占位）
+function onRechargeClick() {
+  Message.info('充值功能即将上线')
 }
 
 // 获取当前用户余额（/api/user/self 返回 quota）
