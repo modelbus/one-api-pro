@@ -10,6 +10,7 @@ import (
 const (
 	SystemSettingCategoryPayment = "payment" // 支付配置
 	SystemSettingCategoryPlan    = "plan"    // 套餐运营
+	SystemSettingCategoryTopup   = "topup"   // 充值设置（在线支付充值）
 	SystemSettingCategoryGeneral = "general" // 通用
 )
 
@@ -26,7 +27,16 @@ const (
 // SystemSetting key constants — plan.*
 const (
 	SystemSettingKeyPlanUpgradeMode = "plan.upgrade_mode"
-	SystemSettingKeyPlanAllowTopup  = "plan.allow_topup"
+	// SystemSettingKeyPlanAllowTopup 已迁移至 topup.enabled，DB 行保留不动
+)
+
+// SystemSetting key constants — topup.*（用户在线支付充值）
+// 版本 v0.0.10  2026-09-06  新增
+const (
+	SystemSettingKeyTopupEnabled      = "topup.enabled"       // 充值总开关（bool: true/false）
+	SystemSettingKeyTopupAllowCustom  = "topup.allow_custom"  // 是否允许用户输入自定义金额（bool）
+	SystemSettingKeyTopupPresets      = "topup.presets"       // 快捷金额列表（JSON: [{amount, bonus_quota}, ...]）
+	SystemSettingKeyTopupExchangeRate = "topup.exchange_rate" // 自定义金额 1 元 = X quota（int，默认 1 即 1:1）
 )
 
 // SystemSetting is a generic key-value configuration row.
