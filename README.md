@@ -193,11 +193,18 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 ### 💳 订单与真实支付
 
-每个套餐下单都会留下一条**完整的订单审计记录**（订单号、用户、套餐快照 JSON、金额、支付方式、状态、支付时间、渠道流水号），支持套餐 / 充值两种订单类型，原生接入 **微信支付 Native**（PC 扫码）与**支付宝当面付**（TradePrecreate），并预置银行 / 线下 / 免费三种管理端通道。套餐升级差价按剩余天数比例自动计算，叠加模式下新旧套餐并行生效，全部规则可在「运营 → 套餐运营」子 Tab 中热切换。
+每个套餐下单都会留下一条**完整的订单审计记录**（订单号、用户、套餐快照 JSON、金额、支付方式、状态、支付时间、渠道流水号），支持套餐 / 充值两种订单类型，原生接入 **微信支付 Native**（PC 扫码）与**支付宝当面付**（TradePrecreate），并预置银行 / 线下 / 免费三种管理端通道。套餐升级差价按剩余天数比例自动计算，叠加模式下新旧套餐并行生效，全部规则可在「设置 → 套餐运营」子 Tab 中热切换。订单中心表格新增「订单类型」列（套餐 / 充值 两色 chip），支付回调统一走 `processNotify` 按 `order.Type` 分发到 `ActivatePackageByOrder` 或 `ActivateTopupByOrder`。
 
-| 订单中心 | 支付配置 |
-|:---:|:---:|
-| ![订单中心](docs/Demo-Order.png) | ![支付配置](docs/Demo-Payment.png) |
+### 💰 在线充值（余额）
+
+控制台「我的余额」卡片支持**在线充值余额**：复用同一套微信 / 支付宝支付通道，弹出 `TopupModal` 选择金额（快捷 chip + 自定义金额），提交后异步到账。可在「设置 → 充值」Tab 中配置：
+
+- **总开关**：`topup.enabled`，关闭后控制台充值入口失效
+- **快捷金额**：`topup.presets`，管理员预设多组 `{金额, 获得额度}`，前端以 chip 形式展示
+- **自定义金额**：`topup.allow_custom`，开启后用户可输入任意金额（最后一个 chip 为「自定义」，点击后才显示输入框）
+- **换算比例**：`topup.exchange_rate`，默认 `1`（1 元 = 1 quota），仅作用于自定义金额；快捷金额按各自 preset 配置独立到账
+
+订单类型 = 2（`OrderTypeTopup`）写入 `orders` 表，与套餐订单共用同一张表，订单号前缀 `TP`，到账幂等（已支付直接 return），激活时同步 `IncreaseUserQuota` + `RecordTopupLog`。
 
 ### 🌐 去中心化多活集群
 
@@ -1005,20 +1012,23 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 - [x] **多级权限体系**：Guest / User / Admin / Root 四级，修复原版 API 权限漏洞
 - [x] **OpenAI 兼容接口**：完整支持 models / chat / completions / embeddings / images / audio / moderations
 - [x] **套餐下单与升级流程**：原生 POST `/api/order/plan` 创建套餐订阅订单，支持 `stack`（叠加）与 `price_diff`（差价升级）两种模式，差价按剩余天数比例自动计算，含同级与降级校验
-- [x] **订单审计与订单中心**：新增 `orders` 表（type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no）持久化所有支付/管理开通流水，前端用户侧 `/plans` 与 `/orders` 页面完整呈现
-- [x] **真实支付集成（gopay）**：原生接入微信支付 Native（PC 扫码）与支付宝当面付（TradePrecreate），支付回调走 `/api/payment/{wechat,alipay}/notify` 完成验签 + 订单激活闭环
+- [x] **订单审计与订单中心**：新增 `orders` 表（type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no）持久化所有支付/管理开通流水，前端用户侧 `/plans` 与 `/orders` 页面完整呈现；订单中心表格新增「订单类型」列区分套餐 / 充值
+- [x] **真实支付集成（gopay）**：原生接入微信支付 Native（PC 扫码）与支付宝当面付（TradePrecreate），支付回调走 `/api/payment/{wechat,alipay}/notify` 完成验签 + 订单激活闭环；支付通知 `processNotify` 按 `order.Type` 分发到套餐激活或充值到账
 - [x] **支付 / 套餐运营设置**：「运营设置」下新增「套餐运营」（差价升级 vs 叠加）与「支付」（微信 / 支付宝 / 银行 三通道独立开关 + 证书上传 + 通知 URL 配置），按需显示表单
+- [x] **在线充值（余额 / quota）**：用户可在控制台「我的余额」卡片点击充值，复用同一套微信 / 支付宝支付通道；后端新增 `OrderTypeTopup=2` 复用 `orders` 表，订单号前缀 `TP`，到账幂等；`ActivateTopupByOrder` 通过 `IncreaseUserQuota` 加额度并写 `RecordTopupLog`
+- [x] **充值设置中心**：「设置 → 充值」Tab 接管原运营 Tab 的 `plan.allow_topup`，新增总开关 / 快捷金额 / 是否允许自定义金额 / 自定义金额换算比例（默认 1:1），复用现有支付设置与 `system_settings` 表
 
 ### 🔄 进行中
 
 - [ ] **更丰富的渠道诊断与智能路由优化**：已具备自动冷却（`CooldownFilter`）、托底降级（`FallbackFilter`）与低成功率自动禁用（`monitor`），下一步补全独立诊断面板 / 节点级 ping 与人工复核流程
 - [ ] 更丰富的用量分析报表与导出
 - [ ] 多语言国际化（i18n）完善
+- [ ] **充值退款闭环**：当前充值订单 `status=3` 仅标记，quota 不回退；待统一订单管理功能上线后补全
 
 ### 🔭 规划中
 
 - [ ] **支付通道扩展**：Apple Pay、银联、Stripe 等；支持异步退款 API + 自动化退款流水
-- [ ] **余额（quota）在线充值**：用户可自助在「个人」区域为账户充值额度，与订阅套餐按需互不干扰
+- [ ] **统一订单管理（管理员视角）**：管理端订单中心增删改查、批量操作、按状态过滤、可视化退款流水
 - [ ] **与常见平台财务对接**：对接主流财务 / 对账平台，自动同步充值、消费、退款等财务流水
 - [ ] **Token 余量预警机制**：账户 / 令牌 Token 余量低时自动预警，支持多通道通知
 - [ ] **日志审计及审计报表**：完整的操作审计日志与可视化审计报表，满足合规要求
