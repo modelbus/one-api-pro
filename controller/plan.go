@@ -239,7 +239,7 @@ func GetCurrentPlan(c *gin.Context) {
 		data["sort"] = up.Plan.Sort
 		data["recommended"] = up.Plan.Recommended
 		data["description"] = up.Plan.Description
-		data["features"] = up.Plan.Features
+		data["features"] = up.Plan.GetFeatures()
 		data["model_limits"] = up.Plan.ModelLimits
 		data["default_model"] = up.Plan.DefaultModel
 	}
