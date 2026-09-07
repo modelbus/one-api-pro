@@ -66,7 +66,39 @@
           </a-col>
         </a-row>
         <a-form-item label="特性说明">
-          <a-textarea v-model="form.features" :auto-size="{ minRows: 2, maxRows: 4 }" placeholder="每行一个特性" />
+          <div class="features-editor">
+            <div
+              v-for="(item, idx) in formFeatures"
+              :key="idx"
+              class="features-editor-row"
+            >
+              <a-input
+                :model-value="item"
+                placeholder="如：每月 1000 次 API 调用"
+                allow-clear
+                @update:model-value="(v) => updateFeature(idx, v)"
+                @keyup.enter="addFeatureAfter(idx)"
+              />
+              <a-button
+                type="text"
+                size="small"
+                status="danger"
+                class="features-editor-remove"
+                :disabled="formFeatures.length === 1 && !item"
+                @click="removeFeature(idx)"
+              >删除</a-button>
+            </div>
+            <a-button
+              type="dashed"
+              size="small"
+              long
+              class="features-editor-add"
+              @click="addFeature()"
+            >
+              <template #icon><icon-plus :size="14" /></template>
+              添加特性
+            </a-button>
+          </div>
         </a-form-item>
         <a-form-item label="默认模型">
           <a-input v-model="form.default_model" placeholder="该套餐的默认模型，如：gpt-4o" />
@@ -80,10 +112,19 @@
 </template>
 
 <script setup>
+// 套餐设置：增删改、启用/禁用、特性说明（动态行）
+// 版本: v0.0.12
+// 日期: 2026-09-07
+// 作者: opencode
 import { ref, reactive, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
+import {
+  sanitizeFeaturesList,
+  featuresFromRecord,
+  buildEmptyFeaturesForm,
+} from '@/utils/plan'
 
 const loading = ref(false)
 const plans = ref([])
@@ -92,8 +133,15 @@ const editing = ref(false)
 const saving = ref(false)
 const form = reactive({
   name: '', description: '', price: 0, duration_days: 30, duration_text: '',
-  status: 1, recommended: false, sort: 0, features: '', model_limits: '', default_model: '',
+  status: 1, recommended: false, sort: 0, features: [], model_limits: '', default_model: '',
 })
+
+// 弹窗中"特性说明"动态行（与 form.features 解耦，避免双向 v-model 在行删除时的索引问题）。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+// 作者: opencode
+const formFeatures = ref(buildEmptyFeaturesForm())
 
 const columns = [
   { title: 'ID', dataIndex: 'id', width: 60 },
@@ -115,27 +163,73 @@ async function loadData() {
   } catch (e) { /* ignore */ } finally { loading.value = false }
 }
 
+// formFeatures 操作：动态行的增删改
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+// 作者: opencode
+function updateFeature(idx, value) {
+  if (idx < 0 || idx >= formFeatures.value.length) return
+  formFeatures.value[idx] = value ?? ''
+}
+
+function addFeature() {
+  formFeatures.value.push('')
+}
+
+function addFeatureAfter(idx) {
+  formFeatures.value.splice(idx + 1, 0, '')
+}
+
+function removeFeature(idx) {
+  if (idx < 0 || idx >= formFeatures.value.length) return
+  formFeatures.value.splice(idx, 1)
+  // 至少保留一行空输入框，方便继续新增
+  if (formFeatures.value.length === 0) {
+    formFeatures.value.push('')
+  }
+}
+
+function resetForm() {
+  form.name = ''
+  form.description = ''
+  form.price = 0
+  form.duration_days = 30
+  form.duration_text = ''
+  form.status = 1
+  form.recommended = false
+  form.sort = 0
+  form.features = []
+  form.model_limits = ''
+  form.default_model = ''
+}
+
 function openModal(record) {
   editing.value = !!record
+  resetForm()
   if (record) {
     Object.assign(form, {
       ...record,
       recommended: record.recommended || false,
-      model_limits: typeof record.model_limits === 'string' ? record.model_limits : JSON.stringify(record.model_limits || {}, null, 2),
+      model_limits: typeof record.model_limits === 'string'
+        ? record.model_limits
+        : JSON.stringify(record.model_limits || {}, null, 2),
       default_model: record.default_model || '',
-      features: record.features || '',
+      features: Array.isArray(record.features) ? record.features : [],
     })
-  } else {
-    form.name = ''; form.description = ''; form.price = 0; form.duration_days = 30; form.duration_text = ''
-    form.status = 1; form.recommended = false; form.sort = 0; form.features = ''; form.model_limits = ''; form.default_model = ''
   }
+  formFeatures.value = featuresFromRecord(form.features)
   modalVisible.value = true
 }
 
 async function handleSave() {
   saving.value = true
   try {
-    const body = { ...form }
+    const cleanedFeatures = sanitizeFeaturesList(formFeatures.value)
+    const body = {
+      ...form,
+      features: cleanedFeatures,
+    }
     if (editing.value) body.id = form.id
     const { data } = editing.value ? await api.put('/api/plan/', body) : await api.post('/api/plan/', body)
     if (data.success) { modalVisible.value = false; Message.success(editing.value ? '套餐已更新' : '套餐已添加'); loadData() }
@@ -159,6 +253,11 @@ onMounted(() => { loadData() })
 .setting-container { padding: 4px 0; }
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .section-header h3 { font-size: 16px; font-weight: 600; color: var(--color-text-1); margin: 0; padding: 0; }
+.features-editor { display: flex; flex-direction: column; gap: 8px; }
+.features-editor-row { display: flex; align-items: center; gap: 8px; }
+.features-editor-row > :first-child { flex: 1; min-width: 0; }
+.features-editor-remove { flex-shrink: 0; }
+.features-editor-add { margin-top: 4px; }
 </style>
 
 <style>
