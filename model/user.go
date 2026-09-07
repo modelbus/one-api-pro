@@ -56,6 +56,30 @@ type User struct {
 	UpdatedAt        int64                     `json:"updated_at" gorm:"bigint;default:0"`
 }
 
+// BeforeCreate 自动填充 CreatedAt / UpdatedAt，避免新建用户的 created_at 永远为 0。
+// BeforeCreate auto-fills CreatedAt / UpdatedAt so newly inserted users have a non-zero timestamp.
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func (user *User) BeforeCreate(tx *gorm.DB) error {
+	now := helper.GetTimestamp()
+	if user.CreatedAt == 0 {
+		user.CreatedAt = now
+	}
+	if user.UpdatedAt == 0 {
+		user.UpdatedAt = user.CreatedAt
+	}
+	return nil
+}
+
+// BeforeUpdate 自动刷新 UpdatedAt，覆盖所有 Updates(...) 路径。
+// BeforeUpdate refreshes UpdatedAt for every Updates(...) call site.
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func (user *User) BeforeUpdate(tx *gorm.DB) error {
+	user.UpdatedAt = helper.GetTimestamp()
+	return nil
+}
+
 func GetMaxUserId() int {
 	var user User
 	DB.Last(&user)
