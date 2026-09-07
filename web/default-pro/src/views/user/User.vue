@@ -69,6 +69,7 @@
           <div class="col">额度</div>
           <div class="col">角色</div>
           <div class="col">状态</div>
+          <div class="col">注册时间</div>
           <div class="col col-action">操作</div>
         </div>
 
@@ -141,6 +142,12 @@
                 <span class="status-dot"></span>
                 {{ u.status === 1 ? '启用' : '禁用' }}
               </span>
+            </div>
+
+            <div class="col">
+              <a-tooltip :content="formatDateTime(u.created_at)">
+                <span class="cell-mono">{{ formatDate(u.created_at) }}</span>
+              </a-tooltip>
             </div>
 
             <div class="col col-action">
@@ -699,6 +706,24 @@ function formatTime(ts) {
   return ''
 }
 
+function formatDate(ts) {
+  if (!ts) return '-'
+  const t = Number(ts)
+  if (isNaN(t) || t <= 0) return '-'
+  const d = new Date(t * 1000)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function formatDateTime(ts) {
+  if (!ts) return ''
+  const t = Number(ts)
+  if (isNaN(t) || t <= 0) return ''
+  return new Date(t * 1000).toLocaleString()
+}
+
 function renderBilling(type) {
   if (type === 'token') return '按 Token'
   if (type === 'request') return '按请求'
@@ -783,7 +808,7 @@ function renderBilling(type) {
 .list-head,
 .list-row {
   display: grid;
-  grid-template-columns: 80px 130px 130px 110px 220px 170px 110px 90px 240px;
+  grid-template-columns: 80px 130px 130px 110px 220px 170px 110px 90px 120px 240px;
   align-items: center;
   padding: 0 20px;
   min-width: max-content;
