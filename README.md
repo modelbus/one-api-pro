@@ -11,6 +11,7 @@
 
 <p align="center">
   👉 <strong>查看在线 Demo</strong>：<a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  👉 <strong>QQ 交流群：1102851586</strong>
 </p>
 
 <p align="center">
