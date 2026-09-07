@@ -1,8 +1,10 @@
 package model
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/modelbus/one-api-pro/common"
@@ -11,6 +13,124 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// StringSlice 在 JSON wire 格式与 DB text 列之间作为 []string 双向桥接。
+//
+// 写入方向：
+//   - MarshalJSON → ["A","B","C"]   （前端 API 看到的形态）
+//   - Value       → JSON 字符串     （DB 列仍是 text，无需迁移）
+//
+// 读取方向（兼容历史三种形态，零迁移）：
+//   - 已是数组                → 原样解析
+//   - JSON 字符串             ["A","B","C"] → 数组
+//   - 换行分隔的纯文本        "A\nB\nC"     → 按行拆分
+//   - JSON 对象               {"A":true,...} → 取键名
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+// 作者: opencode
+type StringSlice []string
+
+// MarshalJSON 输出 JSON 数组；nil 时输出 [] 而非 null。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func (s StringSlice) MarshalJSON() ([]byte, error) {
+	if s == nil {
+		return []byte("[]"), nil
+	}
+	return json.Marshal([]string(s))
+}
+
+// UnmarshalJSON 接受 JSON 数组；同时兼容旧版字符串/换行文本。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func (s *StringSlice) UnmarshalJSON(data []byte) error {
+	trimmed := strings.TrimSpace(string(data))
+	if trimmed == "" || trimmed == "null" {
+		*s = nil
+		return nil
+	}
+	// 主路径：JSON 数组
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*s = arr
+		return nil
+	}
+	// 兼容：旧版字符串（可能为 JSON 字符串或换行文本）
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return fmt.Errorf("StringSlice: cannot unmarshal %s: %w", string(data), err)
+	}
+	*s = splitNonEmptyLines(str)
+	return nil
+}
+
+// Value 实现 driver.Valuer：DB 写入时序列化为 JSON 字符串。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func (s StringSlice) Value() (driver.Value, error) {
+	if s == nil {
+		return nil, nil
+	}
+	b, err := json.Marshal([]string(s))
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
+}
+
+// Scan 实现 sql.Scanner：DB 读出时按 JSON 数组解析；失败时按换行兜底。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func (s *StringSlice) Scan(src interface{}) error {
+	if src == nil {
+		*s = nil
+		return nil
+	}
+	var raw []byte
+	switch v := src.(type) {
+	case []byte:
+		raw = v
+	case string:
+		raw = []byte(v)
+	default:
+		return fmt.Errorf("StringSlice: cannot scan %T", src)
+	}
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" {
+		*s = nil
+		return nil
+	}
+	// 主路径：JSON 数组
+	var arr []string
+	if err := json.Unmarshal(raw, &arr); err == nil {
+		*s = arr
+		return nil
+	}
+	// 兜底：旧版换行分隔文本
+	*s = splitNonEmptyLines(string(raw))
+	return nil
+}
+
+// splitNonEmptyLines 按换行拆分并 trim；空行跳过。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+func splitNonEmptyLines(s string) []string {
+	lines := strings.Split(s, "\n")
+	out := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
 const (
 	PlanStatusEnabled  = 1
 	PlanStatusDisabled = 0
@@ -18,8 +138,8 @@ const (
 	UserPlanStatusActive  = 1
 	UserPlanStatusExpired = 0
 
-	BillingTypeRequest   = "request"
-	BillingTypeToken     = "token"
+	BillingTypeRequest    = "request"
+	BillingTypeToken      = "token"
 	BillingTypePerRequest = "per_request"
 
 	WindowTypePeriod = "period"
@@ -28,32 +148,32 @@ const (
 )
 
 type Plan struct {
-	Id           uint    `gorm:"primaryKey;autoIncrement" json:"id"`
-	Name         string  `gorm:"type:varchar(100);not null" json:"name"`
-	Description  string  `gorm:"type:text" json:"description"`
-	Price        float64 `gorm:"type:decimal(10,2);default:0" json:"price"`
-	DurationDays int     `gorm:"not null;default:30" json:"duration_days"`
-	DurationText string  `gorm:"type:varchar(50)" json:"duration_text"`
-	Status       int     `gorm:"not null;default:1" json:"status"`
-	Recommended  bool    `gorm:"not null;default:false" json:"recommended"`
-	Sort         int     `gorm:"not null;default:0" json:"sort"`
-	Features     string  `gorm:"type:text" json:"features"`
-	ModelLimits  string  `gorm:"type:text;column:model_limits" json:"model_limits"`
-	DefaultModel string  `gorm:"type:varchar(100);default:''" json:"default_model"`
-	CreatedTime  int64   `gorm:"not null;default:0" json:"created_time"`
-	UpdatedTime  int64   `gorm:"not null;default:0" json:"updated_time"`
-	CreatedAt    int64   `json:"created_at" gorm:"bigint;default:0"`
-	UpdatedAt    int64   `json:"updated_at" gorm:"bigint;default:0"`
+	Id           uint        `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name         string      `gorm:"type:varchar(100);not null" json:"name"`
+	Description  string      `gorm:"type:text" json:"description"`
+	Price        float64     `gorm:"type:decimal(10,2);default:0" json:"price"`
+	DurationDays int         `gorm:"not null;default:30" json:"duration_days"`
+	DurationText string      `gorm:"type:varchar(50)" json:"duration_text"`
+	Status       int         `gorm:"not null;default:1" json:"status"`
+	Recommended  bool        `gorm:"not null;default:false" json:"recommended"`
+	Sort         int         `gorm:"not null;default:0" json:"sort"`
+	Features     StringSlice `gorm:"type:text" json:"features"`
+	ModelLimits  string      `gorm:"type:text;column:model_limits" json:"model_limits"`
+	DefaultModel string      `gorm:"type:varchar(100);default:''" json:"default_model"`
+	CreatedTime  int64       `gorm:"not null;default:0" json:"created_time"`
+	UpdatedTime  int64       `gorm:"not null;default:0" json:"updated_time"`
+	CreatedAt    int64       `json:"created_at" gorm:"bigint;default:0"`
+	UpdatedAt    int64       `json:"updated_at" gorm:"bigint;default:0"`
 }
 
 type ModelLimitRule struct {
-	PeriodH        int   `json:"period_h"`
-	RequestPeriod  int64 `json:"request_period"`
-	RequestWeek    int64 `json:"request_week"`
-	RequestMonth   int64 `json:"request_month"`
-	TokenPeriod    int64 `json:"token_period"`
-	TokenWeek      int64 `json:"token_week"`
-	TokenMonth     int64 `json:"token_month"`
+	PeriodH       int   `json:"period_h"`
+	RequestPeriod int64 `json:"request_period"`
+	RequestWeek   int64 `json:"request_week"`
+	RequestMonth  int64 `json:"request_month"`
+	TokenPeriod   int64 `json:"token_period"`
+	TokenWeek     int64 `json:"token_week"`
+	TokenMonth    int64 `json:"token_month"`
 }
 
 func (p *Plan) ValidateDefaultModel() error {
@@ -80,6 +200,20 @@ func (p *Plan) GetModelLimits() map[string]ModelLimitRule {
 		return nil
 	}
 	return limits
+}
+
+// GetFeatures 返回当前 features 列表（拷贝，调用方修改不会影响原值）。
+//
+// 版本: v0.0.12
+// 日期: 2026-09-07
+// 作者: opencode
+func (p *Plan) GetFeatures() []string {
+	if len(p.Features) == 0 {
+		return []string{}
+	}
+	out := make([]string, len(p.Features))
+	copy(out, p.Features)
+	return out
 }
 
 func (p *Plan) Insert() error {
@@ -388,10 +522,10 @@ func GetUserSubscriptionInfo(userId int) ([]map[string]interface{}, error) {
 				windowIndex := CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
 				pu, _ := GetPlanUsage(int(up.Id), model, windowType, windowIndex)
 				entry := map[string]interface{}{
-					"used_requests":      pu.Requests,
-					"used_prompt_tokens": pu.PromptTokens,
+					"used_requests":          pu.Requests,
+					"used_prompt_tokens":     pu.PromptTokens,
 					"used_completion_tokens": pu.CompletionTokens,
-					"used_cached_tokens": pu.CachedTokens,
+					"used_cached_tokens":     pu.CachedTokens,
 				}
 				switch windowType {
 				case WindowTypePeriod:
