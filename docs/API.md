@@ -1335,7 +1335,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
       "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
       "default_model": "gpt-4o",
       "description": "基础套餐描述",
-      "features": "功能特性描述",
+"features": ["API 调用 1000 次/月", "支持 GPT-4o"],
       "sort": 0,
       "status": 1,
       "duration_days": 30,
@@ -1358,7 +1358,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 | model_limits | string | 模型限额配置JSON，key为模型名称，value为ModelLimitRule |
 | default_model | string | 默认模型名称，不在model_limits中的请求模型将转发至此模型计费；为空则不转发，未配置模型返回422 |
 | description | string | 描述 |
-| features | string | 功能特性描述 |
+| features | array<string> | 功能特性列表，每项一行展示在用户端套餐卡 |
 | sort | int | 排序权重 |
 | status | int | 状态：1=上架, 0=下架 |
 | duration_days | int | 有效天数 |
