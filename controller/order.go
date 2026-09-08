@@ -316,25 +316,85 @@ func GetAllOrders(c *gin.Context) {
 	if p < 0 {
 		p = 0
 	}
-	orderType, _ := strconv.Atoi(c.Query("type"))
-	orders, err := model.GetAllOrders(p*config.ItemsPerPage, config.ItemsPerPage, orderType)
+	filter := parseOrderAdminFilter(c)
+	orders, err := model.GetAllOrders(p*config.ItemsPerPage, config.ItemsPerPage, filter)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
+	enrichOrdersWithUserBrief(orders)
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": orders})
 }
 
 // SearchOrders handles GET /api/order/search?keyword=... (admin).
 func SearchOrders(c *gin.Context) {
 	keyword := c.Query("keyword")
-	orderType, _ := strconv.Atoi(c.Query("type"))
-	orders, err := model.SearchOrders(keyword, orderType)
+	filter := parseOrderAdminFilter(c)
+	orders, err := model.SearchOrders(keyword, filter)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
+	enrichOrdersWithUserBrief(orders)
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": orders})
+}
+
+// parseOrderAdminFilter 从 query string 解析 admin 订单列表过滤条件。
+// status 为空字符串表示「全部」,避免与后端 OrderStatusPending(0) 重叠。
+// parseOrderAdminFilter reads admin order filter params from query string.
+// Empty status means "all" to avoid clashing with OrderStatusPending(0).
+// 版本: v0.0.13
+// 日期: 2026-09-08
+func parseOrderAdminFilter(c *gin.Context) model.OrderAdminFilter {
+	orderType, _ := strconv.Atoi(c.Query("type"))
+	statusStr := c.Query("status")
+	var status int
+	if statusStr != "" {
+		status, _ = strconv.Atoi(statusStr)
+	}
+	source, _ := strconv.Atoi(c.Query("source"))
+	userId, _ := strconv.Atoi(c.Query("user_id"))
+	planId, _ := strconv.Atoi(c.Query("plan_id"))
+	return model.OrderAdminFilter{
+		Type:    orderType,
+		Status:  status,
+		Source:  source,
+		UserId:  userId,
+		PlanId:  planId,
+		Keyword: c.Query("keyword"),
+	}
+}
+
+// enrichOrdersWithUserBrief 批量补全每条订单的 User 字段。
+// 收集唯一的 user_id 后单次 WHERE IN 查询,避免 N+1。
+// 失败时不中断响应,User 字段保持 nil(JSON 中省略)。
+// enrichOrdersWithUserBrief backfills the User field on each order.
+// It collects unique user_ids and runs a single WHERE IN query.
+// Failures are non-fatal: User stays nil and is omitted from JSON.
+// 版本: v0.0.13
+// 日期: 2026-09-08
+func enrichOrdersWithUserBrief(orders []*model.Order) {
+	if len(orders) == 0 {
+		return
+	}
+	seen := make(map[int]struct{}, len(orders))
+	ids := make([]int, 0, len(orders))
+	for _, o := range orders {
+		if _, ok := seen[o.UserId]; ok {
+			continue
+		}
+		seen[o.UserId] = struct{}{}
+		ids = append(ids, o.UserId)
+	}
+	briefs, err := model.GetUsersBriefByIds(ids)
+	if err != nil {
+		return
+	}
+	for _, o := range orders {
+		if b, ok := briefs[o.UserId]; ok {
+			o.User = b
+		}
+	}
 }
 
 // GetOrder handles GET /api/order/:id (admin, any user).

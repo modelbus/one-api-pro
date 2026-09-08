@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 
+	"gorm.io/gorm"
+
 	"github.com/modelbus/one-api-pro/common/helper"
 )
 
@@ -64,6 +66,10 @@ type Order struct {
 	PayTradeNo  string  `gorm:"type:varchar(64);default:''" json:"pay_trade_no"`
 	CreateTime  int64   `gorm:"bigint;default:0;index:idx_create_time" json:"create_time"`
 	UpdateTime  int64   `gorm:"bigint;default:0" json:"update_time"`
+	// User 是 admin 列表场景下嵌入的精简用户信息；不持久化。
+	// User is the brief user info embedded in admin list responses; not persisted.
+	// 版本: v0.0.13
+	User *UserBrief `gorm:"-" json:"user,omitempty"`
 }
 
 func (o *Order) Insert() error {
@@ -102,25 +108,62 @@ func GetOrderByOrderNo(orderNo string) (*Order, error) {
 	return &o, nil
 }
 
-func GetAllOrders(startIdx int, num int, orderType int) ([]*Order, error) {
-	var orders []*Order
-	q := DB.Order("id desc")
-	if orderType > 0 {
-		q = q.Where("type = ?", orderType)
+// OrderAdminFilter 携带 admin 订单列表的全部可选过滤条件。
+// 任一字段为 0/"" 时表示「不过滤」,保持向后兼容。
+// 版本: v0.0.13
+// 日期: 2026-09-08
+type OrderAdminFilter struct {
+	Type   int    // 0=全部 1=套餐 2=充值
+	Status int    // 0=全部 1=待支付 2=已支付 3=已取消 4=已退款
+	Source int    // 0=全部 1=用户自助 2=管理员
+	UserId int    // 0=全部;>0 时按 user_id 精确过滤
+	PlanId int    // 0=全部;>0 时按 plan_id 精确过滤
+	Keyword string // 空=不过滤;非空时模糊匹配 order_no / pay_trade_no
+}
+
+// applyTo 把过滤条件追加到 GORM 查询构建器。
+// applyTo appends the filter clauses to the given GORM query builder.
+// 版本: v0.0.13
+// 日期: 2026-09-08
+func (f OrderAdminFilter) applyTo(q *gorm.DB) *gorm.DB {
+	if f.Type > 0 {
+		q = q.Where("type = ?", f.Type)
 	}
+	if f.Status > 0 {
+		q = q.Where("status = ?", f.Status)
+	}
+	if f.Source > 0 {
+		q = q.Where("source = ?", f.Source)
+	}
+	if f.UserId > 0 {
+		q = q.Where("user_id = ?", f.UserId)
+	}
+	if f.PlanId > 0 {
+		q = q.Where("plan_id = ?", f.PlanId)
+	}
+	if f.Keyword != "" {
+		q = q.Where("order_no LIKE ? OR pay_trade_no LIKE ?", f.Keyword+"%", f.Keyword+"%")
+	}
+	return q
+}
+
+func GetAllOrders(startIdx int, num int, filter OrderAdminFilter) ([]*Order, error) {
+	var orders []*Order
+	q := filter.applyTo(DB.Order("id desc"))
 	if err := q.Limit(num).Offset(startIdx).Find(&orders).Error; err != nil {
 		return nil, err
 	}
 	return orders, nil
 }
 
-func SearchOrders(keyword string, orderType int) ([]*Order, error) {
+func SearchOrders(keyword string, filter OrderAdminFilter) ([]*Order, error) {
 	var orders []*Order
-	q := DB.Where("order_no LIKE ? OR pay_trade_no LIKE ?", keyword+"%", keyword+"%")
-	if orderType > 0 {
-		q = q.Where("type = ?", orderType)
+	merged := filter
+	if keyword != "" {
+		merged.Keyword = keyword
 	}
-	if err := q.Order("id desc").Limit(50).Find(&orders).Error; err != nil {
+	q := merged.applyTo(DB.Order("id desc"))
+	if err := q.Limit(50).Find(&orders).Error; err != nil {
 		return nil, err
 	}
 	return orders, nil
