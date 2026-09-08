@@ -210,6 +210,15 @@ func SetApiRouter(router *gin.Engine) {
 			subscriptionRoute.PUT("/", middleware.AdminAuth(), controller.UpdateSubscription)
 			subscriptionRoute.DELETE("/:id", middleware.AdminAuth(), controller.DeleteSubscription)
 		}
+
+		// Admin-only 诊断端点。用于排查 plan_id 显示 0 等问题。
+		// Admin-only diagnostics. Used to debug "plan_id shows 0" and similar.
+		// 版本: v0.0.13
+		diagRoute := apiRouter.Group("/diag")
+		diagRoute.Use(middleware.AdminAuth())
+		{
+			diagRoute.GET("/subscriptions", controller.DiagSubscriptions)
+		}
 		clusterNodeRoute := apiRouter.Group("/cluster_node")
 		clusterNodeRoute.Use(middleware.RootAuth())
 		{
