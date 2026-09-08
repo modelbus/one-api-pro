@@ -231,6 +231,13 @@ func ActivatePackageByOrder(order *Order, mode string) error {
 	if order.Status == OrderStatusPaid {
 		return nil // already activated
 	}
+	// 防御：order.plan_id=0 绝不应该走到激活路径；前置拒绝防止
+	// user_plan 写入脏数据(plan_id=0)。
+	// Defense: order.plan_id=0 should never reach activation; refuse to
+	// insert a user_plan row that points at no套餐.
+	if order.PlanId <= 0 {
+		return fmt.Errorf("order.plan_id 无效 (order_no=%s plan_id=%d)", order.OrderNo, order.PlanId)
+	}
 	plan := GetPlanByOrderPlanInfo(order.PlanInfo)
 	if plan == nil {
 		// Fall back to the live plan row if snapshot is missing/corrupt.

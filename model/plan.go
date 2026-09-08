@@ -3,6 +3,7 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -276,6 +277,13 @@ type UserPlan struct {
 }
 
 func (up *UserPlan) Insert() error {
+	// 防御：plan_id=0 的 user_plan 行无法关联到套餐，会让 admin 列表
+	// 把套餐列显示成空白。此处前置校验，避免写入脏数据。
+	// Defense: block inserts where plan_id=0 (these rows render as empty
+	//套餐 in admin lists and cannot be traced back to a套餐).
+	if up.PlanId <= 0 {
+		return errors.New("user_plan.plan_id 不能为空")
+	}
 	return DB.Create(up).Error
 }
 
