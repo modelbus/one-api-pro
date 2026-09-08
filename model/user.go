@@ -478,3 +478,33 @@ func GetUsernameById(id int) (username string) {
 	DB.Model(&User{}).Where("id = ?", id).Select("username").Find(&username)
 	return username
 }
+
+// UserBrief 是订单/订阅等列表场景下嵌入到每行的精简用户信息。
+// UserBrief is the minimal user projection embedded in list rows (orders, etc.).
+type UserBrief struct {
+	Id          int    `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"display_name"`
+}
+
+// GetUsersBriefByIds 返回 id → UserBrief 映射；ids 为空时返回空 map。
+// 用于订单列表批量嵌入用户名,避免 N+1 查询。
+// GetUsersBriefByIds returns id → UserBrief mapping for embedding into
+// list rows (e.g. orders). Empty ids returns an empty map without DB hit.
+func GetUsersBriefByIds(ids []int) (map[int]*UserBrief, error) {
+	out := make(map[int]*UserBrief)
+	if len(ids) == 0 {
+		return out, nil
+	}
+	var briefs []*UserBrief
+	if err := DB.Model(&User{}).
+		Select("id, username, display_name").
+		Where("id IN ?", ids).
+		Scan(&briefs).Error; err != nil {
+		return nil, err
+	}
+	for _, b := range briefs {
+		out[b.Id] = b
+	}
+	return out, nil
+}
