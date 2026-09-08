@@ -50,6 +50,10 @@
             <template #icon><icon-apps /></template>
             {{ $t('menu.channel') }}
           </a-menu-item>
+          <a-menu-item key="/admin/orders">
+            <template #icon><icon-storage /></template>
+            订单
+          </a-menu-item>
           <a-menu-item key="/redemption">
             <template #icon><icon-gift /></template>
             {{ $t('menu.redemption') }}

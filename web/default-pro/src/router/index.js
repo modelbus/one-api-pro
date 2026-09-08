@@ -53,6 +53,7 @@ const routes = [
     children: [
       { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/Dashboard.vue'), meta: { title: '仪表盘' } },
       { path: 'channel', name: 'Channel', component: () => import('@/views/channel/Channel.vue'), meta: { title: '渠道', admin: true } },
+      { path: 'admin/orders', name: 'AdminOrders', component: () => import('@/views/admin/AdminOrders.vue'), meta: { title: '订单', admin: true } },
       { path: 'token', name: 'Token', component: () => import('@/views/token/Token.vue'), meta: { title: '令牌' } },
       { path: 'user', name: 'User', component: () => import('@/views/user/User.vue'), meta: { title: '用户', admin: true } },
       { path: 'redemption', name: 'Redemption', component: () => import('@/views/redemption/Redemption.vue'), meta: { title: '兑换码', admin: true } },
@@ -86,7 +87,7 @@ const router = createRouter({ history: createWebHistory(), routes })
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem('user'))
   const isLoggedIn = !!user
-  const isAdminRoute = to.meta.admin || to.name === 'Channel' || to.name === 'User' || to.name === 'Redemption'
+  const isAdminRoute = to.meta.admin || to.name === 'Channel' || to.name === 'User' || to.name === 'Redemption' || to.name === 'AdminOrders'
 
   // 根路径始终展示落地页
   if (to.path === '/') {
