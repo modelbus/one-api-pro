@@ -286,14 +286,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 
 		response, meta := StreamResponseClaude2OpenAI(&claudeResponse)
 		if meta != nil {
-			usage.PromptTokens += meta.Usage.InputTokens
-			usage.CompletionTokens += meta.Usage.OutputTokens
-			if meta.Usage.CacheReadTokens > 0 {
-				if usage.PromptTokensDetails == nil {
-					usage.PromptTokensDetails = &model.PromptTokensDetails{}
-				}
-				usage.PromptTokensDetails.CachedTokens += meta.Usage.CacheReadTokens
-			}
+			// message_start 与 message_delta 携带的都是累计 usage，取 max 而非 += 累加，避免 input/cache 双计（见 #13）。
+			MergeClaudeUsage(&usage, meta.Usage)
 			if len(meta.Id) > 0 { // only message_start has an id, otherwise it's a finish_reason event.
 				modelName = meta.Model
 				id = fmt.Sprintf("chatcmpl-%s", meta.Id)
@@ -368,16 +362,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	}
 	fullTextResponse := ResponseClaude2OpenAI(&claudeResponse)
 	fullTextResponse.Model = modelName
-	usage := model.Usage{
-		PromptTokens:     claudeResponse.Usage.InputTokens,
-		CompletionTokens: claudeResponse.Usage.OutputTokens,
-		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
-	}
-	if claudeResponse.Usage.CacheReadTokens > 0 {
-		usage.PromptTokensDetails = &model.PromptTokensDetails{
-			CachedTokens: claudeResponse.Usage.CacheReadTokens,
-		}
-	}
+	usage := ClaudeUsage2OpenAI(claudeResponse.Usage)
 	fullTextResponse.Usage = usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
