@@ -69,14 +69,8 @@ func (p *AnthropicPipeline) Run(c *gin.Context, resp *http.Response) (*model.Err
 
 		response, meta := StreamResponseClaude2OpenAI(&claudeResponse)
 		if meta != nil {
-			usage.PromptTokens += meta.Usage.InputTokens
-			usage.CompletionTokens += meta.Usage.OutputTokens
-			if meta.Usage.CacheReadTokens > 0 {
-				if usage.PromptTokensDetails == nil {
-					usage.PromptTokensDetails = &model.PromptTokensDetails{}
-				}
-				usage.PromptTokensDetails.CachedTokens += meta.Usage.CacheReadTokens
-			}
+			// message_start 与 message_delta 携带的都是累计 usage，取 max 而非 += 累加，避免 input/cache 双计（见 #13）。
+			MergeClaudeUsage(&usage, meta.Usage)
 			if len(meta.Id) > 0 {
 				ctx.ModelName = meta.Model
 				ctx.ID = fmt.Sprintf("chatcmpl-%s", meta.Id)
