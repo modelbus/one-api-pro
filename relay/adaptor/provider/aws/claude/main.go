@@ -13,15 +13,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime/types"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
-	"github.com/pkg/errors"
 	"github.com/modelbus/one-api-pro/common"
 	"github.com/modelbus/one-api-pro/common/ctxkey"
 	"github.com/modelbus/one-api-pro/common/helper"
 	"github.com/modelbus/one-api-pro/common/logger"
 	"github.com/modelbus/one-api-pro/relay/adaptor/anthropic"
-	"github.com/modelbus/one-api-pro/relay/adaptor/provider/aws/utils"
 	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
+	"github.com/modelbus/one-api-pro/relay/adaptor/provider/aws/utils"
 	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
+	"github.com/pkg/errors"
 )
 
 // https://docs.aws.amazon.com/bedrock/latest/userguide/model-ids.html
@@ -88,11 +88,7 @@ func Handler(c *gin.Context, awsCli *bedrockruntime.Client, modelName string) (*
 
 	openaiResp := anthropic.ResponseClaude2OpenAI(claudeResponse)
 	openaiResp.Model = modelName
-	usage := relaymodel.Usage{
-		PromptTokens:     claudeResponse.Usage.InputTokens,
-		CompletionTokens: claudeResponse.Usage.OutputTokens,
-		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
-	}
+	usage := anthropic.ClaudeUsage2OpenAI(claudeResponse.Usage)
 	openaiResp.Usage = usage
 
 	c.JSON(http.StatusOK, openaiResp)
@@ -159,8 +155,8 @@ func StreamHandler(c *gin.Context, awsCli *bedrockruntime.Client) (*relaymodel.E
 
 			response, meta := anthropic.StreamResponseClaude2OpenAI(claudeResp)
 			if meta != nil {
-				usage.PromptTokens += meta.Usage.InputTokens
-				usage.CompletionTokens += meta.Usage.OutputTokens
+				// Bedrock Claude 各事件携带累计 usage，取 max 合并并补齐 cache read 统计（见 #13）。
+				anthropic.MergeClaudeUsage(&usage, meta.Usage)
 				if len(meta.Id) > 0 { // only message_start has an id, otherwise it's a finish_reason event.
 					id = fmt.Sprintf("chatcmpl-%s", meta.Id)
 					return true
