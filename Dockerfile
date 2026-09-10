@@ -1,21 +1,14 @@
 # syntax=docker/dockerfile:1.7
 
-# ============ Stage 1: 前端构建（仅 default-pro） ============
-FROM node:20-alpine AS web-builder
-WORKDIR /src
-
-COPY web/THEMES      ./web/THEMES
-COPY web/default-pro ./web/default-pro
-
-RUN while IFS= read -r theme; do \
-      echo "==> npm install ($theme)" && \
-      npm install --prefix ./web/"$theme" && \
-      echo "==> npm run build ($theme)" && \
-      npm run build --prefix ./web/"$theme"; \
-    done < web/THEMES
-
-
-# ============ Stage 2: Go 二进制构建 ============
+# ============ Stage 1: 前端构建产物由 CI 预构建 ============
+# 关键改动：v0.0.16 之前 Stage 1 在 buildx 多架构构建里跑 npm install。
+# 在 QEMU arm64 emulated 下 V8 生成的原子指令触发 SIGILL(exit 132)。
+# 改为由 CI workflow 在原生 amd64 runner 预构建 web/build/default-pro,
+# Dockerfile 仅 COPY 已构建产物;arm64 构建不再跑 npm。
+#
+# web/build 由 release-docker.yml 中的 "Pre-build web/default-pro" step
+# 产出并通过 GHA cache 跨 workflow 复用。
+# 版本: v0.0.16
 FROM golang:1.22-alpine AS go-builder
 WORKDIR /build
 
@@ -25,8 +18,8 @@ ENV GOTOOLCHAIN=auto
 COPY go.mod go.sum ./
 RUN go mod download
 
+# 注意:web/build 必须在 build context 中存在,由 CI workflow 预构建并 cache
 COPY . .
-COPY --from=web-builder /src/web/build ./web/build
 
 ARG VERSION="dev"
 RUN CGO_ENABLED=0 GOOS=linux \
