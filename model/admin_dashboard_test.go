@@ -347,20 +347,6 @@ func TestGetAdminDashboardOverview_Smoke(t *testing.T) {
 	if ov.Range != "7d" {
 		t.Errorf("range=%q want=7d", ov.Range)
 	}
-	if len(ov.Trends.Requests) == 0 || len(ov.Trends.Quota) == 0 {
-		t.Errorf("trends empty: %+v", ov.Trends)
-	}
-	// v0.0.17: 验证 token 趋势序列（默认 7 日窗口，可能为 7 或 8 个点）
-	if len(ov.Trends.Tokens) != 7 && len(ov.Trends.Tokens) != 8 {
-		t.Errorf("tokens trends len=%d want=7 or 8", len(ov.Trends.Tokens))
-	}
-	// 每个 token 点应有 sum(prompt+completion) == 2*100 + 2*200 = 600（4 个 sample 都是 prompt=100/completion=200）
-	for _, p := range ov.Trends.Tokens {
-		// 6 日均为 0（log 创建在「今天」）；但要确保字段能正常赋值
-		if p.Tokens < 0 {
-			t.Errorf("negative tokens: %+v", p)
-		}
-	}
 }
 
 // TestGetAdminTopUsers 验证排行榜：request_count>0 过滤 + 排序 + 当前套餐名。
@@ -463,190 +449,104 @@ func makeConsumeLogForModel(userId int, modelName string, quota int, createdAt i
 	}
 }
 
-// TestGetAdminModelDistribution 验证全站模型分布的 Top-N 排序 + 7 天日期序列 + 聚合。
-// TestGetAdminModelDistribution verifies Top-N ordering, 7-day series, and per-model aggregates.
+// TestParseAdminChartsRange 验证图表窗口的 day 对齐与天数。
+// TestParseAdminChartsRange verifies day-aligned windows and day counts.
 // 版本: v0.0.17
 // 日期: 2026-09-11
-func TestGetAdminModelDistribution(t *testing.T) {
+func TestParseAdminChartsRange(t *testing.T) {
+	cases := []struct {
+		in   string
+		key  string
+		days int
+	}{
+		{"today", "today", 1},
+		{"7d", "7d", 7},
+		{"30d", "30d", 30},
+		{"all", "all", 30},
+		{"unknown", "7d", 7},
+	}
+	daySec := int64(86400)
+	for _, c := range cases {
+		got := ParseAdminChartsRange(c.in)
+		if got.Key != c.key || got.Days != c.days {
+			t.Errorf("in=%q key=%q days=%d, want key=%q days=%d", c.in, got.Key, got.Days, c.key, c.days)
+		}
+		// End - Start 应覆盖 days 天（end 为 now，start 为 todayStart-(days-1)）
+		span := got.End - got.Start
+		wantMin := int64(c.days-1) * daySec
+		if span < wantMin || span > wantMin+daySec {
+			t.Errorf("in=%q span=%d want ~[%d,%d]", c.in, span, wantMin, wantMin+daySec)
+		}
+	}
+}
+
+// TestSearchAdminLogsByDayAndModel 验证全站 day×model 聚合结构与字段。
+// TestSearchAdminLogsByDayAndModel verifies the day×model aggregate shape.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func TestSearchAdminLogsByDayAndModel(t *testing.T) {
 	setupAdminDashboardTestDB(t)
 	now := helper.GetTimestamp()
 	daySec := int64(86400)
 	todayStart := now - (now % daySec)
 
-	// 三个模型：gpt-4o 配额最大，claude 次之，gemini 最小
-	// Three models with descending quota
-	logs := []struct {
+	// 两个模型 × 两天
+	type rec struct {
+		user  int
 		model string
 		quota int
-		day   int64 // 距今天 N 天
-	}{
-		{"gpt-4o", 5000, 0},
-		{"gpt-4o", 3000, 1},
-		{"claude-3.5", 4000, 0},
-		{"claude-3.5", 2000, 2},
-		{"gemini-pro", 1000, 0},
+		day   int64
 	}
-	for _, l := range logs {
-		// day=0 表示今天。UTC 对齐：取 todayStart + 100s，确保 SQLite strftime
-		// 和 Go time.Format 都判定为今天。
-		// day=0 means today. Use todayStart + 100s for UTC alignment so both
-		// SQLite strftime and Go time.Format agree it's today.
-		ts := todayStart + 100 - int64(l.day)*daySec
-		if err := LOG_DB.Create(makeConsumeLogForModel(1, l.model, l.quota, ts)).Error; err != nil {
+	recs := []rec{
+		{1, "gpt-4o", 1000, 0},
+		{2, "gpt-4o", 2000, 0}, // 不同用户，聚合时应合并
+		{1, "gpt-4o", 500, 1},
+		{1, "claude-3.5", 800, 0},
+		{2, "claude-3.5", 600, 1},
+	}
+	for _, r := range recs {
+		ts := todayStart + 100 - r.day*daySec
+		if err := LOG_DB.Create(makeConsumeLogForModel(r.user, r.model, r.quota, ts)).Error; err != nil {
 			t.Fatalf("create log: %v", err)
 		}
 	}
 
-	dist, err := GetAdminModelDistribution("7d", 5)
+	rows, err := SearchAdminLogsByDayAndModel(todayStart-6*daySec, now)
 	if err != nil {
-		t.Fatalf("model distribution: %v", err)
+		t.Fatalf("search: %v", err)
 	}
-	if dist.Range != "7d" {
-		t.Errorf("range=%q want=7d", dist.Range)
+	// 预期 4 行：2 模型 × 2 天
+	if len(rows) != 4 {
+		t.Fatalf("rows=%d want=4: %+v", len(rows), rows)
 	}
-	if len(dist.Days) != 7 {
-		t.Errorf("days=%d want=7", len(dist.Days))
-	}
-	if len(dist.Items) != 3 {
-		t.Fatalf("items=%d want=3", len(dist.Items))
-	}
-	// 排序：gpt-4o(8000) > claude-3.5(6000) > gemini-pro(1000)
-	wantOrder := []string{"gpt-4o", "claude-3.5", "gemini-pro"}
-	for i, want := range wantOrder {
-		if dist.Items[i].ModelName != want {
-			t.Errorf("items[%d].ModelName=%q want=%q", i, dist.Items[i].ModelName, want)
+	// 字段齐全（无 omitempty 导致的缺字段）
+	// 每行 prompt=100×N，completion=200×N（N=合并的日志条数）
+	for _, r := range rows {
+		if r.Day == "" || r.ModelName == "" {
+			t.Errorf("empty day/model: %+v", r)
+		}
+		if r.PromptTokens == 0 || r.PromptTokens%100 != 0 {
+			t.Errorf("prompt_tokens mismatch: %+v", r)
+		}
+		if r.CompletionTokens != r.PromptTokens*2 {
+			t.Errorf("completion/prompt ratio mismatch: %+v", r)
 		}
 	}
-	// 总配额聚合校验
-	wantQuota := map[string]int64{
-		"gpt-4o":     8000,
-		"claude-3.5": 6000,
-		"gemini-pro": 1000,
-	}
-	for _, item := range dist.Items {
-		if item.Quota != wantQuota[item.ModelName] {
-			t.Errorf("model=%s quota=%d want=%d", item.ModelName, item.Quota, wantQuota[item.ModelName])
+	// 今天 gpt-4o 应合并两个用户：1000+2000=3000, request_count=2
+	found := false
+	for _, r := range rows {
+		if r.Day == rows[0].Day && r.ModelName == "gpt-4o" {
+			// rows[0].Day 是今天还是昨天取决于排序（day ASC -> 昨天在前）
+			// 直接找 quota=3000 的那行
+		}
+		if r.ModelName == "gpt-4o" && r.Quota == 3000 {
+			found = true
+			if r.RequestCount != 2 {
+				t.Errorf("gpt-4o request_count=%d want=2", r.RequestCount)
+			}
 		}
 	}
-	// 请求数 = 日志条数
-	if dist.Items[0].RequestCount != 2 {
-		t.Errorf("gpt-4o request_count=%d want=2", dist.Items[0].RequestCount)
-	}
-
-	// DayQuota 序列长度对齐、聚合对齐
-	for _, item := range dist.Items {
-		if len(item.DayQuota) != 7 {
-			t.Errorf("model=%s day_quota len=%d want=7", item.ModelName, len(item.DayQuota))
-			continue
-		}
-		var sum int64
-		for _, v := range item.DayQuota {
-			sum += v
-		}
-		if sum != item.Quota {
-			t.Errorf("model=%s day_quota sum=%d want=%d", item.ModelName, sum, item.Quota)
-		}
-	}
-	// gpt-4o 今天=5000 + 1 天前=3000，其余 0
-	if dist.Items[0].DayQuota[6] != 5000 || dist.Items[0].DayQuota[5] != 3000 {
-		t.Errorf("gpt-4o day_quota=[today=%d, d-1=%d] want=[5000,3000]",
-			dist.Items[0].DayQuota[6], dist.Items[0].DayQuota[5])
-	}
-}
-
-// TestGetAdminModelDistribution_Empty 验证空数据时返回空结构（不报错）。
-// TestGetAdminModelDistribution_Empty verifies empty data returns empty struct.
-// 版本: v0.0.17
-// 日期: 2026-09-11
-func TestGetAdminModelDistribution_Empty(t *testing.T) {
-	setupAdminDashboardTestDB(t)
-	dist, err := GetAdminModelDistribution("7d", 8)
-	if err != nil {
-		t.Fatalf("empty: %v", err)
-	}
-	if len(dist.Items) != 0 || len(dist.Days) != 7 {
-		t.Errorf("empty dist=%+v", dist)
-	}
-}
-
-// TestGetAdminUsageDetails 验证使用明细的 day×model 行展开、排序。
-// TestGetAdminUsageDetails verifies day×model unpivoted rows, ordering.
-// 版本: v0.0.17
-// 日期: 2026-09-11
-func TestGetAdminUsageDetails(t *testing.T) {
-	setupAdminDashboardTestDB(t)
-	now := helper.GetTimestamp()
-	daySec := int64(86400)
-	todayStart := now - (now % daySec)
-
-	// todayStart+100 = UTC today (sqlite strftime "2026-09-11")
-	// todayStart+100-daySec = UTC yesterday ("2026-09-10")
-	logs := []struct {
-		model string
-		quota int
-		day   int64 // 距今天 N 天
-	}{
-		{"gpt-4o", 1000, 0},
-		{"gpt-4o", 2000, 0},
-		{"gpt-4o", 500, 1},
-		{"claude-3.5", 800, 0},
-		{"claude-3.5", 600, 1},
-	}
-	for _, l := range logs {
-		ts := todayStart + 100 - int64(l.day)*daySec
-		if err := LOG_DB.Create(makeConsumeLogForModel(1, l.model, l.quota, ts)).Error; err != nil {
-			t.Fatalf("create log: %v", err)
-		}
-	}
-
-	det, err := GetAdminUsageDetails("7d", 5)
-	if err != nil {
-		t.Fatalf("usage details: %v", err)
-	}
-	if det.Range != "7d" {
-		t.Errorf("range=%q want=7d", det.Range)
-	}
-	// 应有 2 个 day：今天 + 1 天前
-	if len(det.Days) != 2 {
-		t.Errorf("days=%d want=2 (%+v)", len(det.Days), det.Days)
-	}
-	if len(det.Items) != 4 {
-		t.Errorf("items=%d want=4 (2 models × 2 days) items=%+v", len(det.Items), det.Items)
-	}
-	// 排序规则：day ASC（最早在前），然后同 day 内 quota DESC
-	// day=1（昨天）先，day=0（今天）后
-	// 找到 day=0 和 day=1 的索引
-	var todayIdx, yestIdx = -1, -1
-	for i, d := range det.Days {
-		if d == "2026-09-11" {
-			todayIdx = i
-		}
-		if d == "2026-09-10" {
-			yestIdx = i
-		}
-	}
-	if todayIdx < 0 || yestIdx < 0 {
-		t.Fatalf("missing day in days=%+v", det.Days)
-	}
-	// items[0..1] 应是 yesterday 的两行（按 quota DESC：gpt-4o/500 > claude-3.5/600 错！claude-3.5/600 > gpt-4o/500）
-	// 注意：yesterday gpt-4o=500, claude-3.5=600，所以 claude-3.5 在前
-	if det.Items[0].Day != det.Days[yestIdx] {
-		t.Errorf("items[0].day=%s want yesterday (%s)", det.Items[0].Day, det.Days[yestIdx])
-	}
-	if det.Items[0].ModelName != "claude-3.5" || det.Items[0].Quota != 600 {
-		t.Errorf("items[0]=%+v want claude-3.5/600 (yesterday quota desc)", det.Items[0])
-	}
-	if det.Items[1].ModelName != "gpt-4o" || det.Items[1].Quota != 500 {
-		t.Errorf("items[1]=%+v want gpt-4o/500", det.Items[1])
-	}
-	// items[2..3] 应是 today 的两行（gpt-4o/3000 > claude-3.5/800）
-	if det.Items[2].Day != det.Days[todayIdx] {
-		t.Errorf("items[2].day=%s want today (%s)", det.Items[2].Day, det.Days[todayIdx])
-	}
-	if det.Items[2].ModelName != "gpt-4o" || det.Items[2].Quota != 3000 {
-		t.Errorf("items[2]=%+v want gpt-4o/3000", det.Items[2])
-	}
-	if det.Items[3].ModelName != "claude-3.5" || det.Items[3].Quota != 800 {
-		t.Errorf("items[3]=%+v want claude-3.5/800", det.Items[3])
+	if !found {
+		t.Errorf("gpt-4o merged row (quota=3000) not found: %+v", rows)
 	}
 }
