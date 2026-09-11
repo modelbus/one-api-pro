@@ -17,28 +17,23 @@ function buildParams(extras = {}) {
 }
 
 export const adminApi = {
-  // 运营概览：KPI + 7 日趋势，一次性返回。
-  // Operations overview: KPIs + 7-day trends, single-shot response.
+  // 运营概览：纯 KPI（不含图表数据）。
+  // Operations overview: KPI-only (chart data lives in charts()).
   // range: today | 7d | 30d | all（默认 7d）
   overview: (range) => api.get('/api/admin/dashboard/overview', { params: buildParams({ range }) }),
+
+  // 全站图表数据：day × model 聚合，结构与 /api/user/dashboard 一致。
+  // 一份数据同时驱动：请求量/额度/Token 折线图 + 模型分布 + 使用明细。
+  // Whole-site chart data: day×model aggregate, same shape as /api/user/dashboard.
+  // One payload drives the 3 line charts + model distribution + usage details.
+  // range: today | 7d | 30d | all（默认 7d）
+  charts: (range) => api.get('/api/admin/dashboard/charts', { params: buildParams({ range }) }),
 
   // 活跃用户排行榜。
   // Active-user leaderboard.
   // range: today | 7d | 30d | all（默认 7d）；limit 默认 20
   topUsers: (range, limit) =>
     api.get('/api/admin/dashboard/top-users', { params: buildParams({ range, limit }) }),
-
-  // 全站模型用量分布：Top N 模型 + 7 天 day 序列，供堆叠柱图渲染。
-  // Whole-site model distribution: Top N models + 7-day series for stacked bar.
-  // range: today | 7d | 30d | all（默认 7d）；top_n 默认 8
-  modelDistribution: (range, topN) =>
-    api.get('/api/admin/dashboard/model-distribution', { params: buildParams({ range, top_n: topN }) }),
-
-  // 全站使用明细：Top N 模型 × 每天的请求/消耗（透视前行），供表格渲染。
-  // Whole-site usage details: Top N models × per-day rows (unpivoted).
-  // range: today | 7d | 30d | all（默认 7d）；top_n 默认 8
-  usageDetails: (range, topN) =>
-    api.get('/api/admin/dashboard/usage-details', { params: buildParams({ range, top_n: topN }) }),
 }
 
 export default adminApi
