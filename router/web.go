@@ -26,8 +26,25 @@ func SetWebRouter(router *gin.Engine, buildFS embed.FS) {
 	router.Use(middleware.Cache())
 	router.Use(static.Serve("/", common.EmbedFolder(buildFS, fmt.Sprintf("web/build/%s", config.Theme))))
 	router.NoRoute(func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.RequestURI, "/v1") || strings.HasPrefix(c.Request.RequestURI, "/api") {
+		// /v1/* 未匹配：返回 OpenAI 兼容错误，供 relay 客户端识别。
+		// Unmatched /v1/*: return the OpenAI-compatible error for relay clients.
+		if strings.HasPrefix(c.Request.RequestURI, "/v1") {
 			controller.RelayNotFound(c)
+			return
+		}
+		// /api/* 未匹配：返回标准 API 404 信封，避免被误认为 relay 路由问题
+		// （历史上这里复用 RelayNotFound，导致缺失的管理接口返回
+		//  invalid_request_error，排查困难）。
+		// Unmatched /api/*: return the standard API 404 envelope. Reusing
+		// RelayNotFound here previously produced an OpenAI-style
+		// invalid_request_error for missing management routes, which was
+		// misleading.
+		if strings.HasPrefix(c.Request.RequestURI, "/api") {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"message": "接口不存在: " + c.Request.Method + " " + c.Request.URL.Path,
+				"data":    nil,
+			})
 			return
 		}
 		c.Header("Cache-Control", "no-cache")
