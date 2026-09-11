@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  OneAPI Pro · Go 言語で構築されたエンタープライズ向け AI API Gateway
+  <strong>OneAPI</strong> Pro · Go 言語で構築されたエンタープライズ向け AI API Gateway
 </p>
 <p align="center">
-  <a href="https://github.com/songquanpeng/one-api">one-api</a> (by <a href="https://github.com/songquanpeng">JustSong</a>) を深くリファクタリングして開発されました。原作者のオープンソースへの貢献に感謝します。
+  <a href="https://github.com/songquanpeng/one-api">one-api</a> を深くリファクタリングして開発されました。原作者のオープンソースへの貢献に感謝します。
 </p>
 
 <p align="center">
