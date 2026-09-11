@@ -19,6 +19,8 @@ web/default
 web/berry
 web/build
 web/README.md
+# Official website (one-api.pro), not tracked
+website
 /web/*/node_modules
 dist
 one-api-pro
