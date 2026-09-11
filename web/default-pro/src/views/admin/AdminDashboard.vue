@@ -174,10 +174,10 @@
           <div class="panel">
             <div class="panel-head">
               <h2 class="panel-title">{{ t('admin.chartModelDist') }}</h2>
-              <span class="panel-extra">{{ t('admin.topN', { n: distItems.length || 0 }) }} · {{ rangeLabel }}</span>
+              <span class="panel-extra">{{ t('admin.topN', { n: distModels.length || 0 }) }} · {{ rangeLabel }}</span>
             </div>
             <v-chart
-              v-if="distItems.length > 0"
+              v-if="distModels.length > 0"
               :option="modelBarOption"
               :style="{ height: '320px' }"
               autoresize
@@ -190,17 +190,17 @@
           <div class="panel no-pad">
             <div class="panel-head pad-head">
               <h2 class="panel-title">{{ t('admin.sectionUsageDetails') }}</h2>
-              <span class="panel-extra">{{ t('admin.usageRowCount', { n: usageDetails.length }) }}</span>
+              <span class="panel-extra">{{ t('admin.usageRowCount', { n: usageRows.length }) }}</span>
             </div>
             <a-table
               :columns="usageColumns"
-              :data="usageDetails"
+              :data="usageRows"
               :pagination="{ pageSize: 8, showTotal: false, showJumper: false }"
               :bordered="false"
               :stripe="true"
               size="medium"
               class="dash-table"
-              :loading="usageLoading"
+              :loading="chartsLoading"
             >
               <template #day="{ record }">
                 <span class="cell-mono">{{ record.day }}</span>
@@ -380,13 +380,10 @@ const range = ref('7d')
 const topRange = ref('7d')
 const overviewLoading = ref(false)
 const topLoading = ref(false)
-const distLoading = ref(false)
-const usageLoading = ref(false)
+const chartsLoading = ref(false)
 const overview = ref(null)
 const topUsers = ref([])
-const distDays = ref([])
-const distItems = ref([])
-const usageDetails = ref([])
+const charts = ref([]) // 原始 []LogStatistic（day × model）
 const lastRefreshAt = ref(0)
 
 // ---------- 公告 / 更新日志 / 资源（管理员仪表盘固定列表） ----------
@@ -474,6 +471,102 @@ const palette = {
 
 // 模型分布柱图配色（堆叠）
 const modelColors = ['#165dff', '#00b42a', '#722ed1', '#ff7d00', '#0fc6c2', '#f53f3f', '#f7ba1e', '#86909c']
+
+// ---------- 图表数据（对齐 api/user/dashboard 的 LogStatistic） ----------
+// 后端 GORM 序列化的字段名为 PascalCase（Day/ModelName/...），
+// 同时兼容 snake_case fallback，与 Dashboard.vue::buildCharts 一致。
+// pick: 从一行 LogStatistic 里读字段，兼容 Pascal/snake。
+function pick(row, lower, upper) {
+  return row?.[lower] ?? row?.[upper] ?? 0
+}
+
+// rangeDays: 当前 range 对应的天数（today=1 / 7d=7 / 30d=30 / all=30）。
+const rangeDays = computed(() => {
+  switch (range.value) {
+    case 'today': return 1
+    case '30d': return 30
+    case 'all': return 30
+    default: return 7
+  }
+})
+
+// daySeries: 近 N 天的日期序列（本地日期，包含今天），解决「今天不显示」。
+const daySeries = computed(() => {
+  const n = rangeDays.value
+  const pad = (x) => String(x).padStart(2, '0')
+  const fmt = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  const today = new Date()
+  const out = []
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    out.push(fmt(d))
+  }
+  return out
+})
+
+// chartData: 按天聚合出 requests / quota / tokens 三条序列。
+const chartData = computed(() => {
+  const list = Array.isArray(charts.value) ? charts.value : []
+  const map = {}
+  for (const it of list) {
+    const day = it.Day ?? it.day
+    if (!day) continue
+    if (!map[day]) map[day] = { requests: 0, quota: 0, tokens: 0 }
+    map[day].requests += Number(pick(it, 'request_count', 'RequestCount')) || 0
+    map[day].quota += Number(pick(it, 'quota', 'Quota')) || 0
+    map[day].tokens += (Number(pick(it, 'prompt_tokens', 'PromptTokens')) || 0)
+      + (Number(pick(it, 'completion_tokens', 'CompletionTokens')) || 0)
+  }
+  const days = daySeries.value
+  const build = (key) => days.map((d) => ({ date: d, value: map[d]?.[key] || 0 }))
+  return { requests: build('requests'), quota: build('quota'), tokens: build('tokens') }
+})
+
+// distModels: Top 8 模型 + 每天 quota 序列（堆叠柱图）。
+const distModels = computed(() => {
+  const list = Array.isArray(charts.value) ? charts.value : []
+  const totals = {}
+  for (const it of list) {
+    const model = it.ModelName ?? it.model_name ?? ''
+    if (!model) continue
+    totals[model] = (totals[model] || 0) + (Number(pick(it, 'quota', 'Quota')) || 0)
+  }
+  const top = Object.entries(totals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map((x) => x[0])
+  const days = daySeries.value
+  return top.map((name) => {
+    const dayQuota = days.map((d) => {
+      let sum = 0
+      for (const it of list) {
+        const day = it.Day ?? it.day
+        const model = it.ModelName ?? it.model_name ?? ''
+        if (day === d && model === name) {
+          sum += Number(pick(it, 'quota', 'Quota')) || 0
+        }
+      }
+      return sum
+    })
+    return { model_name: name, quota: totals[name], day_quota: dayQuota }
+  })
+})
+
+// usageRows: 使用明细（扁平 day × model 行，按日期倒序 + 消耗降序）。
+const usageRows = computed(() => {
+  const list = Array.isArray(charts.value) ? charts.value : []
+  return list
+    .map((it) => ({
+      day: it.Day ?? it.day,
+      model_name: it.ModelName ?? it.model_name ?? '',
+      request_count: Number(pick(it, 'request_count', 'RequestCount')) || 0,
+      quota: Number(pick(it, 'quota', 'Quota')) || 0,
+      prompt_tokens: Number(pick(it, 'prompt_tokens', 'PromptTokens')) || 0,
+      completion_tokens: Number(pick(it, 'completion_tokens', 'CompletionTokens')) || 0,
+    }))
+    .sort((a, b) => String(b.day).localeCompare(String(a.day)) || b.quota - a.quota)
+})
 
 // ---------- KPI 卡数据 ----------
 // getNum: 防御性读取，undefined → 0。
@@ -566,19 +659,17 @@ const revenueStatItems = computed(() => {
 })
 
 const trendItems = computed(() => {
-  const trends = overview.value?.trends || {}
-  const req = trends.requests || []
-  const qua = trends.quota || []
-  const tok = trends.tokens || []
+  const d = chartData.value
   return [
-    { field: 'requests', label: t('admin.chartRequests'), color: '#165dff', total: numFmt(sumBy(req, 'count')) },
-    { field: 'quota', label: t('admin.chartQuota'), color: '#00b42a', total: formatQuota(sumBy(qua, 'quota')) },
-    { field: 'tokens', label: t('admin.chartTokens'), color: '#ff7d00', total: formatTokens(sumBy(tok, 'tokens')) },
+    { field: 'requests', label: t('admin.chartRequests'), color: '#165dff', total: numFmt(sumBy(d.requests)) },
+    { field: 'quota', label: t('admin.chartQuota'), color: '#00b42a', total: formatQuota(sumBy(d.quota)) },
+    { field: 'tokens', label: t('admin.chartTokens'), color: '#ff7d00', total: formatTokens(sumBy(d.tokens)) },
   ]
 })
 
-function sumBy(arr, key) {
-  return (arr || []).reduce((acc, p) => acc + (Number(p?.[key]) || 0), 0)
+// sumBy: 对 [{date, value}] 求和。
+function sumBy(arr) {
+  return (arr || []).reduce((acc, p) => acc + (Number(p?.value) || 0), 0)
 }
 
 function ratioText(num, denom) {
@@ -597,16 +688,10 @@ function rankClass(rank) {
 }
 
 // ---------- 折线图（与 Dashboard.vue lineOption 同构） ----------
-// 修复：1) 全 0 数据画底线看不见 → max 强制 ≥ 1 且 areaStyle 透明度 02 → 30
-//       2) 9-11 标签被右边界裁切 → grid.right=16 + axisLabel.margin=8
-//       3) 折线点不可见 → symbolSize=6 + 显式 itemStyle.borderColor
+// 数据来自 chartData（本地补全日期序列，保证包含今天且有 0 值占位）。
 function lineOption(field, color) {
-  const points = overview.value?.trends?.[field] || []
-  const values = points.map((d) => {
-    if (field === 'quota') return d.quota
-    if (field === 'tokens') return d.tokens
-    return d.count
-  })
+  const series = chartData.value[field] || []
+  const values = series.map((d) => d.value)
   const maxV = values.length ? Math.max(...values) : 0
   // 全 0 数据时强制 max=1，保证线条/点在视口里可见
   const safeMax = maxV > 0 ? undefined : 1
@@ -621,7 +706,7 @@ function lineOption(field, color) {
     },
     xAxis: {
       type: 'category', boundaryGap: false,
-      data: points.map((d) => (d.day || '').slice(5)),
+      data: series.map((d) => (d.date || '').slice(5)),
       axisLabel: { fontSize: 11, color: '#86909c', margin: 8, hideOverlap: false },
       axisLine: { show: false },
       axisTick: { show: false },
@@ -643,7 +728,6 @@ function lineOption(field, color) {
     series: [{
       type: 'line', smooth: true,
       symbol: 'circle', symbolSize: 6,
-      connectNulls: true,
       showSymbol: true,
       data: values,
       lineStyle: { color, width: 2 },
@@ -660,8 +744,8 @@ function lineOption(field, color) {
 
 // ---------- 模型分布堆叠柱图（独立面板，320px 高，Dashboard 风格） ----------
 const modelBarOption = computed(() => {
-  const days = distDays.value
-  const items = distItems.value
+  const days = daySeries.value
+  const items = distModels.value
   const series = items.map((m, idx) => ({
     name: m.model_name,
     type: 'bar',
@@ -759,44 +843,26 @@ async function loadTopUsers() {
   }
 }
 
-async function loadModelDistribution() {
-  distLoading.value = true
+async function loadCharts() {
+  chartsLoading.value = true
   try {
-    const { data } = await adminApi.modelDistribution(range.value, 8)
+    const { data } = await adminApi.charts(range.value)
     if (data?.success) {
-      distDays.value = data.data?.days || []
-      distItems.value = data.data?.items || []
+      charts.value = Array.isArray(data.data) ? data.data : []
     } else {
       Message.error(data?.message || t('admin.loadFailed'))
     }
   } catch (e) {
     Message.error(t('admin.loadFailed') + ': ' + (e?.message || ''))
   } finally {
-    distLoading.value = false
-  }
-}
-
-async function loadUsageDetails() {
-  usageLoading.value = true
-  try {
-    const { data } = await adminApi.usageDetails(range.value, 8)
-    if (data?.success) {
-      usageDetails.value = data.data?.items || []
-    } else {
-      Message.error(data?.message || t('admin.loadFailed'))
-    }
-  } catch (e) {
-    Message.error(t('admin.loadFailed') + ': ' + (e?.message || ''))
-  } finally {
-    usageLoading.value = false
+    chartsLoading.value = false
   }
 }
 
 function loadAll() {
   loadOverview()
+  loadCharts()
   loadTopUsers()
-  loadModelDistribution()
-  loadUsageDetails()
 }
 
 onMounted(loadAll)
