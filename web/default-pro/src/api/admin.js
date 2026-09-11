@@ -27,6 +27,12 @@ export const adminApi = {
   // range: today | 7d | 30d | all（默认 7d）；limit 默认 20
   topUsers: (range, limit) =>
     api.get('/api/admin/dashboard/top-users', { params: buildParams({ range, limit }) }),
+
+  // 全站模型用量分布：Top N 模型 + 7 天 day 序列，供堆叠柱图渲染。
+  // Whole-site model distribution: Top N models + 7-day series for stacked bar.
+  // range: today | 7d | 30d | all（默认 7d）；top_n 默认 8
+  modelDistribution: (range, topN) =>
+    api.get('/api/admin/dashboard/model-distribution', { params: buildParams({ range, top_n: topN }) }),
 }
 
 export default adminApi
