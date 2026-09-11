@@ -176,12 +176,12 @@ func TestGetAdminDashboardOverview_Smoke(t *testing.T) {
 
 	// Channels
 	if err := DB.Create(&Channel{
-		Type:    1,
-		Key:     "ck",
-		Name:    "c1",
-		Status:  ChannelStatusEnabled,
-		Models:  "gpt-4o-mini",
-		Group:   "default",
+		Type:   1,
+		Key:    "ck",
+		Name:   "c1",
+		Status: ChannelStatusEnabled,
+		Models: "gpt-4o-mini",
+		Group:  "default",
 	}).Error; err != nil {
 		t.Fatalf("create channel: %v", err)
 	}
