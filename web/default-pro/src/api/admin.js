@@ -33,6 +33,12 @@ export const adminApi = {
   // range: today | 7d | 30d | all（默认 7d）；top_n 默认 8
   modelDistribution: (range, topN) =>
     api.get('/api/admin/dashboard/model-distribution', { params: buildParams({ range, top_n: topN }) }),
+
+  // 全站使用明细：Top N 模型 × 每天的请求/消耗（透视前行），供表格渲染。
+  // Whole-site usage details: Top N models × per-day rows (unpivoted).
+  // range: today | 7d | 30d | all（默认 7d）；top_n 默认 8
+  usageDetails: (range, topN) =>
+    api.get('/api/admin/dashboard/usage-details', { params: buildParams({ range, top_n: topN }) }),
 }
 
 export default adminApi
