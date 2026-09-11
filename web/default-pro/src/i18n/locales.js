@@ -252,7 +252,9 @@ export default {
       chartRequests: '请求量趋势（近 7 日）',
       chartQuota: 'Quota 消耗趋势（近 7 日）',
 
-      sectionRevenue: '收入',
+      sectionRevenue: '营收',
+      sectionUsageDetails: '使用明细',
+      sectionUsers: '用户',
       revenueTotal: '总营收',
       revenueTopup: '充值收入',
       revenueSubscription: '订阅收入',
@@ -262,13 +264,24 @@ export default {
       revenueSubscriptionFoot: '订阅订单',
       revenueRefundFoot: '退款订单',
 
-      sectionLeaderboard: '活跃用户排行榜 TOP 20',
+      chartModelDist: '模型分布（近 7 日）',
+
+      todayLabel: '今日',
+      weekLabel: '本周',
+      monthLabel: '本月',
+
+      sectionLeaderboard: '用户排行',
       noLeaderboard: '暂无活跃用户',
       colUsername: '用户',
       colRequestCount: '请求数',
       colQuota: '消耗',
       colBalance: '当前余额',
       colPlan: '当前套餐',
+      colDay: '日期',
+      colModel: '模型',
+      colTokens: 'Tokens',
+      usageRowCount: '共 {n} 条',
+      usageEmpty: '暂无使用记录',
 
       // v0.0.17 右侧栏 / 右栏 i18n
       // Right column additions
@@ -554,6 +567,7 @@ export default {
       chartQuota: 'Quota Consumption Trend (Last 7 Days)',
 
       sectionRevenue: 'Revenue',
+      sectionUsageDetails: 'Usage Details',
       revenueTotal: 'Total',
       revenueTopup: 'Top Up',
       revenueSubscription: 'Subscription',
@@ -563,12 +577,23 @@ export default {
       revenueSubscriptionFoot: 'Subscription orders',
       revenueRefundFoot: 'Refunded orders',
 
-      sectionLeaderboard: 'Active Users Leaderboard TOP 20',
+      chartModelDist: 'Model Distribution (Last 7 Days)',
+
+      todayLabel: 'Today',
+      weekLabel: 'This Week',
+      monthLabel: 'This Month',
+
+      sectionLeaderboard: 'User Ranking',
       noLeaderboard: 'No active users',
       colUsername: 'User',
       colRequestCount: 'Requests',
       colQuota: 'Quota',
       colBalance: 'Balance',
+      colDay: 'Date',
+      colModel: 'Model',
+      colTokens: 'Tokens',
+      usageRowCount: 'Total {n} rows',
+      usageEmpty: 'No usage records',
       colPlan: 'Current Plan',
 
       // v0.0.17 right column additions
