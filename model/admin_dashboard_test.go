@@ -1,6 +1,6 @@
 // admin_dashboard_test.go 管理员仪表盘聚合查询单测
 // Unit tests for admin_dashboard aggregate queries.
-// 版本: v0.0.16
+// 版本: v0.0.17
 // 日期: 2026-09-11
 // 作者: opencode
 //
@@ -8,6 +8,7 @@
 //   - ParseAdminDashboardRange 在四种 range 下的边界
 //   - GetAdminDashboardOverview 各段聚合（users/tokens/channels/plans/redemptions/subscriptions/revenue/active_7d）
 //   - GetAdminTopUsers 排行榜的 request_count>0 过滤与排序
+//   - GetAdminModelDistribution 全站 Top N 模型 × 7 日聚合
 
 package model
 
@@ -431,5 +432,103 @@ func TestGetAdminTopUsers(t *testing.T) {
 	}
 	if rows[1].CurrentPlanName != "" {
 		t.Errorf("row1.plan=%q want empty", rows[1].CurrentPlanName)
+	}
+}
+
+// makeConsumeLogForModel 工厂：可指定 model_name 与 created_at。
+// makeConsumeLogForModel factory for model-distribution test data.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func makeConsumeLogForModel(userId int, modelName string, quota int, createdAt int64) *Log {
+	return &Log{
+		UserId:           userId,
+		CreatedAt:        createdAt,
+		Type:             LogTypeConsume,
+		ModelName:        modelName,
+		Quota:            quota,
+		PromptTokens:     100,
+		CompletionTokens: 200,
+		ChannelId:        1,
+	}
+}
+
+// TestGetAdminModelDistribution 验证全站模型分布的 Top-N 排序 + 7 天日期序列 + 聚合。
+// TestGetAdminModelDistribution verifies Top-N ordering, 7-day series, and per-model aggregates.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func TestGetAdminModelDistribution(t *testing.T) {
+	setupAdminDashboardTestDB(t)
+	now := helper.GetTimestamp()
+	daySec := int64(86400)
+	todayStart := now - (now % daySec)
+
+	// 三个模型：gpt-4o 配额最大，claude 次之，gemini 最小
+	// Three models with descending quota
+	logs := []struct {
+		model string
+		quota int
+		day   int64 // 距今天 N 天
+	}{
+		{"gpt-4o", 5000, 0},
+		{"gpt-4o", 3000, 1},
+		{"claude-3.5", 4000, 0},
+		{"claude-3.5", 2000, 2},
+		{"gemini-pro", 1000, 0},
+	}
+	for _, l := range logs {
+		if err := LOG_DB.Create(makeConsumeLogForModel(1, l.model, l.quota, todayStart-int64(l.day)*daySec-100)).Error; err != nil {
+			t.Fatalf("create log: %v", err)
+		}
+	}
+
+	dist, err := GetAdminModelDistribution("7d", 5)
+	if err != nil {
+		t.Fatalf("model distribution: %v", err)
+	}
+	if dist.Range != "7d" {
+		t.Errorf("range=%q want=7d", dist.Range)
+	}
+	if len(dist.Days) != 7 {
+		t.Errorf("days=%d want=7", len(dist.Days))
+	}
+	if len(dist.Items) != 3 {
+		t.Fatalf("items=%d want=3", len(dist.Items))
+	}
+	// 排序：gpt-4o(8000) > claude-3.5(6000) > gemini-pro(1000)
+	wantOrder := []string{"gpt-4o", "claude-3.5", "gemini-pro"}
+	for i, want := range wantOrder {
+		if dist.Items[i].ModelName != want {
+			t.Errorf("items[%d].ModelName=%q want=%q", i, dist.Items[i].ModelName, want)
+		}
+	}
+	// 总配额聚合校验
+	wantQuota := map[string]int64{
+		"gpt-4o":     8000,
+		"claude-3.5": 6000,
+		"gemini-pro": 1000,
+	}
+	for _, item := range dist.Items {
+		if item.Quota != wantQuota[item.ModelName] {
+			t.Errorf("model=%s quota=%d want=%d", item.ModelName, item.Quota, wantQuota[item.ModelName])
+		}
+	}
+	// 请求数 = 日志条数
+	if dist.Items[0].RequestCount != 2 {
+		t.Errorf("gpt-4o request_count=%d want=2", dist.Items[0].RequestCount)
+	}
+}
+
+// TestGetAdminModelDistribution_Empty 验证空数据时返回空结构（不报错）。
+// TestGetAdminModelDistribution_Empty verifies empty data returns empty struct.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func TestGetAdminModelDistribution_Empty(t *testing.T) {
+	setupAdminDashboardTestDB(t)
+	dist, err := GetAdminModelDistribution("7d", 8)
+	if err != nil {
+		t.Fatalf("empty: %v", err)
+	}
+	if len(dist.Items) != 0 || len(dist.Days) != 7 {
+		t.Errorf("empty dist=%+v", dist)
 	}
 }
