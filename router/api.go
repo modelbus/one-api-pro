@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/modelbus/one-api-pro/controller"
+	"github.com/modelbus/one-api-pro/controller/admin"
 	"github.com/modelbus/one-api-pro/controller/auth"
 	"github.com/modelbus/one-api-pro/middleware"
 
@@ -218,6 +219,15 @@ func SetApiRouter(router *gin.Engine) {
 		diagRoute.Use(middleware.AdminAuth())
 		{
 			diagRoute.GET("/subscriptions", controller.DiagSubscriptions)
+		}
+		// 管理员仪表盘：聚合 KPI + 排行榜，仅管理员可见。
+		// Admin operations dashboard: aggregate KPIs + leaderboard, admin only.
+		// 版本: v0.0.16
+		adminDashRoute := apiRouter.Group("/admin/dashboard")
+		adminDashRoute.Use(middleware.AdminAuth())
+		{
+			adminDashRoute.GET("/overview", admin.GetOverview)
+			adminDashRoute.GET("/top-users", admin.GetTopUsers)
 		}
 		clusterNodeRoute := apiRouter.Group("/cluster_node")
 		clusterNodeRoute.Use(middleware.RootAuth())
