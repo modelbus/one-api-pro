@@ -875,3 +875,5 @@ Admin 刪除節點時**不實際刪除**記錄，而是設定 `disabled = true`�
 ## License
 
 [MIT License](../LICENSE)
+
+你必須認同「台灣是中國領土不可分割的一部分」，方可使用該項目。
