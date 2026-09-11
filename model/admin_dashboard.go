@@ -506,11 +506,14 @@ func batchTopActivePlanNames(userIds []int) (map[int]string, error) {
 // 版本: v0.0.17
 // 日期: 2026-09-11
 type AdminModelDistributionRow struct {
-	ModelName    string `json:"model_name" gorm:"column:model_name"`
-	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
-	Quota        int64  `json:"quota" gorm:"column:quota"`
-	PromptTokens int64  `json:"prompt_tokens" gorm:"column:prompt_tokens"`
-	CompletionTokens int64 `json:"completion_tokens" gorm:"column:completion_tokens"`
+	ModelName        string `json:"model_name" gorm:"column:model_name"`
+	RequestCount     int64  `json:"request_count" gorm:"column:request_count"`
+	Quota            int64  `json:"quota" gorm:"column:quota"`
+	PromptTokens     int64  `json:"prompt_tokens" gorm:"column:prompt_tokens"`
+	CompletionTokens int64  `json:"completion_tokens" gorm:"column:completion_tokens"`
+	// DayQuota: 该模型每天的 quota 序列（按 Days 顺序对齐），用于堆叠柱图。
+	// DayQuota: per-day quota series aligned with Days, for stacked bar chart.
+	DayQuota []int64 `json:"day_quota,omitempty"`
 }
 
 // AdminModelDistribution 全站模型分布聚合：按模型 × 日 双维度，限定窗口内 Top N 模型。
@@ -570,12 +573,15 @@ func GetAdminModelDistribution(rawRange string, topN int) (*AdminModelDistributi
 		Items: []AdminModelDistributionRow{},
 		Range: r.Key,
 	}
-	if len(top) == 0 {
-		return out, nil
-	}
 
 	// 构造日期序列：默认固定 7 天，便于前端堆叠柱图横轴对齐。
+	// 即使没有数据也要返回 7 天序列，让前端 X 轴稳定。
+	// 必须用 UTC，与 SQLite/PostgreSQL 的 strftime/to_timestamp 默认时区一致，
+	// 否则非 UTC 时区下 day 对齐会偏差一天。
 	// Build day series (fixed 7 days by default, aligned with admin trends).
+	// Always return 7 days even when empty so the chart X axis stays stable.
+	// Must use UTC to match SQLite strftime / PG to_timestamp default timezone,
+	// otherwise day alignment drifts by 1 in non-UTC zones.
 	now := helper.GetTimestamp()
 	daySec := int64(86400)
 	todayStart := now - (now % daySec)
@@ -585,6 +591,10 @@ func GetAdminModelDistribution(rawRange string, topN int) (*AdminModelDistributi
 		out.Days = append(out.Days, t.Format("2006-01-02"))
 	}
 	dayStart := todayStart - int64(days-1)*daySec
+
+	if len(top) == 0 {
+		return out, nil
+	}
 
 	// 拉 Top N 模型 × 7 天的 quota + requests。
 	// Pull per-model per-day aggregates for the top-N models over the last `days`.
@@ -622,18 +632,32 @@ func GetAdminModelDistribution(rawRange string, topN int) (*AdminModelDistributi
 	for _, r := range rows {
 		key := r.ModelName
 		if _, ok := bucket[key]; !ok {
-			bucket[key] = &AdminModelDistributionRow{ModelName: key}
+			bucket[key] = &AdminModelDistributionRow{
+				ModelName: key,
+				DayQuota:  make([]int64, len(out.Days)),
+			}
 		}
 		bucket[key].RequestCount += r.RequestCount
 		bucket[key].Quota += r.Quota
 		bucket[key].PromptTokens += r.PromptTokens
 		bucket[key].CompletionTokens += r.CompletionTokens
+		// 把当日 quota 写入对应索引，保持与 out.Days 顺序一致。
+		// Fill day-aligned quota at the matching index to keep Days order.
+		for di, day := range out.Days {
+			if day == r.Day {
+				bucket[key].DayQuota[di] += r.Quota
+				break
+			}
+		}
 	}
 	for _, m := range top {
 		if row, ok := bucket[m.ModelName]; ok {
 			out.Items = append(out.Items, *row)
 		} else {
-			out.Items = append(out.Items, AdminModelDistributionRow{ModelName: m.ModelName})
+			out.Items = append(out.Items, AdminModelDistributionRow{
+				ModelName: m.ModelName,
+				DayQuota:  make([]int64, len(out.Days)),
+			})
 		}
 	}
 	return out, nil

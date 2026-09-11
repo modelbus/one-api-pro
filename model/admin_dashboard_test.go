@@ -476,7 +476,12 @@ func TestGetAdminModelDistribution(t *testing.T) {
 		{"gemini-pro", 1000, 0},
 	}
 	for _, l := range logs {
-		if err := LOG_DB.Create(makeConsumeLogForModel(1, l.model, l.quota, todayStart-int64(l.day)*daySec-100)).Error; err != nil {
+		// day=0 表示今天。UTC 对齐：取 todayStart + 100s，确保 SQLite strftime
+		// 和 Go time.Format 都判定为今天。
+		// day=0 means today. Use todayStart + 100s for UTC alignment so both
+		// SQLite strftime and Go time.Format agree it's today.
+		ts := todayStart + 100 - int64(l.day)*daySec
+		if err := LOG_DB.Create(makeConsumeLogForModel(1, l.model, l.quota, ts)).Error; err != nil {
 			t.Fatalf("create log: %v", err)
 		}
 	}
@@ -515,6 +520,26 @@ func TestGetAdminModelDistribution(t *testing.T) {
 	// 请求数 = 日志条数
 	if dist.Items[0].RequestCount != 2 {
 		t.Errorf("gpt-4o request_count=%d want=2", dist.Items[0].RequestCount)
+	}
+
+	// DayQuota 序列长度对齐、聚合对齐
+	for _, item := range dist.Items {
+		if len(item.DayQuota) != 7 {
+			t.Errorf("model=%s day_quota len=%d want=7", item.ModelName, len(item.DayQuota))
+			continue
+		}
+		var sum int64
+		for _, v := range item.DayQuota {
+			sum += v
+		}
+		if sum != item.Quota {
+			t.Errorf("model=%s day_quota sum=%d want=%d", item.ModelName, sum, item.Quota)
+		}
+	}
+	// gpt-4o 今天=5000 + 1 天前=3000，其余 0
+	if dist.Items[0].DayQuota[6] != 5000 || dist.Items[0].DayQuota[5] != 3000 {
+		t.Errorf("gpt-4o day_quota=[today=%d, d-1=%d] want=[5000,3000]",
+			dist.Items[0].DayQuota[6], dist.Items[0].DayQuota[5])
 	}
 }
 
