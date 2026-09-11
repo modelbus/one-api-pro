@@ -91,6 +91,42 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.created=${{ github.event.repository.updated_at }}
 
+      # 预构建 web/build 在 amd64 原生 runner 上跑 npm install;避免在 arm64
+      # emulated 下跑 Node 触发 Illegal instruction(SIGILL, 退出码 132)。
+      # web/build 在 GitHub Actions cache 里跨 workflow 复用,命中时直接 skip。
+      # Pre-build web/build on the native amd64 runner. This avoids running
+      # npm install under QEMU-arm64 emulation, which causes SIGILL (exit 132)
+      # because V8's generated atomics aren't translated by qemu-user-static.
+      # Cross-workflow caching in GHA skips rebuilds on lockfile hit.
+      # 版本: v0.0.16
+      - name: Set up Node.js (for pre-building web/default-pro)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore web/build cache
+        id: web-build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: web/build
+          key: web-build-${{ runner.os }}-${{ hashFiles('web/default-pro/package-lock.json', 'web/default-pro/pnpm-lock.yaml', 'web/default-pro/vite.config.js') }}
+          restore-keys: |
+            web-build-${{ runner.os }}-
+
+      - name: Pre-build web/default-pro
+        if: steps.web-build-cache.outputs.cache-hit != 'true'
+        working-directory: web/default-pro
+        run: |
+          npm ci
+          npm run build
+
+      - name: Save web/build cache
+        if: steps.web-build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: web/build
+          key: web-build-${{ runner.os }}-${{ hashFiles('web/default-pro/package-lock.json', 'web/default-pro/pnpm-lock.yaml', 'web/default-pro/vite.config.js') }}
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
