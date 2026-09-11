@@ -66,17 +66,19 @@ func GetTopUsers(c *gin.Context) {
 	})
 }
 
-// GetModelDistribution 处理 GET /api/admin/dashboard/model-distribution。
-// 返回全站按 quota 降序的 Top N 模型 + 7 日 day 序列，供堆叠柱图渲染。
-// Query: range=today|7d|30d|all (default 7d), top_n (1-50, default 8)。
-// GetModelDistribution handles GET /api/admin/dashboard/model-distribution.
+// GetCharts 处理 GET /api/admin/dashboard/charts。
+// 返回全站按 day × model 聚合的日志统计（[]LogStatistic），结构与 api/user/dashboard 一致。
+// 前端用同一份数据绘制：请求量 / 额度 / Token 三张折线图 + 模型分布 + 使用明细。
+// Query: range=today|7d|30d|all (default 7d)。
+// GetCharts handles GET /api/admin/dashboard/charts.
+// Returns whole-site day×model stats ([]LogStatistic), same shape as api/user/dashboard.
 // 版本: v0.0.17
 // 日期: 2026-09-11
-func GetModelDistribution(c *gin.Context) {
+func GetCharts(c *gin.Context) {
 	rawRange := c.Query("range")
-	topN, _ := strconv.Atoi(c.Query("top_n"))
+	win := model.ParseAdminChartsRange(rawRange)
 
-	dist, err := model.GetAdminModelDistribution(rawRange, topN)
+	rows, err := model.SearchAdminLogsByDayAndModel(win.Start, win.End)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -84,34 +86,12 @@ func GetModelDistribution(c *gin.Context) {
 		})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    dist,
-	})
-}
-
-// GetUsageDetails 处理 GET /api/admin/dashboard/usage-details。
-// 返回全站 Top N 模型 × 该窗口每日明细（透视前行），供「使用明细」表渲染。
-// Query: range=today|7d|30d|all (default 7d), top_n (1-50, default 8)。
-// GetUsageDetails handles GET /api/admin/dashboard/usage-details.
-// 版本: v0.0.17
-// 日期: 2026-09-11
-func GetUsageDetails(c *gin.Context) {
-	rawRange := c.Query("range")
-	topN, _ := strconv.Atoi(c.Query("top_n"))
-
-	det, err := model.GetAdminUsageDetails(rawRange, topN)
-	if err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
-		return
+	if rows == nil {
+		rows = []*model.LogStatistic{}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    det,
+		"data":    rows,
 	})
 }
