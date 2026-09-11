@@ -119,8 +119,8 @@
             </div>
           </div>
 
-          <!-- ④ Token / 请求消耗 + 三图（请求/Quota/模型分布） -->
-          <!-- Quota + 3 charts (requests / quota / model dist) -->
+          <!-- ④ Token / 请求消耗 + 三图（请求量/额度/Token） -->
+          <!-- Quota + 3 line charts (Requests / Quota / Token) -->
           <div class="panel">
             <div class="panel-head">
               <h2 class="panel-title">{{ t('admin.sectionQuota') }}</h2>
@@ -150,8 +150,8 @@
                 v-for="t in trendItems"
                 :key="t.field"
                 :xs="24"
-                :sm="t.field === 'model' ? 12 : 12"
-                :md="t.field === 'model' ? 8 : 8"
+                :sm="8"
+                :md="8"
               >
                 <div class="trend-cell">
                   <div class="trend-head">
@@ -160,7 +160,7 @@
                     <span class="trend-total">{{ t.total }}</span>
                   </div>
                   <v-chart
-                    :option="t.kind === 'bar' ? t.option : lineOption(t.field, t.color)"
+                    :option="lineOption(t.field, t.color)"
                     :style="{ height: '160px' }"
                     autoresize
                   />
@@ -169,7 +169,23 @@
             </a-row>
           </div>
 
-          <!-- ⑤ 使用明细（按 range 切换） -->
+          <!-- ⑤ 模型分布（独立面板，横向拉长，与仪表盘风格一致） -->
+          <!-- Model distribution (standalone panel, full-width, Dashboard-style) -->
+          <div class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">{{ t('admin.chartModelDist') }}</h2>
+              <span class="panel-extra">{{ t('admin.topN', { n: distItems.length || 0 }) }} · {{ rangeLabel }}</span>
+            </div>
+            <v-chart
+              v-if="distItems.length > 0"
+              :option="modelBarOption"
+              :style="{ height: '320px' }"
+              autoresize
+            />
+            <div v-else class="chart-empty">{{ t('admin.chartEmpty') }}</div>
+          </div>
+
+          <!-- ⑥ 使用明细（按 range 切换） -->
           <!-- Usage details (range switchable) -->
           <div class="panel no-pad">
             <div class="panel-head pad-head">
@@ -407,6 +423,16 @@ function formatQuota(n) {
   return (num / 1e9).toFixed(2) + 'B'
 }
 
+// formatTokens: K/M/B 与 Dashboard.vue 一致，专用于「Token」卡片。
+// formatTokens: K/M/B same as Dashboard.vue, used for the Token card.
+function formatTokens(n) {
+  const num = Number(n) || 0
+  if (num < 10000) return num.toLocaleString()
+  if (num < 1e6) return (num / 1e3).toFixed(2) + 'K'
+  if (num < 1e9) return (num / 1e6).toFixed(2) + 'M'
+  return (num / 1e9).toFixed(2) + 'B'
+}
+
 function fmtMoney(n) {
   const num = Number(n) || 0
   return num.toFixed(2)
@@ -543,11 +569,11 @@ const trendItems = computed(() => {
   const trends = overview.value?.trends || {}
   const req = trends.requests || []
   const qua = trends.quota || []
-  const modelTotal = (distItems.value || []).reduce((acc, m) => acc + (Number(m?.quota) || 0), 0)
+  const tok = trends.tokens || []
   return [
-    { field: 'requests', kind: 'line', label: t('admin.chartRequests'), color: '#165dff', total: numFmt(sumBy(req, 'count')) },
-    { field: 'quota', kind: 'line', label: t('admin.chartQuota'), color: '#722ed1', total: formatQuota(sumBy(qua, 'quota')) },
-    { field: 'model', kind: 'bar', label: t('admin.chartModelDist'), color: '#0fc6c2', total: formatQuota(modelTotal), option: modelBarOption.value },
+    { field: 'requests', label: t('admin.chartRequests'), color: '#165dff', total: numFmt(sumBy(req, 'count')) },
+    { field: 'quota', label: t('admin.chartQuota'), color: '#00b42a', total: formatQuota(sumBy(qua, 'quota')) },
+    { field: 'tokens', label: t('admin.chartTokens'), color: '#ff7d00', total: formatTokens(sumBy(tok, 'tokens')) },
   ]
 })
 
@@ -571,14 +597,21 @@ function rankClass(rank) {
 }
 
 // ---------- 折线图（与 Dashboard.vue lineOption 同构） ----------
-// 修复：当 7 天数据全是 0 时，y 轴 auto-scale 会把线压成一条不可见的线。
-// 显式设 min=0 并加大 symbol，保证哪怕是 0 数据也能看到「今天的点」。
+// 修复：1) 全 0 数据画底线看不见 → max 强制 ≥ 1 且 areaStyle 透明度 02 → 30
+//       2) 9-11 标签被右边界裁切 → grid.right=16 + axisLabel.margin=8
+//       3) 折线点不可见 → symbolSize=6 + 显式 itemStyle.borderColor
 function lineOption(field, color) {
   const points = overview.value?.trends?.[field] || []
-  const values = points.map((d) => (field === 'quota' ? d.quota : d.count))
+  const values = points.map((d) => {
+    if (field === 'quota') return d.quota
+    if (field === 'tokens') return d.tokens
+    return d.count
+  })
   const maxV = values.length ? Math.max(...values) : 0
+  // 全 0 数据时强制 max=1，保证线条/点在视口里可见
+  const safeMax = maxV > 0 ? undefined : 1
   return {
-    grid: { left: 32, right: 8, top: 12, bottom: 22 },
+    grid: { left: 36, right: 16, top: 16, bottom: 24 },
     tooltip: {
       trigger: 'axis',
       confine: true,
@@ -589,15 +622,14 @@ function lineOption(field, color) {
     xAxis: {
       type: 'category', boundaryGap: false,
       data: points.map((d) => (d.day || '').slice(5)),
-      axisLabel: { fontSize: 11, color: '#86909c' },
+      axisLabel: { fontSize: 11, color: '#86909c', margin: 8, hideOverlap: false },
       axisLine: { show: false },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       min: 0,
-      // 数据全 0 时给一个最小刻度上限，避免线被压扁到看不见
-      max: maxV > 0 ? undefined : 1,
+      max: safeMax,
       splitNumber: 4,
       axisLabel: {
         fontSize: 11,
@@ -609,22 +641,24 @@ function lineOption(field, color) {
       axisTick: { show: false },
     },
     series: [{
-      type: 'line', smooth: true, symbol: 'circle', symbolSize: 6,
+      type: 'line', smooth: true,
+      symbol: 'circle', symbolSize: 6,
       connectNulls: true,
+      showSymbol: true,
       data: values,
       lineStyle: { color, width: 2 },
-      itemStyle: { color },
+      itemStyle: { color, borderColor: color, borderWidth: 2 },
       areaStyle: {
         color: {
           type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [{ offset: 0, color: color + '35' }, { offset: 1, color: color + '02' }],
+          colorStops: [{ offset: 0, color: color + '30' }, { offset: 1, color: color + '02' }],
         },
       },
     }],
   }
 }
 
-// ---------- 模型分布堆叠柱图 ----------
+// ---------- 模型分布堆叠柱图（独立面板，320px 高，Dashboard 风格） ----------
 const modelBarOption = computed(() => {
   const days = distDays.value
   const items = distItems.value
@@ -632,14 +666,14 @@ const modelBarOption = computed(() => {
     name: m.model_name,
     type: 'bar',
     stack: 'total',
-    barMaxWidth: 22,
-    itemStyle: { color: modelColors[idx % modelColors.length], borderRadius: [2, 2, 0, 0] },
+    barMaxWidth: 36,
+    itemStyle: { color: modelColors[idx % modelColors.length], borderRadius: [3, 3, 0, 0] },
     emphasis: { focus: 'series' },
     data: m.day_quota || [],
   }))
   return {
     color: modelColors,
-    grid: { left: 32, right: 8, top: 8, bottom: 28 },
+    grid: { left: 48, right: 16, top: 16, bottom: 36 },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
@@ -659,7 +693,7 @@ const modelBarOption = computed(() => {
     },
     xAxis: {
       type: 'category', data: days.map((d) => d.slice(5)),
-      axisLabel: { fontSize: 11, color: '#86909c' },
+      axisLabel: { fontSize: 11, color: '#86909c', margin: 8 },
       axisLine: { show: false },
       axisTick: { show: false },
     },
