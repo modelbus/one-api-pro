@@ -11,6 +11,7 @@ package model
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/modelbus/one-api-pro/common"
@@ -660,5 +661,120 @@ func GetAdminModelDistribution(rawRange string, topN int) (*AdminModelDistributi
 			})
 		}
 	}
+	return out, nil
+}
+
+// AdminUsageDetailRow 使用明细的单行：每个模型 × 每天的请求/消耗明细。
+// AdminUsageDetailRow is one row in the admin usage-details table.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+type AdminUsageDetailRow struct {
+	Day              string `json:"day" gorm:"column:day"`
+	ModelName        string `json:"model_name" gorm:"column:model_name"`
+	RequestCount     int64  `json:"request_count" gorm:"column:request_count"`
+	Quota            int64  `json:"quota" gorm:"column:quota"`
+	PromptTokens     int64  `json:"prompt_tokens" gorm:"column:prompt_tokens"`
+	CompletionTokens int64  `json:"completion_tokens" gorm:"column:completion_tokens"`
+}
+
+// AdminUsageDetails 全站使用明细：每个 Top N 模型 × 每个 day 的明细行。
+// 与 model-distribution 的差别：这里返回明细行（透视前），方便前端做表格。
+// AdminUsageDetails is the full per-model per-day breakdown.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+type AdminUsageDetails struct {
+	Days  []string              `json:"days"`
+	Items []AdminUsageDetailRow `json:"items"`
+	Range string                `json:"range"`
+}
+
+// GetAdminUsageDetails 返回 Top N 模型 × 该窗口内每日明细（透视前）。
+// 与 GetAdminModelDistribution 共用同样的窗口/Top-N 逻辑，但返回明细分行而非聚合。
+// GetAdminUsageDetails returns the breakdown rows (unpivoted) for the same window.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func GetAdminUsageDetails(rawRange string, topN int) (*AdminUsageDetails, error) {
+	if topN <= 0 || topN > 50 {
+		topN = 8
+	}
+	r := ParseAdminDashboardRange(rawRange)
+
+	var dayExpr string
+	switch {
+	case common.UsingPostgreSQL:
+		dayExpr = "TO_CHAR(date_trunc('day', to_timestamp(created_at)), 'YYYY-MM-DD')"
+	case common.UsingSQLite:
+		dayExpr = "strftime('%Y-%m-%d', datetime(created_at, 'unixepoch'))"
+	default:
+		dayExpr = "DATE_FORMAT(FROM_UNIXTIME(created_at), '%Y-%m-%d')"
+	}
+
+	// 窗口内 quota 总额 Top N 模型名（与 distribution 共用逻辑，但窗口独立）
+	// Top-N models by total quota within the window.
+	type modelAgg struct {
+		ModelName string
+		Total     int64
+	}
+	var top []modelAgg
+	if err := LOG_DB.Raw(`
+		SELECT model_name, COALESCE(SUM(quota), 0) AS total
+		FROM logs
+		WHERE type = ?
+		  AND model_name != ''
+		  AND (? = 0 OR created_at >= ?)
+		  AND (? = 0 OR created_at <= ?)
+		GROUP BY model_name
+		ORDER BY total DESC
+		LIMIT ?
+	`, LogTypeConsume, r.StartTs, r.StartTs, r.EndTs, r.EndTs, topN).Scan(&top).Error; err != nil {
+		return nil, fmt.Errorf("aggregate top models: %w", err)
+	}
+
+	out := &AdminUsageDetails{
+		Days:  []string{},
+		Items: []AdminUsageDetailRow{},
+		Range: r.Key,
+	}
+	if len(top) == 0 {
+		return out, nil
+	}
+
+	names := make([]string, 0, len(top))
+	for _, m := range top {
+		names = append(names, m.ModelName)
+	}
+
+	q := fmt.Sprintf(`
+		SELECT %s AS day,
+		       model_name,
+		       COUNT(1) AS request_count,
+		       COALESCE(SUM(quota), 0) AS quota,
+		       COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+		       COALESCE(SUM(completion_tokens), 0) AS completion_tokens
+		FROM logs
+		WHERE type = ?
+		  AND model_name IN ?
+		  AND (? = 0 OR created_at >= ?)
+		  AND (? = 0 OR created_at <= ?)
+		GROUP BY day, model_name
+		ORDER BY day ASC, quota DESC
+	`, dayExpr)
+	var rows []AdminUsageDetailRow
+	if err := LOG_DB.Raw(q, LogTypeConsume, names, r.StartTs, r.StartTs, r.EndTs, r.EndTs).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("aggregate usage details: %w", err)
+	}
+
+	// 构造 day 序列（按 day ASC 去重），便于前端画表格时间轴。
+	daySet := make(map[string]bool, len(rows))
+	for _, r := range rows {
+		daySet[r.Day] = true
+	}
+	days := make([]string, 0, len(daySet))
+	for d := range daySet {
+		days = append(days, d)
+	}
+	sort.Strings(days)
+	out.Days = days
+	out.Items = rows
 	return out, nil
 }
