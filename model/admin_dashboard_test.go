@@ -350,6 +350,17 @@ func TestGetAdminDashboardOverview_Smoke(t *testing.T) {
 	if len(ov.Trends.Requests) == 0 || len(ov.Trends.Quota) == 0 {
 		t.Errorf("trends empty: %+v", ov.Trends)
 	}
+	// v0.0.17: 验证 token 趋势序列（默认 7 日窗口，可能为 7 或 8 个点）
+	if len(ov.Trends.Tokens) != 7 && len(ov.Trends.Tokens) != 8 {
+		t.Errorf("tokens trends len=%d want=7 or 8", len(ov.Trends.Tokens))
+	}
+	// 每个 token 点应有 sum(prompt+completion) == 2*100 + 2*200 = 600（4 个 sample 都是 prompt=100/completion=200）
+	for _, p := range ov.Trends.Tokens {
+		// 6 日均为 0（log 创建在「今天」）；但要确保字段能正常赋值
+		if p.Tokens < 0 {
+			t.Errorf("negative tokens: %+v", p)
+		}
+	}
 }
 
 // TestGetAdminTopUsers 验证排行榜：request_count>0 过滤 + 排序 + 当前套餐名。

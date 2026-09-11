@@ -70,21 +70,23 @@ type AdminDashboardRevenue struct {
 
 // AdminTrendPoint 单日趋势点
 // AdminTrendPoint is one point in a daily trend series.
-// 版本: v0.0.16
+// 版本: v0.0.17
 // 日期: 2026-09-11
 type AdminTrendPoint struct {
-	Day   string `json:"day"`
-	Count int64  `json:"count,omitempty"`
-	Quota int64  `json:"quota,omitempty"`
+	Day    string `json:"day"`
+	Count  int64  `json:"count,omitempty"`
+	Quota  int64  `json:"quota,omitempty"`
+	Tokens int64  `json:"tokens,omitempty"`
 }
 
 // AdminDashboardTrends 趋势数据
 // AdminDashboardTrends holds trend series.
-// 版本: v0.0.16
+// 版本: v0.0.17
 // 日期: 2026-09-11
 type AdminDashboardTrends struct {
 	Requests []AdminTrendPoint `json:"requests"`
 	Quota    []AdminTrendPoint `json:"quota"`
+	Tokens   []AdminTrendPoint `json:"tokens"`
 }
 
 // AdminDashboardOverview 单次响应聚合：KPI + 7 日趋势
@@ -282,6 +284,11 @@ func GetAdminDashboardOverview(rawRange string) (*AdminDashboardOverview, error)
 		return nil, err
 	}
 	overview.Trends.Quota = quotaSeries
+	tokensSeries, err := aggregateTrends(trendStart, now, "tokens")
+	if err != nil {
+		return nil, err
+	}
+	overview.Trends.Tokens = tokensSeries
 
 	return overview, nil
 }
@@ -327,11 +334,11 @@ func aggregateRevenue(out *AdminDashboardRevenue, startTs, endTs int64) error {
 	return nil
 }
 
-// aggregateTrends 按 day 聚合请求量或 quota。
-// metric: "count"（request_count）或 "quota"。
+// aggregateTrends 按 day 聚合请求量/quota/tokens。
+// metric: "count"（request_count）/ "quota" / "tokens"。
 // 三种 DB 各自一份 SQL，参考 model/log.go:245 的跨库兼容写法。
-// aggregateTrends aggregates daily requests or quota, with cross-DB support.
-// 版本: v0.0.16
+// aggregateTrends aggregates daily requests / quota / tokens, with cross-DB support.
+// 版本: v0.0.17
 // 日期: 2026-09-11
 func aggregateTrends(startTs, endTs int64, metric string) ([]AdminTrendPoint, error) {
 	var dayExpr string
@@ -344,8 +351,11 @@ func aggregateTrends(startTs, endTs int64, metric string) ([]AdminTrendPoint, er
 		dayExpr = "DATE_FORMAT(FROM_UNIXTIME(created_at), '%Y-%m-%d')"
 	}
 	col := "count(1)"
-	if metric == "quota" {
+	switch metric {
+	case "quota":
 		col = "sum(quota)"
+	case "tokens":
+		col = "sum(prompt_tokens + completion_tokens)"
 	}
 	q := fmt.Sprintf(`
 		SELECT %s AS day, %s AS value
@@ -385,9 +395,12 @@ func aggregateTrends(startTs, endTs int64, metric string) ([]AdminTrendPoint, er
 		if got, ok := bucket[key]; ok {
 			v = got
 		}
-		if metric == "quota" {
+		switch metric {
+		case "quota":
 			out = append(out, AdminTrendPoint{Day: key, Quota: v})
-		} else {
+		case "tokens":
+			out = append(out, AdminTrendPoint{Day: key, Tokens: v})
+		default:
 			out = append(out, AdminTrendPoint{Day: key, Count: v})
 		}
 	}
