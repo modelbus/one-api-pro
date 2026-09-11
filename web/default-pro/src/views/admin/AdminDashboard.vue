@@ -364,16 +364,16 @@ const resourceStatItems = computed(() => {
 const quotaStatItems = computed(() => {
   const q = overview.value?.quota
   return [
-    { label: t('admin.quotaToday'), icon: IconHistogram, ...palette.blue,
+    { label: t('admin.quotaToday'), icon: IconBarChart, ...palette.blue,
       value: formatQuota(getNum(q, 'today')),
       foot: t('admin.quotaUnit') },
-    { label: t('admin.quota7d'), icon: IconHistogram, ...palette.purple,
+    { label: t('admin.quota7d'), icon: IconBarChart, ...palette.purple,
       value: formatQuota(getNum(q, 'week')),
       foot: t('admin.quotaUnit') },
-    { label: t('admin.quota30d'), icon: IconHistogram, ...palette.orange,
+    { label: t('admin.quota30d'), icon: IconBarChart, ...palette.orange,
       value: formatQuota(getNum(q, 'month')),
       foot: t('admin.quotaUnit') },
-    { label: t('admin.quotaTotal'), icon: IconHistogram, ...palette.cyan,
+    { label: t('admin.quotaTotal'), icon: IconBarChart, ...palette.cyan,
       value: formatQuota(getNum(q, 'total')),
       foot: t('admin.quotaUnit') },
   ]
@@ -391,7 +391,7 @@ const revenueStatItems = computed(() => {
     { label: t('admin.revenueSubscription'), icon: IconSubscribe, ...palette.purple,
       value: fmtMoney(getNum(r, 'subscription')),
       foot: t('admin.revenueSubscriptionFoot') },
-    { label: t('admin.revenueRefund'), icon: IconRollback, ...palette.red,
+    { label: t('admin.revenueRefund'), icon: IconArrowFall, ...palette.red,
       value: fmtMoney(getNum(r, 'refund')),
       foot: t('admin.revenueRefundFoot') },
   ]
