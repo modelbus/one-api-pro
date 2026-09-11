@@ -46,6 +46,10 @@
 
         <template v-if="authStore.isAdmin">
           <div class="menu-divider" />
+          <a-menu-item key="/admin/dashboard">
+            <template #icon><icon-bar-chart /></template>
+            {{ $t('menu.adminDashboard') }}
+          </a-menu-item>
           <a-menu-item key="/channel">
             <template #icon><icon-apps /></template>
             {{ $t('menu.channel') }}
@@ -155,7 +159,7 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
-import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown, IconStorage } from '@arco-design/web-vue/es/icon'
+import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown, IconStorage, IconBarChart } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import logoPng from '@/assets/logo.png'
 
