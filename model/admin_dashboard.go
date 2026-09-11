@@ -500,3 +500,141 @@ func batchTopActivePlanNames(userIds []int) (map[int]string, error) {
 	}
 	return out, nil
 }
+
+// AdminModelDistributionRow 全站模型分布的单行：按模型聚合 quota/requests，附带天数窗口。
+// AdminModelDistributionRow is one model row in the admin distribution chart.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+type AdminModelDistributionRow struct {
+	ModelName    string `json:"model_name" gorm:"column:model_name"`
+	RequestCount int64  `json:"request_count" gorm:"column:request_count"`
+	Quota        int64  `json:"quota" gorm:"column:quota"`
+	PromptTokens int64  `json:"prompt_tokens" gorm:"column:prompt_tokens"`
+	CompletionTokens int64 `json:"completion_tokens" gorm:"column:completion_tokens"`
+}
+
+// AdminModelDistribution 全站模型分布聚合：按模型 × 日 双维度，限定窗口内 Top N 模型。
+// AdminModelDistribution aggregates model distribution across all users.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+type AdminModelDistribution struct {
+	Days  []string                    `json:"days"`
+	Items []AdminModelDistributionRow `json:"items"`
+	Range string                      `json:"range"`
+}
+
+// GetAdminModelDistribution 全站模型用量分布：返回按 quota 降序的 Top N 模型 + 该窗口的 7/30 天日期序列。
+// 复用 model/log.go 的三库 day 表达式，但去掉 user_id 过滤。
+// GetAdminModelDistribution returns top-N models by quota + day series in the window.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func GetAdminModelDistribution(rawRange string, topN int) (*AdminModelDistribution, error) {
+	if topN <= 0 || topN > 50 {
+		topN = 8
+	}
+	r := ParseAdminDashboardRange(rawRange)
+
+	var dayExpr string
+	switch {
+	case common.UsingPostgreSQL:
+		dayExpr = "TO_CHAR(date_trunc('day', to_timestamp(created_at)), 'YYYY-MM-DD')"
+	case common.UsingSQLite:
+		dayExpr = "strftime('%Y-%m-%d', datetime(created_at, 'unixepoch'))"
+	default:
+		dayExpr = "DATE_FORMAT(FROM_UNIXTIME(created_at), '%Y-%m-%d')"
+	}
+
+	// 取窗口内 quota 总额 Top N 模型名。
+	// First pick top-N models by total quota within the window.
+	type modelAgg struct {
+		ModelName string
+		Total     int64
+	}
+	var top []modelAgg
+	if err := LOG_DB.Raw(`
+		SELECT model_name, COALESCE(SUM(quota), 0) AS total
+		FROM logs
+		WHERE type = ?
+		  AND model_name != ''
+		  AND (? = 0 OR created_at >= ?)
+		  AND (? = 0 OR created_at <= ?)
+		GROUP BY model_name
+		ORDER BY total DESC
+		LIMIT ?
+	`, LogTypeConsume, r.StartTs, r.StartTs, r.EndTs, r.EndTs, topN).Scan(&top).Error; err != nil {
+		return nil, fmt.Errorf("aggregate top models: %w", err)
+	}
+
+	out := &AdminModelDistribution{
+		Days:  []string{},
+		Items: []AdminModelDistributionRow{},
+		Range: r.Key,
+	}
+	if len(top) == 0 {
+		return out, nil
+	}
+
+	// 构造日期序列：默认固定 7 天，便于前端堆叠柱图横轴对齐。
+	// Build day series (fixed 7 days by default, aligned with admin trends).
+	now := helper.GetTimestamp()
+	daySec := int64(86400)
+	todayStart := now - (now % daySec)
+	days := 7
+	for i := days - 1; i >= 0; i-- {
+		t := time.Unix(todayStart-int64(i)*daySec, 0).UTC()
+		out.Days = append(out.Days, t.Format("2006-01-02"))
+	}
+	dayStart := todayStart - int64(days-1)*daySec
+
+	// 拉 Top N 模型 × 7 天的 quota + requests。
+	// Pull per-model per-day aggregates for the top-N models over the last `days`.
+	names := make([]string, 0, len(top))
+	for _, m := range top {
+		names = append(names, m.ModelName)
+	}
+	type row struct {
+		ModelName        string
+		Day              string
+		RequestCount     int64
+		Quota            int64
+		PromptTokens     int64
+		CompletionTokens int64
+	}
+	var rows []row
+	q := fmt.Sprintf(`
+		SELECT model_name, %s AS day,
+		       COUNT(1) AS request_count,
+		       COALESCE(SUM(quota), 0) AS quota,
+		       COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+		       COALESCE(SUM(completion_tokens), 0) AS completion_tokens
+		FROM logs
+		WHERE type = ?
+		  AND model_name IN ?
+		  AND created_at BETWEEN ? AND ?
+		GROUP BY model_name, day
+	`, dayExpr)
+	if err := LOG_DB.Raw(q, LogTypeConsume, names, dayStart, now).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("aggregate model-day: %w", err)
+	}
+
+	// 汇总到 Items 数组（按 Top N 顺序）。
+	bucket := make(map[string]*AdminModelDistributionRow, len(top))
+	for _, r := range rows {
+		key := r.ModelName
+		if _, ok := bucket[key]; !ok {
+			bucket[key] = &AdminModelDistributionRow{ModelName: key}
+		}
+		bucket[key].RequestCount += r.RequestCount
+		bucket[key].Quota += r.Quota
+		bucket[key].PromptTokens += r.PromptTokens
+		bucket[key].CompletionTokens += r.CompletionTokens
+	}
+	for _, m := range top {
+		if row, ok := bucket[m.ModelName]; ok {
+			out.Items = append(out.Items, *row)
+		} else {
+			out.Items = append(out.Items, AdminModelDistributionRow{ModelName: m.ModelName})
+		}
+	}
+	return out, nil
+}
