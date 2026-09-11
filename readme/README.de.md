@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  OneAPI Pro · Ein unternehmensweiter AI-API-Gateway auf Basis von Go
+  <strong>OneAPI</strong> Pro · Ein unternehmensweiter AI-API-Gateway auf Basis von Go
 </p>
 <p align="center">
-  Dieses Projekt ist eine umfassende Weiterentwicklung von <a href="https://github.com/songquanpeng/one-api">one-api</a> (von <a href="https://github.com/songquanpeng">JustSong</a>) – vielen Dank an den ursprünglichen Autor für seinen Open-Source-Beitrag.
+  Dieses Projekt ist eine umfassende Weiterentwicklung von <a href="https://github.com/songquanpeng/one-api">one-api</a> – vielen Dank an den ursprünglichen Autor für seinen Open-Source-Beitrag.
 </p>
 
 <p align="center">
