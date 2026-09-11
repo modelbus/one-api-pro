@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  One Api Pro · Go로 구축된 엔터프라이즈급 AI API Gateway
+  OneAPI Pro · Go로 구축된 엔터프라이즈급 AI API Gateway
 </p>
 <p align="center">
   본 프로젝트는 <a href="https://github.com/songquanpeng/one-api">one-api</a> (by <a href="https://github.com/songquanpeng">JustSong</a>)을 기반으로 심층 재구축했으며, 원저자의 오픈소스 기여에 감사를 표합니다.
