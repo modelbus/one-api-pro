@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  OneAPI Pro · An enterprise-grade AI API Gateway, built with Go
+  <strong>OneAPI</strong> Pro · An enterprise-grade AI API Gateway, built with Go
 </p>
 <p align="center">
-  Deep refactor and extension of <a href="https://github.com/songquanpeng/one-api">one-api</a> (by <a href="https://github.com/songquanpeng">JustSong</a>) — many thanks to the original author.
+  Deep refactor and extension of <a href="https://github.com/songquanpeng/one-api">one-api</a> — many thanks to the original author.
 </p>
 
 <p align="center">
