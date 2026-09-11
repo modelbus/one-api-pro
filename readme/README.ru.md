@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  One Api Pro · Корпоративный AI API Gateway на Go
+  OneAPI Pro · Корпоративный AI API Gateway на Go
 </p>
 <p align="center">
   Проект глубоко переработан на основе <a href="https://github.com/songquanpeng/one-api">one-api</a> (автор <a href="https://github.com/songquanpeng">JustSong</a>) — большая благодарность автору за вклад с открытым исходным кодом.
