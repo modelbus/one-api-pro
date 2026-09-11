@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  One Api Pro · 基於 Go 語言打造的企業級 AI API Gateway
+  OneAPI Pro · 基於 Go 語言打造的企業級 AI API Gateway
 </p>
 <p align="center">
   本項目基於 <a href="https://github.com/songquanpeng/one-api">one-api</a> (by <a href="https://github.com/songquanpeng">JustSong</a>) 深度重構開發，感謝原作者的開源貢獻。
