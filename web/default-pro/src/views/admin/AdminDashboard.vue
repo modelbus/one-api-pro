@@ -45,25 +45,56 @@
       <!-- Left column: 16/24 -->
       <a-col :xs="24" :lg="16">
         <a-spin :loading="overviewLoading" style="width: 100%">
-          <!-- ① 用户层 KPI -->
-          <div class="panel stat-grid">
-            <div
-              v-for="item in userStatItems"
-              :key="item.label"
-              class="stat-item"
-            >
-              <div class="stat-head">
-                <span class="stat-label">{{ item.label }}</span>
-                <span class="stat-icon" :style="{ background: item.bg, color: item.color }">
-                  <component :is="item.icon" :size="14" />
-                </span>
+          <!-- ① 用户 KPI（带标题） -->
+          <!-- Users KPI (with title) -->
+          <div class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">{{ t('admin.sectionUsers') }}</h2>
+            </div>
+            <div class="stat-grid">
+              <div
+                v-for="item in userStatItems"
+                :key="item.label"
+                class="stat-item"
+              >
+                <div class="stat-head">
+                  <span class="stat-label">{{ item.label }}</span>
+                  <span class="stat-icon" :style="{ background: item.bg, color: item.color }">
+                    <component :is="item.icon" :size="14" />
+                  </span>
+                </div>
+                <div class="stat-value">{{ item.value }}</div>
+                <div class="stat-foot" v-if="item.foot">{{ item.foot }}</div>
               </div>
-              <div class="stat-value">{{ item.value }}</div>
-              <div class="stat-foot" v-if="item.foot">{{ item.foot }}</div>
             </div>
           </div>
 
-          <!-- ② 资源 / 用量 -->
+          <!-- ② 营收（移到资源上方） -->
+          <!-- Revenue (moved above resources) -->
+          <div class="panel">
+            <div class="panel-head">
+              <h2 class="panel-title">{{ t('admin.sectionRevenue') }}</h2>
+              <span class="panel-extra">¥ · {{ rangeLabel }}</span>
+            </div>
+            <div class="stat-grid">
+              <div
+                v-for="item in revenueStatItems"
+                :key="item.label"
+                class="stat-item"
+              >
+                <div class="stat-head">
+                  <span class="stat-label">{{ item.label }}</span>
+                  <span class="stat-icon" :style="{ background: item.bg, color: item.color }">
+                    <component :is="item.icon" :size="14" />
+                  </span>
+                </div>
+                <div class="stat-value">¥ {{ item.value }}</div>
+                <div class="stat-foot">{{ item.foot }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ③ 资源 / 用量 -->
           <div class="panel">
             <div class="panel-head">
               <h2 class="panel-title">{{ t('admin.sectionResources') }}</h2>
@@ -88,7 +119,8 @@
             </div>
           </div>
 
-          <!-- ③ Token / 请求消耗 + 趋势 -->
+          <!-- ④ Token / 请求消耗 + 三图（请求/Quota/模型分布） -->
+          <!-- Quota + 3 charts (requests / quota / model dist) -->
           <div class="panel">
             <div class="panel-head">
               <h2 class="panel-title">{{ t('admin.sectionQuota') }}</h2>
@@ -114,7 +146,13 @@
             <div class="trend-divider" />
 
             <a-row :gutter="12">
-              <a-col :xs="24" :sm="12" v-for="t in trendItems" :key="t.field">
+              <a-col
+                v-for="t in trendItems"
+                :key="t.field"
+                :xs="24"
+                :sm="t.field === 'model' ? 12 : 12"
+                :md="t.field === 'model' ? 8 : 8"
+              >
                 <div class="trend-cell">
                   <div class="trend-head">
                     <span class="trend-dot" :style="{ background: t.color }"></span>
@@ -122,8 +160,8 @@
                     <span class="trend-total">{{ t.total }}</span>
                   </div>
                   <v-chart
-                    :option="lineOption(t.field, t.color)"
-                    :style="{ height: '180px' }"
+                    :option="t.kind === 'bar' ? t.option : lineOption(t.field, t.color)"
+                    :style="{ height: '160px' }"
                     autoresize
                   />
                 </div>
@@ -131,28 +169,42 @@
             </a-row>
           </div>
 
-          <!-- ④ 收入 -->
-          <div class="panel">
-            <div class="panel-head">
-              <h2 class="panel-title">{{ t('admin.sectionRevenue') }}</h2>
-              <span class="panel-extra">¥ · {{ rangeLabel }}</span>
+          <!-- ⑤ 使用明细（按 range 切换） -->
+          <!-- Usage details (range switchable) -->
+          <div class="panel no-pad">
+            <div class="panel-head pad-head">
+              <h2 class="panel-title">{{ t('admin.sectionUsageDetails') }}</h2>
+              <span class="panel-extra">{{ t('admin.usageRowCount', { n: usageDetails.length }) }}</span>
             </div>
-            <div class="stat-grid">
-              <div
-                v-for="item in revenueStatItems"
-                :key="item.label"
-                class="stat-item"
-              >
-                <div class="stat-head">
-                  <span class="stat-label">{{ item.label }}</span>
-                  <span class="stat-icon" :style="{ background: item.bg, color: item.color }">
-                    <component :is="item.icon" :size="14" />
-                  </span>
-                </div>
-                <div class="stat-value">¥ {{ item.value }}</div>
-                <div class="stat-foot">{{ item.foot }}</div>
-              </div>
-            </div>
+            <a-table
+              :columns="usageColumns"
+              :data="usageDetails"
+              :pagination="{ pageSize: 8, showTotal: false, showJumper: false }"
+              :bordered="false"
+              :stripe="true"
+              size="medium"
+              class="dash-table"
+              :loading="usageLoading"
+            >
+              <template #day="{ record }">
+                <span class="cell-mono">{{ record.day }}</span>
+              </template>
+              <template #model_name="{ record }">
+                <span class="model-name-text">{{ record.model_name }}</span>
+              </template>
+              <template #request_count="{ record }">
+                <span class="cell-num">{{ numFmt(record.request_count) }}</span>
+              </template>
+              <template #quota="{ record }">
+                <span class="cell-num">{{ formatQuota(record.quota) }}</span>
+              </template>
+              <template #tokens="{ record }">
+                <span class="cell-num">{{ numFmt(record.prompt_tokens + record.completion_tokens) }}</span>
+              </template>
+              <template #empty>
+                <div class="empty-state">{{ t('admin.usageEmpty') }}</div>
+              </template>
+            </a-table>
           </div>
         </a-spin>
       </a-col>
@@ -161,87 +213,68 @@
       <!-- Right column: 8/24 -->
       <a-col :xs="24" :lg="8">
         <!-- ⑥ 广告位占位（顶部） -->
-        <!-- Ad placeholder (top) -->
         <div class="panel ad-panel">
           <div class="ad-badge">{{ t('admin.adBadge') }}</div>
           <div class="ad-title">{{ t('admin.adTitle') }}</div>
           <div class="ad-desc">{{ t('admin.adDesc') }}</div>
         </div>
 
-        <!-- ⑦ 模型用量分布（堆叠柱图） -->
+        <!-- ⑦ 用户排行（卡片式，按今日/本周/本月） -->
+        <!-- User ranking (card-style, today/week/month tags) -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">{{ t('admin.sectionModelDist') }}</h2>
-            <span class="panel-extra">{{ t('admin.topN', { n: distItems.length || 0 }) }}</span>
-          </div>
-          <v-chart
-            v-if="distItems.length > 0"
-            :option="modelBarOption"
-            :style="{ height: '220px' }"
-            autoresize
-          />
-          <div v-else class="chart-empty">{{ t('admin.chartEmpty') }}</div>
-        </div>
-
-        <!-- ⑧ 活跃用户 TOP 20 -->
-        <div class="panel no-pad">
-          <div class="panel-head pad-head">
             <h2 class="panel-title">{{ t('admin.sectionLeaderboard') }}</h2>
-            <div class="leaderboard-extra">
-              <a-radio-group
-                v-model="topRange"
-                type="button"
-                size="small"
-                @change="loadTopUsers"
-              >
-                <a-radio value="today">{{ t('admin.rangeToday') }}</a-radio>
-                <a-radio value="7d">{{ t('admin.range7d') }}</a-radio>
-                <a-radio value="30d">{{ t('admin.range30d') }}</a-radio>
-              </a-radio-group>
-            </div>
+            <a-radio-group
+              v-model="topRange"
+              type="button"
+              size="small"
+              @change="loadTopUsers"
+            >
+              <a-radio value="today">{{ t('admin.todayLabel') }}</a-radio>
+              <a-radio value="7d">{{ t('admin.weekLabel') }}</a-radio>
+              <a-radio value="30d">{{ t('admin.monthLabel') }}</a-radio>
+            </a-radio-group>
           </div>
-          <a-table
-            :columns="topColumns"
-            :data="topUsers"
-            :pagination="false"
-            :loading="topLoading"
-            row-key="id"
-            :bordered="false"
-            :stripe="true"
-            size="small"
-            class="dash-table"
-          >
-            <template #rank="{ record }">
-              <span class="rank-badge" :class="rankClass(record.rank)">{{ record.rank }}</span>
-            </template>
-            <template #username="{ record }">
-              <span class="user-cell">
-                <span class="user-name">{{ record.username }}</span>
-                <span v-if="record.email" class="user-email">{{ record.email }}</span>
-              </span>
-            </template>
-            <template #request_count="{ record }">
-              <span class="cell-num">{{ numFmt(record.request_count) }}</span>
-            </template>
-            <template #quota="{ record }">
-              <span class="cell-num">{{ formatQuota(record.quota) }}</span>
-            </template>
-            <template #balance="{ record }">
-              <span class="cell-num cell-num-muted">{{ formatQuota(record.balance) }}</span>
-            </template>
-            <template #current_plan_name="{ record }">
-              <a-tag v-if="record.current_plan_name" color="arcoblue" size="small">
-                {{ record.current_plan_name }}
-              </a-tag>
-              <span v-else class="cell-muted">—</span>
-            </template>
-            <template #empty>
-              <div class="empty-state">{{ t('admin.noLeaderboard') }}</div>
-            </template>
-          </a-table>
+          <a-spin :loading="topLoading" style="width: 100%">
+            <div v-if="topUsers.length === 0 && !topLoading" class="empty-state">
+              {{ t('admin.noLeaderboard') }}
+            </div>
+            <div v-else class="lb-list">
+              <div
+                v-for="row in topUsers"
+                :key="row.id"
+                class="lb-item"
+              >
+                <span class="rank-badge" :class="rankClass(row.rank)">{{ row.rank }}</span>
+                <div class="lb-info">
+                  <span class="lb-name">{{ row.username }}</span>
+                  <span v-if="row.email" class="lb-email">{{ row.email }}</span>
+                </div>
+                <div class="lb-stats">
+                  <div class="lb-stat">
+                    <span class="lb-stat-label">{{ t('admin.colRequestCount') }}</span>
+                    <span class="cell-num">{{ numFmt(row.request_count) }}</span>
+                  </div>
+                  <div class="lb-stat">
+                    <span class="lb-stat-label">{{ t('admin.colQuota') }}</span>
+                    <span class="cell-num">{{ formatQuota(row.quota) }}</span>
+                  </div>
+                </div>
+                <a-tag
+                  v-if="row.current_plan_name"
+                  color="arcoblue"
+                  size="small"
+                  class="lb-plan"
+                >
+                  {{ row.current_plan_name }}
+                </a-tag>
+                <span v-else class="cell-muted lb-plan">—</span>
+              </div>
+            </div>
+          </a-spin>
         </div>
 
-        <!-- ⑨ 系统公告 -->
+        <!-- ⑧ 系统公告 -->
         <div class="panel clickable" @click="$router.push('/log')">
           <div class="panel-head">
             <h2 class="panel-title">{{ t('admin.sectionAnnouncement') }}</h2>
@@ -255,7 +288,7 @@
           </div>
         </div>
 
-        <!-- ⑩ 更新日志 -->
+        <!-- ⑨ 更新日志 -->
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-title">{{ t('admin.sectionChangelog') }}</h2>
@@ -271,10 +304,10 @@
           </div>
         </div>
 
-        <!-- ⑪ 资源 -->
+        <!-- ⑩ 资源 -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">{{ t('admin.sectionResources') }}</h2>
+            <h2 class="panel-title">{{ t('admin.contactTitle') }}</h2>
           </div>
           <div class="contact-list">
             <a
@@ -332,10 +365,12 @@ const topRange = ref('7d')
 const overviewLoading = ref(false)
 const topLoading = ref(false)
 const distLoading = ref(false)
+const usageLoading = ref(false)
 const overview = ref(null)
 const topUsers = ref([])
 const distDays = ref([])
 const distItems = ref([])
+const usageDetails = ref([])
 const lastRefreshAt = ref(0)
 
 // ---------- 公告 / 更新日志 / 资源（管理员仪表盘固定列表） ----------
@@ -508,9 +543,11 @@ const trendItems = computed(() => {
   const trends = overview.value?.trends || {}
   const req = trends.requests || []
   const qua = trends.quota || []
+  const modelTotal = (distItems.value || []).reduce((acc, m) => acc + (Number(m?.quota) || 0), 0)
   return [
-    { field: 'requests', label: t('admin.chartRequests'), color: '#165dff', total: numFmt(sumBy(req, 'count')) },
-    { field: 'quota', label: t('admin.chartQuota'), color: '#722ed1', total: formatQuota(sumBy(qua, 'quota')) },
+    { field: 'requests', kind: 'line', label: t('admin.chartRequests'), color: '#165dff', total: numFmt(sumBy(req, 'count')) },
+    { field: 'quota', kind: 'line', label: t('admin.chartQuota'), color: '#722ed1', total: formatQuota(sumBy(qua, 'quota')) },
+    { field: 'model', kind: 'bar', label: t('admin.chartModelDist'), color: '#0fc6c2', total: formatQuota(modelTotal), option: modelBarOption.value },
   ]
 })
 
@@ -541,7 +578,7 @@ function lineOption(field, color) {
   const values = points.map((d) => (field === 'quota' ? d.quota : d.count))
   const maxV = values.length ? Math.max(...values) : 0
   return {
-    grid: { left: 36, right: 12, top: 18, bottom: 22 },
+    grid: { left: 32, right: 8, top: 12, bottom: 22 },
     tooltip: {
       trigger: 'axis',
       confine: true,
@@ -642,11 +679,15 @@ const modelBarOption = computed(() => {
 })
 
 // ---------- 排行榜 ----------
-const topColumns = computed(() => [
-  { title: '#', slotName: 'rank', width: 52, align: 'center' },
-  { title: t('admin.colUsername'), slotName: 'username' },
-  { title: t('admin.colRequestCount'), slotName: 'request_count', width: 88, align: 'right' },
-  { title: t('admin.colQuota'), slotName: 'quota', width: 88, align: 'right' },
+// 改为卡片式布局，无表格 column 定义。
+
+// ---------- 使用明细 ----------
+const usageColumns = computed(() => [
+  { title: t('admin.colDay'), slotName: 'day', width: 120 },
+  { title: t('admin.colModel'), slotName: 'model_name', width: 220, ellipsis: true, tooltip: true },
+  { title: t('admin.colRequestCount'), slotName: 'request_count', width: 110, align: 'right' },
+  { title: t('admin.colQuota'), slotName: 'quota', width: 130, align: 'right' },
+  { title: t('admin.colTokens'), slotName: 'tokens', width: 130, align: 'right' },
 ])
 
 // ---------- 数据加载 ----------
@@ -701,10 +742,27 @@ async function loadModelDistribution() {
   }
 }
 
+async function loadUsageDetails() {
+  usageLoading.value = true
+  try {
+    const { data } = await adminApi.usageDetails(range.value, 8)
+    if (data?.success) {
+      usageDetails.value = data.data?.items || []
+    } else {
+      Message.error(data?.message || t('admin.loadFailed'))
+    }
+  } catch (e) {
+    Message.error(t('admin.loadFailed') + ': ' + (e?.message || ''))
+  } finally {
+    usageLoading.value = false
+  }
+}
+
 function loadAll() {
   loadOverview()
   loadTopUsers()
   loadModelDistribution()
+  loadUsageDetails()
 }
 
 onMounted(loadAll)
@@ -721,7 +779,11 @@ onMounted(loadAll)
    ============================================================ */
 
 .admin-dashboard {
-  padding: 4px 4px 8px;
+  /* 与 Dashboard.vue 一致：使用 flex + gap，不要再叠加容器 padding */
+  /* Match Dashboard.vue: flex + gap, no extra container padding */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* ============ 顶部欢迎条 ============ */
@@ -1201,5 +1263,81 @@ onMounted(loadAll)
     padding-right: 16px;
     border-right: 1px solid var(--color-fill-3);
   }
+}
+
+/* ============ 用户排行：卡片式布局 ============ */
+.lb-list {
+  display: flex;
+  flex-direction: column;
+}
+.lb-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-fill-3);
+}
+.lb-item:last-child {
+  border-bottom: none;
+}
+.lb-item:hover {
+  background: var(--color-fill-1);
+  margin: 0 -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+  border-radius: 6px;
+}
+.lb-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+.lb-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-email {
+  font-size: 11px;
+  color: var(--color-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-stats {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.lb-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.lb-stat-label {
+  font-size: 10px;
+  color: var(--color-text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.lb-plan {
+  margin-left: 0 !important;
+}
+
+/* ============ 使用明细：模型名普通文本 ============ */
+.model-name-text {
+  font-size: 13px;
+  color: var(--color-text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 </style>
