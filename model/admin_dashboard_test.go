@@ -557,3 +557,85 @@ func TestGetAdminModelDistribution_Empty(t *testing.T) {
 		t.Errorf("empty dist=%+v", dist)
 	}
 }
+
+// TestGetAdminUsageDetails 验证使用明细的 day×model 行展开、排序。
+// TestGetAdminUsageDetails verifies day×model unpivoted rows, ordering.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func TestGetAdminUsageDetails(t *testing.T) {
+	setupAdminDashboardTestDB(t)
+	now := helper.GetTimestamp()
+	daySec := int64(86400)
+	todayStart := now - (now % daySec)
+
+	// todayStart+100 = UTC today (sqlite strftime "2026-09-11")
+	// todayStart+100-daySec = UTC yesterday ("2026-09-10")
+	logs := []struct {
+		model string
+		quota int
+		day   int64 // 距今天 N 天
+	}{
+		{"gpt-4o", 1000, 0},
+		{"gpt-4o", 2000, 0},
+		{"gpt-4o", 500, 1},
+		{"claude-3.5", 800, 0},
+		{"claude-3.5", 600, 1},
+	}
+	for _, l := range logs {
+		ts := todayStart + 100 - int64(l.day)*daySec
+		if err := LOG_DB.Create(makeConsumeLogForModel(1, l.model, l.quota, ts)).Error; err != nil {
+			t.Fatalf("create log: %v", err)
+		}
+	}
+
+	det, err := GetAdminUsageDetails("7d", 5)
+	if err != nil {
+		t.Fatalf("usage details: %v", err)
+	}
+	if det.Range != "7d" {
+		t.Errorf("range=%q want=7d", det.Range)
+	}
+	// 应有 2 个 day：今天 + 1 天前
+	if len(det.Days) != 2 {
+		t.Errorf("days=%d want=2 (%+v)", len(det.Days), det.Days)
+	}
+	if len(det.Items) != 4 {
+		t.Errorf("items=%d want=4 (2 models × 2 days) items=%+v", len(det.Items), det.Items)
+	}
+	// 排序规则：day ASC（最早在前），然后同 day 内 quota DESC
+	// day=1（昨天）先，day=0（今天）后
+	// 找到 day=0 和 day=1 的索引
+	var todayIdx, yestIdx = -1, -1
+	for i, d := range det.Days {
+		if d == "2026-09-11" {
+			todayIdx = i
+		}
+		if d == "2026-09-10" {
+			yestIdx = i
+		}
+	}
+	if todayIdx < 0 || yestIdx < 0 {
+		t.Fatalf("missing day in days=%+v", det.Days)
+	}
+	// items[0..1] 应是 yesterday 的两行（按 quota DESC：gpt-4o/500 > claude-3.5/600 错！claude-3.5/600 > gpt-4o/500）
+	// 注意：yesterday gpt-4o=500, claude-3.5=600，所以 claude-3.5 在前
+	if det.Items[0].Day != det.Days[yestIdx] {
+		t.Errorf("items[0].day=%s want yesterday (%s)", det.Items[0].Day, det.Days[yestIdx])
+	}
+	if det.Items[0].ModelName != "claude-3.5" || det.Items[0].Quota != 600 {
+		t.Errorf("items[0]=%+v want claude-3.5/600 (yesterday quota desc)", det.Items[0])
+	}
+	if det.Items[1].ModelName != "gpt-4o" || det.Items[1].Quota != 500 {
+		t.Errorf("items[1]=%+v want gpt-4o/500", det.Items[1])
+	}
+	// items[2..3] 应是 today 的两行（gpt-4o/3000 > claude-3.5/800）
+	if det.Items[2].Day != det.Days[todayIdx] {
+		t.Errorf("items[2].day=%s want today (%s)", det.Items[2].Day, det.Days[todayIdx])
+	}
+	if det.Items[2].ModelName != "gpt-4o" || det.Items[2].Quota != 3000 {
+		t.Errorf("items[2]=%+v want gpt-4o/3000", det.Items[2])
+	}
+	if det.Items[3].ModelName != "claude-3.5" || det.Items[3].Quota != 800 {
+		t.Errorf("items[3]=%+v want claude-3.5/800", det.Items[3])
+	}
+}
