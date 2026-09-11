@@ -3,10 +3,10 @@
 </p>
 
 <p align="center">
-  OneAPI Pro · بوابة API للذكاء الاصطناعي بمستوى المؤسسات، مبنية بلغة Go
+  <strong>OneAPI</strong> Pro · بوابة API للذكاء الاصطناعي بمستوى المؤسسات، مبنية بلغة Go
 </p>
 <p align="center">
-  إعادة بناء وتطوير معمّق لمشروع <a href="https://github.com/songquanpeng/one-api">one-api</a> (من <a href="https://github.com/songquanpeng">JustSong</a>) — شكر جزيل للمؤلف الأصلي على مساهمته مفتوحة المصدر.
+  إعادة بناء وتطوير معمّق لمشروع <a href="https://github.com/songquanpeng/one-api">one-api</a> — شكر جزيل للمؤلف الأصلي على مساهمته مفتوحة المصدر.
 </p>
 
 <p align="center">
