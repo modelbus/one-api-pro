@@ -249,8 +249,11 @@ export default {
       quota30d: '30 日消耗',
       quotaTotal: '总消耗',
       quotaUnit: 'quota',
-      chartRequests: '请求量趋势（近 7 日）',
-      chartQuota: 'Quota 消耗趋势（近 7 日）',
+      chartRequests: '请求量',
+      chartQuota: '额度',
+      chartTokens: 'Token',
+      chartModelDist: '模型分布（近 7 日）',
+      chartModelDistShort: '模型分布',
 
       sectionRevenue: '营收',
       sectionUsageDetails: '使用明细',
@@ -263,8 +266,6 @@ export default {
       revenueTopupFoot: '充值订单',
       revenueSubscriptionFoot: '订阅订单',
       revenueRefundFoot: '退款订单',
-
-      chartModelDist: '模型分布（近 7 日）',
 
       todayLabel: '今日',
       weekLabel: '本周',
@@ -564,8 +565,11 @@ export default {
       quota30d: '30 Days',
       quotaTotal: 'Total',
       quotaUnit: 'quota',
-      chartRequests: 'Request Trend (Last 7 Days)',
-      chartQuota: 'Quota Consumption Trend (Last 7 Days)',
+      chartRequests: 'Requests',
+      chartQuota: 'Quota',
+      chartTokens: 'Tokens',
+      chartModelDist: 'Model Distribution (Last 7 Days)',
+      chartModelDistShort: 'Model Distribution',
 
       sectionRevenue: 'Revenue',
       sectionUsageDetails: 'Usage Details',
@@ -577,8 +581,6 @@ export default {
       revenueTopupFoot: 'Top-up orders',
       revenueSubscriptionFoot: 'Subscription orders',
       revenueRefundFoot: 'Refunded orders',
-
-      chartModelDist: 'Model Distribution (Last 7 Days)',
 
       todayLabel: 'Today',
       weekLabel: 'This Week',
