@@ -311,6 +311,7 @@ export default {
 
       contactDocsLabel: '官方文档',
       contactGithubLabel: 'GitHub',
+      contactTitle: '资源',
     },
   },
 
@@ -623,6 +624,7 @@ export default {
 
       contactDocsLabel: 'Docs',
       contactGithubLabel: 'GitHub',
+      contactTitle: 'Resources',
     },
   },
 }
