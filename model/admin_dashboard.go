@@ -22,14 +22,14 @@ import (
 // 版本: v0.0.16
 // 日期: 2026-09-11
 type AdminDashboardUsers struct {
-	Total     int64 `json:"total"`
-	Enabled   int64 `json:"enabled"`
-	Disabled  int64 `json:"disabled"`
-	Deleted   int64 `json:"deleted"`
-	NewToday  int64 `json:"new_today"`
-	New7d     int64 `json:"new_7d"`
-	New30d    int64 `json:"new_30d"`
-	Active7d  int64 `json:"active_7d"`
+	Total    int64 `json:"total" gorm:"column:total"`
+	Enabled  int64 `json:"enabled" gorm:"column:enabled"`
+	Disabled int64 `json:"disabled" gorm:"column:disabled"`
+	Deleted  int64 `json:"deleted" gorm:"column:deleted"`
+	NewToday int64 `json:"new_today" gorm:"column:new_today"`
+	New7d    int64 `json:"new_7d" gorm:"column:new_7d"`
+	New30d   int64 `json:"new_30d" gorm:"column:new_30d"`
+	Active7d int64 `json:"active_7d" gorm:"column:active_7d"`
 }
 
 // AdminDashboardResources 资源计数（令牌 / 渠道 / 套餐 / 兑换码 / 订阅）
@@ -37,12 +37,12 @@ type AdminDashboardUsers struct {
 // 版本: v0.0.16
 // 日期: 2026-09-11
 type AdminDashboardResources struct {
-	Total         int64 `json:"total"`
-	Enabled       int64 `json:"enabled,omitempty"`
-	Used          int64 `json:"used,omitempty"`
-	Unused        int64 `json:"unused,omitempty"`
-	Active        int64 `json:"active,omitempty"`
-	Expired       int64 `json:"expired,omitempty"`
+	Total   int64 `json:"total" gorm:"column:total"`
+	Enabled int64 `json:"enabled,omitempty" gorm:"column:enabled"`
+	Used    int64 `json:"used,omitempty" gorm:"column:used"`
+	Unused  int64 `json:"unused,omitempty" gorm:"column:unused"`
+	Active  int64 `json:"active,omitempty" gorm:"column:active"`
+	Expired int64 `json:"expired,omitempty" gorm:"column:expired"`
 }
 
 // AdminDashboardQuota 各时间窗的 quota 消耗
@@ -109,13 +109,13 @@ type AdminDashboardOverview struct {
 // 版本: v0.0.16
 // 日期: v0.0.16
 type AdminTopUserRow struct {
-	Id                int    `json:"id"`
-	Username          string `json:"username"`
-	Email             string `json:"email"`
-	RequestCount      int64  `json:"request_count"`
-	Quota             int64  `json:"quota"`
-	Balance           int64  `json:"balance"`
-	CurrentPlanName   string `json:"current_plan_name"`
+	Id              int    `json:"id" gorm:"column:id"`
+	Username        string `json:"username" gorm:"column:username"`
+	Email           string `json:"email" gorm:"column:email"`
+	RequestCount    int64  `json:"request_count" gorm:"column:request_count_col"`
+	Quota           int64  `json:"quota" gorm:"column:quota_col"`
+	Balance         int64  `json:"balance" gorm:"column:quota"`
+	CurrentPlanName string `json:"current_plan_name"`
 }
 
 // AdminDashboardRange 解析后的时间筛选参数
