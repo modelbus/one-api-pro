@@ -229,6 +229,7 @@ func SetApiRouter(router *gin.Engine) {
 			adminDashRoute.GET("/overview", admin.GetOverview)
 			adminDashRoute.GET("/top-users", admin.GetTopUsers)
 			adminDashRoute.GET("/model-distribution", admin.GetModelDistribution)
+			adminDashRoute.GET("/usage-details", admin.GetUsageDetails)
 		}
 		clusterNodeRoute := apiRouter.Group("/cluster_node")
 		clusterNodeRoute.Use(middleware.RootAuth())

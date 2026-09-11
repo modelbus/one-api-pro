@@ -90,3 +90,28 @@ func GetModelDistribution(c *gin.Context) {
 		"data":    dist,
 	})
 }
+
+// GetUsageDetails 处理 GET /api/admin/dashboard/usage-details。
+// 返回全站 Top N 模型 × 该窗口每日明细（透视前行），供「使用明细」表渲染。
+// Query: range=today|7d|30d|all (default 7d), top_n (1-50, default 8)。
+// GetUsageDetails handles GET /api/admin/dashboard/usage-details.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func GetUsageDetails(c *gin.Context) {
+	rawRange := c.Query("range")
+	topN, _ := strconv.Atoi(c.Query("top_n"))
+
+	det, err := model.GetAdminUsageDetails(rawRange, topN)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    det,
+	})
+}
