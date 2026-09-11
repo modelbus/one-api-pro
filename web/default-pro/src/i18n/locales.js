@@ -269,6 +269,35 @@ export default {
       colQuota: '消耗',
       colBalance: '当前余额',
       colPlan: '当前套餐',
+
+      // v0.0.17 右侧栏 / 右栏 i18n
+      // Right column additions
+      pageTitle: '运营数据',
+      pageSubtitle: '全站 KPI · 趋势 · 排行',
+      sectionModelDist: '模型用量分布（近 7 日）',
+      topN: 'Top {n}',
+      chartEmpty: '暂无数据',
+
+      adBadge: 'AD',
+      adTitle: 'ONE-API-PRO 企业版',
+      adDesc: '为业务增长而生的 AI API 网关 · 多模型统一接入 · 高可用集群',
+
+      sectionAnnouncement: '系统公告',
+      viewLog: '查看日志',
+      announcement1Title: 'One Api Pro 企业版正式发布',
+      announcement1Time: '2026-08-01',
+      announcement2Title: '支持 40+ 模型平台统一接入',
+      announcement2Time: '2026-07-25',
+      announcement3Title: '新增订阅套餐与用量管控',
+      announcement3Time: '2026-07-15',
+
+      sectionChangelog: '更新日志',
+      changelogCurrentDesc: '新增管理员仪表盘：全站 KPI · 趋势 · 排行 · 模型分布',
+      changelogTopupDesc: '新增在线充值（topup）与兑换码管理',
+      changelogInitialDesc: 'One Api Pro 首个稳定版发布',
+
+      contactDocsLabel: '官方文档',
+      contactGithubLabel: 'GitHub',
     },
   },
 
@@ -541,6 +570,34 @@ export default {
       colQuota: 'Quota',
       colBalance: 'Balance',
       colPlan: 'Current Plan',
+
+      // v0.0.17 right column additions
+      pageTitle: 'Overview',
+      pageSubtitle: 'Site-wide KPI · Trends · Leaderboard',
+      sectionModelDist: 'Model Distribution (Last 7 Days)',
+      topN: 'Top {n}',
+      chartEmpty: 'No data',
+
+      adBadge: 'AD',
+      adTitle: 'ONE-API-PRO Enterprise',
+      adDesc: 'AI API gateway for business growth — multi-model unified access — high-availability cluster',
+
+      sectionAnnouncement: 'Announcements',
+      viewLog: 'View logs',
+      announcement1Title: 'One Api Pro Enterprise officially launched',
+      announcement1Time: '2026-08-01',
+      announcement2Title: '40+ model providers unified access',
+      announcement2Time: '2026-07-25',
+      announcement3Title: 'Subscription plans and usage control added',
+      announcement3Time: '2026-07-15',
+
+      sectionChangelog: 'Changelog',
+      changelogCurrentDesc: 'Admin operations dashboard: site-wide KPI · trends · leaderboard · model distribution',
+      changelogTopupDesc: 'Online top-up and redemption code management',
+      changelogInitialDesc: 'One Api Pro first stable release',
+
+      contactDocsLabel: 'Docs',
+      contactGithubLabel: 'GitHub',
     },
   },
 }
