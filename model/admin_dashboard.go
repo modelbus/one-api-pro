@@ -121,7 +121,7 @@ func ParseAdminDashboardRange(raw string) AdminDashboardRange {
 	daySec := int64(86400)
 	switch raw {
 	case "today":
-		startOfDay := now - (now%daySec)
+		startOfDay := now - (now % daySec)
 		return AdminDashboardRange{Key: "today", StartTs: startOfDay, EndTs: now, TrendDays: 1}
 	case "30d":
 		return AdminDashboardRange{Key: "30d", StartTs: now - 30*daySec, EndTs: now, TrendDays: 30}
