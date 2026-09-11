@@ -115,4 +115,14 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
+const BASE_TITLE = 'ONE-API-PRO'
+
+router.afterEach((to) => {
+  if (to.meta && to.meta.title) {
+    document.title = `${to.meta.title}—${BASE_TITLE}`
+  } else {
+    document.title = `${BASE_TITLE}—企业级AI API 网关`
+  }
+})
+
 export default router
