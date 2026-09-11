@@ -525,60 +525,251 @@ onMounted(loadAll)
 </script>
 
 <style scoped>
-/* ---------- admin-dashboard 仅做容器覆盖（welcome-bar、stat-grid、trend-cell、panel 等全部复用 Dashboard.vue 的同名样式） ---------- */
+/* ============================================================
+   注意：Vue <style scoped> 会给每个组件生成独立的 class hash，
+   Dashboard.vue 里的同名样式不会作用到本组件。
+   因此把本组件实际用到的样式内联在这里（与 Dashboard.vue 同步）。
+   Note: <style scoped> produces per-component class hashes.
+   Dashboard.vue's same-name classes won't apply here, so we
+   inline the same style rules in this file.
+   ============================================================ */
+
 .admin-dashboard {
   padding: 4px 4px 8px;
 }
 
-/* 与 Dashboard.vue 略有不同：用户层 8 个 stat-item，希望排成 4 列 × 2 行。
-   stat-grid 默认 4 列；这里把每个 stat-item 的 border-right 规则覆盖为「3、7 列无右边线」。 */
+/* ============ 顶部欢迎条 ============ */
+.welcome-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
+}
+.welcome-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin: 0 0 4px;
+  letter-spacing: -0.2px;
+}
+.welcome-desc {
+  font-size: 13px;
+  color: var(--color-text-3);
+  margin: 0;
+}
+.welcome-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.meta-chip {
+  font-size: 12px;
+  color: var(--color-text-3);
+  background: var(--color-fill-2);
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+.meta-chip-mono {
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* ============ 通用 Panel ============ */
+.panel {
+  background: var(--color-bg-2);
+  border: 1px solid var(--color-border-2);
+  border-radius: 8px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.panel:last-child {
+  margin-bottom: 0;
+}
+.panel.no-pad {
+  padding: 18px 0 0;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.panel-head.pad-head {
+  padding: 0 20px;
+}
+.panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  margin: 0;
+}
+.panel-extra {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+/* ============ 核心指标 ============ */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  padding: 18px 20px;
+}
+/* 用户层 8 个 stat-item 排成 4 列 × 2 行：覆盖 stat-grid 缺省 4 列 + nth-child 边线 */
 .admin-dashboard :deep(.stat-grid) {
   grid-template-columns: repeat(4, 1fr);
   padding: 18px 20px;
 }
-
 .admin-dashboard :deep(.stat-grid .stat-item:nth-child(4n)) {
   border-right: none;
   padding-right: 0;
 }
-
 .admin-dashboard :deep(.stat-grid .stat-item:nth-child(4n+1)) {
   padding-left: 0;
 }
 
-/* stat-item-clickable hover：点击感 */
-.admin-dashboard :deep(.stat-item-clickable) {
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 16px;
+  border-right: 1px solid var(--color-fill-3);
+}
+.stat-item:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+.stat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.stat-label {
+  font-size: 13px;
+  color: var(--color-text-3);
+}
+.stat-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-1);
+  line-height: 1.2;
+  letter-spacing: -0.3px;
+  word-break: break-all;
+}
+.stat-foot {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+/* stat-item-clickable：点击感的 hover 高亮 */
+.stat-item-clickable {
   cursor: pointer;
   border-radius: 6px;
-  margin: -6px -6px;
-  padding: 6px 6px;
+  margin: -6px;
+  padding: 6px;
   transition: background 0.15s;
 }
-.admin-dashboard :deep(.stat-item-clickable:hover) {
+.stat-item-clickable:hover {
   background: var(--color-fill-1);
 }
 
-/* 趋势区与 stat-grid 之间的分隔条 */
+/* ============ 趋势图 ============ */
 .trend-divider {
   height: 1px;
   background: var(--color-fill-3);
   margin: 18px 0 16px;
 }
+.trend-cell {
+  background: var(--color-fill-1);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+.trend-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.trend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.trend-label {
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+.trend-total {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-1);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
-/* 排行榜 extra：右侧 radio 组 */
+/* ============ 表格 ============ */
+.dash-table {
+  background: transparent;
+}
+.dash-table :deep(.arco-table) {
+  background: transparent;
+}
+.dash-table :deep(.arco-table-th) {
+  background: var(--color-fill-1);
+  font-size: 12px;
+  color: var(--color-text-3);
+  font-weight: 500;
+}
+.dash-table :deep(.arco-table-td) {
+  font-size: 13px;
+  color: var(--color-text-2);
+}
+.dash-table :deep(.arco-table-tr:hover .arco-table-td) {
+  background: var(--color-fill-1);
+}
+.cell-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+.cell-num-muted {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  color: var(--color-text-3);
+}
+.cell-mono {
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--color-text-2);
+}
+.cell-muted {
+  color: var(--color-text-4);
+  font-size: 13px;
+}
+.empty-state {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--color-text-4);
+  font-size: 13px;
+}
+
+/* ============ 排行榜 extra ============ */
 .leaderboard-extra {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* meta-chip 单色字（last refresh） */
-.meta-chip-mono {
-  font-variant-numeric: tabular-nums;
-  font-family: 'SF Mono', Menlo, Consolas, monospace;
-}
-
-/* 排行榜：rank 徽章 */
+/* ============ 排行榜 rank 徽章 ============ */
 .rank-badge {
   display: inline-flex;
   align-items: center;
@@ -604,7 +795,7 @@ onMounted(loadAll)
   color: #00b42a;
 }
 
-/* 排行榜：用户名 + 邮箱堆叠 */
+/* ============ 排行榜：用户名 + 邮箱堆叠 ============ */
 .user-cell {
   display: flex;
   flex-direction: column;
@@ -622,15 +813,5 @@ onMounted(loadAll)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.cell-num-muted {
-  color: var(--color-text-3);
-  font-weight: 400;
-}
-
-.cell-muted {
-  color: var(--color-text-4);
-  font-size: 13px;
 }
 </style>
