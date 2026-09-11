@@ -65,3 +65,28 @@ func GetTopUsers(c *gin.Context) {
 		},
 	})
 }
+
+// GetModelDistribution 处理 GET /api/admin/dashboard/model-distribution。
+// 返回全站按 quota 降序的 Top N 模型 + 7 日 day 序列，供堆叠柱图渲染。
+// Query: range=today|7d|30d|all (default 7d), top_n (1-50, default 8)。
+// GetModelDistribution handles GET /api/admin/dashboard/model-distribution.
+// 版本: v0.0.17
+// 日期: 2026-09-11
+func GetModelDistribution(c *gin.Context) {
+	rawRange := c.Query("range")
+	topN, _ := strconv.Atoi(c.Query("top_n"))
+
+	dist, err := model.GetAdminModelDistribution(rawRange, topN)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    dist,
+	})
+}
