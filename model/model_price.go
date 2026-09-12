@@ -133,6 +133,9 @@ func GetAllGroupPrices() ([]*GroupPrice, error) {
 func (p *ModelPrice) Insert() error {
 	p.CreatedAt = helper.GetTimestamp()
 	p.UpdatedAt = helper.GetTimestamp()
+	// Insert 是「新增」语义：无论调用方是否在 struct 上预置了 Id，都强制走主键自增。
+	// 防御性兜底：避免前端/其他调用方把编辑态的旧 id 误传到 Insert() 时撞主键冲突。
+	p.Id = 0
 	return DB.Create(p).Error
 }
 
@@ -154,6 +157,9 @@ func DeleteModelPriceById(id int) error {
 func (p *GroupPrice) Insert() error {
 	p.CreatedAt = helper.GetTimestamp()
 	p.UpdatedAt = helper.GetTimestamp()
+	// Insert 是「新增」语义：无论调用方是否在 struct 上预置了 Id，都强制走主键自增。
+	// 防御性兜底：避免前端/其他调用方把编辑态的旧 id 误传到 Insert() 时撞主键冲突。
+	p.Id = 0
 	return DB.Create(p).Error
 }
 
