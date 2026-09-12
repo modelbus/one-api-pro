@@ -50,3 +50,49 @@ func IsIpInSubnets(ctx context.Context, ip string, subnets string) bool {
 	}
 	return false
 }
+
+// IsPrivateIP 判断 ip 是否属于 loopback / RFC1918 / link-local / CGNAT /
+// IPv6 ULA / IPv4-mapped IPv6 等私有或保留范围。
+// 主要用于 SSRF 防护：阻止出站请求命中内网或云元数据地址。
+// 参考: https://github.com/songquanpeng/one-api/issues/2387
+// 版本: v0.0.18
+// 日期: 2026-09-12
+func IsPrivateIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+	if ip.IsPrivate() || ip.IsUnspecified() || ip.IsMulticast() {
+		return true
+	}
+	v4 := ip.To4()
+	for _, cidr := range []string{
+		"0.0.0.0/8",
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		"169.254.0.0/16",
+		"100.64.0.0/10",
+		"224.0.0.0/4",
+		"240.0.0.0/4",
+	} {
+		if v4 == nil {
+			break
+		}
+		_, ipNet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			continue
+		}
+		if ipNet.Contains(v4) {
+			return true
+		}
+	}
+	if v4 == nil {
+		if _, ipNet, err := net.ParseCIDR("::ffff:0:0/96"); err == nil && ipNet.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
