@@ -33,6 +33,7 @@ func AddModelPrice(c *gin.Context) {
 		})
 		return
 	}
+	price.Id = 0
 	if price.ModelName == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -136,6 +137,7 @@ func AddGroupPrice(c *gin.Context) {
 		})
 		return
 	}
+	price.Id = 0
 	if price.GroupName == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
