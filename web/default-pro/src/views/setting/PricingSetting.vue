@@ -156,7 +156,7 @@ async function loadData() {
 
 function openModelPrice(r) {
   mpEditing.value = !!r
-  Object.assign(mpForm, r ? { ...r } : { model_name: '', input_price: 0, output_price: 0, cached_price: 0, per_request_price: 0, billing_type: 'token' })
+  Object.assign(mpForm, r ? { ...r } : { id: 0, model_name: '', input_price: 0, output_price: 0, cached_price: 0, per_request_price: 0, billing_type: 'token' })
   mpVisible.value = true
 }
 async function handleSaveMP() {
@@ -171,7 +171,7 @@ async function handleDelMP(id) { try { await api.delete(`/api/model_price/${id}`
 
 function openGroupPrice(r) {
   gpEditing.value = !!r
-  Object.assign(gpForm, r ? { ...r } : { group_name: '', model_name: '', discount: 1 })
+  Object.assign(gpForm, r ? { ...r } : { id: 0, group_name: '', model_name: '', discount: 1 })
   gpVisible.value = true
 }
 async function handleSaveGP() {
