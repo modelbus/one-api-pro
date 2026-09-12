@@ -27,7 +27,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("failed to open in-memory sqlite: " + err.Error())
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Plan{}, &model.UserPlan{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Plan{}, &model.UserPlan{}, &model.ModelPrice{}, &model.GroupPrice{}); err != nil {
 		panic("failed to migrate schema: " + err.Error())
 	}
 	model.DB = db
