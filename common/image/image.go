@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"github.com/modelbus/one-api-pro/common/client"
+	"github.com/modelbus/one-api-pro/common/logger"
+	"github.com/modelbus/one-api-pro/common/network"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"net/http"
+	"net"
+	"net/url"
 	"regexp"
 	"strings"
 	"sync"
@@ -18,6 +21,38 @@ import (
 
 // Regex to match data URL pattern
 var dataURLPattern = regexp.MustCompile(`data:image/([^;]+);base64,(.*)`)
+
+// validateImageUrl 解析 URL 并拒绝解析到私有/保留 IP 段的目标，
+// 用于阻断 vision API 中通过 image_url 进行的 SSRF 攻击。
+// 仅放行 http/https；解析失败或命中 IsPrivateIP 一律视为不安全。
+// 参考: https://github.com/songquanpeng/one-api/issues/2387
+// 版本: v0.0.18
+// 日期: 2026-09-12
+func validateImageUrl(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	host := u.Hostname()
+	if host == "" {
+		return false
+	}
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		logger.SysLog("SSRF: failed to resolve host " + host + ": " + err.Error())
+		return false
+	}
+	for _, ip := range ips {
+		if network.IsPrivateIP(ip) {
+			logger.SysLog("SSRF: rejecting image_url resolving to private IP " + ip.String() + " for host " + host)
+			return false
+		}
+	}
+	return true
+}
 
 func IsImageUrl(url string) (bool, error) {
 	resp, err := client.UserContentRequestHTTPClient.Head(url)
@@ -61,7 +96,10 @@ func GetImageFromUrl(url string) (mimeType string, data string, err error) {
 	if !isImage {
 		return
 	}
-	resp, err := http.Get(url)
+	if !validateImageUrl(url) {
+		return
+	}
+	resp, err := client.UserContentRequestHTTPClient.Get(url)
 	if err != nil {
 		return
 	}
