@@ -3,6 +3,9 @@ package model
 import (
 	"testing"
 
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -243,5 +246,100 @@ func TestDefaultModelPrices(t *testing.T) {
 			So(p.GroupName, ShouldNotBeEmpty)
 			So(p.Discount, ShouldBeGreaterThan, 0)
 		}
+	})
+}
+
+// setupPriceTestDB opens an in-memory sqlite + model_prices/group_prices tables
+// and wires it as the package-level DB. Returns the *gorm.DB for convenience.
+//
+// 版本: v0.0.18
+// 日期: 2026-09-13
+func setupPriceTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	if err := db.AutoMigrate(&ModelPrice{}, &GroupPrice{}); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	return db
+}
+
+// TestModelPriceInsert_StripsClientId 验证 Insert 不会使用 struct 上预置的
+// 非零主键，从而避免「前端编辑后新增时携带旧 id 写入数据库」造成的冲突。
+//
+// 防御深度：即便 controller 未清零 Id，model 层也应保证主键自增。
+// 由 controller.AddModelPrice 的 price.Id = 0 兜底，本测试聚焦 model.Insert() 行为。
+//
+// 版本: v0.0.18
+// 日期: 2026-09-13
+func TestModelPriceInsert_StripsClientId(t *testing.T) {
+	Convey("ModelPrice.Insert ignores preset Id", t, func() {
+		db := setupPriceTestDB(t)
+		DB = db
+
+		p := &ModelPrice{
+			Id:          9999,
+			ModelName:   "gpt-4o",
+			InputPrice:  2.5,
+			OutputPrice: 10.0,
+			BillingType: BillingTypeToken,
+			Enabled:     true,
+		}
+		So(p.Insert(), ShouldBeNil)
+
+		Convey("DB assigns auto-incremented primary key, not the preset", func() {
+			So(p.Id, ShouldNotEqual, 9999)
+			So(p.Id, ShouldBeGreaterThan, 0)
+		})
+
+		Convey("CreatedAt/UpdatedAt filled", func() {
+			So(p.CreatedAt, ShouldBeGreaterThan, 0)
+			So(p.UpdatedAt, ShouldBeGreaterThan, 0)
+		})
+
+		Convey("row persisted with model_name preserved", func() {
+			var got ModelPrice
+			So(DB.First(&got, "model_name = ?", "gpt-4o").Error, ShouldBeNil)
+			So(got.Id, ShouldEqual, p.Id)
+			So(got.InputPrice, ShouldEqual, 2.5)
+		})
+	})
+}
+
+// TestGroupPriceInsert_StripsClientId 同上的 GroupPrice 版本。
+//
+// 版本: v0.0.18
+// 日期: 2026-09-13
+func TestGroupPriceInsert_StripsClientId(t *testing.T) {
+	Convey("GroupPrice.Insert ignores preset Id", t, func() {
+		db := setupPriceTestDB(t)
+		DB = db
+
+		p := &GroupPrice{
+			Id:        9999,
+			GroupName: "vip",
+			ModelName: "gpt-4o",
+			Discount:  0.5,
+		}
+		So(p.Insert(), ShouldBeNil)
+
+		Convey("DB assigns auto-incremented primary key, not the preset", func() {
+			So(p.Id, ShouldNotEqual, 9999)
+			So(p.Id, ShouldBeGreaterThan, 0)
+		})
+
+		Convey("CreatedAt/UpdatedAt filled", func() {
+			So(p.CreatedAt, ShouldBeGreaterThan, 0)
+			So(p.UpdatedAt, ShouldBeGreaterThan, 0)
+		})
+
+		Convey("row persisted with group_name+model_name preserved", func() {
+			var got GroupPrice
+			So(DB.First(&got, "group_name = ? AND model_name = ?", "vip", "gpt-4o").Error, ShouldBeNil)
+			So(got.Id, ShouldEqual, p.Id)
+			So(got.Discount, ShouldEqual, 0.5)
+		})
 	})
 }
