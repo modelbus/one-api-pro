@@ -181,6 +181,17 @@
         <a-form-item field="name" label="名称" required>
           <a-input v-model="form.name" placeholder="渠道名称" allow-clear />
         </a-form-item>
+        <a-form-item field="groups" label="分组">
+          <a-select
+            v-model="form.groups"
+            placeholder="选择分组，可多选"
+            multiple
+            allow-clear
+            allow-search
+          >
+            <a-option v-for="g in availableGroups" :key="g" :value="g" :label="g" />
+          </a-select>
+        </a-form-item>
         <a-form-item field="base_url" label="Base URL">
           <a-input v-model="form.base_url" placeholder="https://api.openai.com" allow-clear />
         </a-form-item>
@@ -205,9 +216,6 @@
             />
             <span class="form-hint form-hint-block">示例：&#123;"gpt-3.5-turbo-0301":"gpt-3.5-turbo","gpt-4-0314":"gpt-4"&#125;</span>
           </div>
-        </a-form-item>
-        <a-form-item field="groups" label="分组">
-          <a-input v-model="form.groups" placeholder="多个分组用逗号分隔" allow-clear />
         </a-form-item>
         <a-form-item field="key" label="密钥" :required="!isEdit">
           <a-input-password v-model="form.key" :placeholder="isEdit ? '留空表示不修改密钥' : 'API Key'" />
@@ -304,7 +312,7 @@ const form = reactive({
   base_url: '',
   models: [],
   model_mapping: '',
-  groups: '',
+  groups: [],
   key: '',
   is_fallback: false,
   fallback_priority: 0,
@@ -313,6 +321,7 @@ const form = reactive({
 const modalTitle = ref('添加渠道')
 
 const availableModelOptions = ref([])
+const availableGroups = ref([])
 
 const pageItems = computed(() => {
   const start = (activePage.value - 1) * pageSize.value
@@ -398,7 +407,7 @@ function openCreateModal() {
   form.base_url = ''
   form.models = []
   form.model_mapping = ''
-  form.groups = ''
+  form.groups = []
   form.key = ''
   form.is_fallback = false
   form.fallback_priority = 0
@@ -414,7 +423,7 @@ function openEditModal(record) {
   form.base_url = record.base_url || ''
   form.models = parseModelsField(record.models)
   form.model_mapping = record.model_mapping || ''
-  form.groups = record.groups || ''
+  form.groups = parseModelsField(record.groups)
   form.key = record.key || ''
   form.is_fallback = !!record.is_fallback
   form.fallback_priority = record.fallback_priority || 0
@@ -459,7 +468,7 @@ async function handleSubmit() {
       base_url: form.base_url,
       models: Array.isArray(form.models) ? form.models.join(',') : form.models,
       model_mapping: form.model_mapping && form.model_mapping.trim() ? form.model_mapping : '',
-      groups: form.groups,
+      groups: Array.isArray(form.groups) ? form.groups.join(',') : form.groups,
       key: form.key,
       is_fallback: form.is_fallback,
       fallback_priority: form.fallback_priority,
@@ -501,6 +510,25 @@ async function fetchAvailableModels() {
     availableModelOptions.value = Array.from(ids).sort()
   } catch (e) {
     availableModelOptions.value = []
+  }
+}
+
+async function fetchGroups() {
+  try {
+    const { data } = await api.get('/api/group/')
+    const ids = new Set()
+    const list = data?.data || []
+    list.forEach((g) => {
+      if (g) ids.add(g)
+    })
+    if (Array.isArray(form.groups)) {
+      form.groups.forEach((g) => {
+        if (g) ids.add(g)
+      })
+    }
+    availableGroups.value = Array.from(ids).sort()
+  } catch (e) {
+    availableGroups.value = []
   }
 }
 
@@ -607,6 +635,7 @@ async function handleDeleteDisabled() {
 onMounted(() => {
   fetchChannels()
   fetchAvailableModels()
+  fetchGroups()
 })
 </script>
 
