@@ -195,6 +195,15 @@
             <a-option v-for="m in availableModelOptions" :key="m" :value="m" :label="m" />
           </a-select>
         </a-form-item>
+        <a-form-item field="model_mapping" label="模型重定向">
+          <a-textarea
+            v-model="form.model_mapping"
+            placeholder="JSON 对象，键为渠道侧模型名，值为真实模型名。留空表示不重定向"
+            :auto-size="{ minRows: 4, maxRows: 8 }"
+            allow-clear
+          />
+          <span class="form-hint">示例：&#123;"gpt-3.5-turbo-0301":"gpt-3.5-turbo","gpt-4-0314":"gpt-4"&#125;</span>
+        </a-form-item>
         <a-form-item field="groups" label="分组">
           <a-input v-model="form.groups" placeholder="多个分组用逗号分隔" allow-clear />
         </a-form-item>
@@ -292,6 +301,7 @@ const form = reactive({
   name: '',
   base_url: '',
   models: [],
+  model_mapping: '',
   groups: '',
   key: '',
   is_fallback: false,
@@ -385,6 +395,7 @@ function openCreateModal() {
   form.name = ''
   form.base_url = ''
   form.models = []
+  form.model_mapping = ''
   form.groups = ''
   form.key = ''
   form.is_fallback = false
@@ -400,6 +411,7 @@ function openEditModal(record) {
   form.name = record.name || ''
   form.base_url = record.base_url || ''
   form.models = parseModelsField(record.models)
+  form.model_mapping = record.model_mapping || ''
   form.groups = record.groups || ''
   form.key = record.key || ''
   form.is_fallback = !!record.is_fallback
@@ -425,6 +437,18 @@ function closeModal() {
 async function handleSubmit() {
   const errors = await formRef.value?.validate()
   if (errors) return
+  if (form.model_mapping && form.model_mapping.trim()) {
+    try {
+      const parsed = JSON.parse(form.model_mapping)
+      if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
+        Message.error('模型重定向必须是 JSON 对象')
+        return
+      }
+    } catch {
+      Message.error('模型重定向 JSON 格式错误')
+      return
+    }
+  }
   submitting.value = true
   try {
     const payload = {
@@ -432,6 +456,7 @@ async function handleSubmit() {
       name: form.name,
       base_url: form.base_url,
       models: Array.isArray(form.models) ? form.models.join(',') : form.models,
+      model_mapping: form.model_mapping && form.model_mapping.trim() ? form.model_mapping : '',
       groups: form.groups,
       key: form.key,
       is_fallback: form.is_fallback,
