@@ -496,11 +496,11 @@ async function handleSubmit() {
 
 async function fetchAvailableModels() {
   try {
-    const { data } = await api.get('/api/channel/models')
-    const list = data?.data || []
+    const { data } = await api.get('/api/model_price/options')
+    const list = Array.isArray(data?.data) ? data.data : []
     const ids = new Set()
     list.forEach((m) => {
-      if (m && m.id) ids.add(m.id)
+      if (typeof m === 'string' && m) ids.add(m)
     })
     if (Array.isArray(form.models)) {
       form.models.forEach((m) => {
