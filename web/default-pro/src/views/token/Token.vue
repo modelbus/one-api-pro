@@ -212,18 +212,17 @@
         </a-form-item>
 
         <a-form-item field="remain_quota" label="额度限制">
-          <a-input-number
-            v-model="form.remain_quota"
-            :min="-1"
-            :precision="0"
-            placeholder="500000"
-            :disabled="form.unlimited_quota"
-            style="width: 100%"
-          />
-        </a-form-item>
-
-        <a-form-item field="unlimited_quota">
-          <a-checkbox v-model="form.unlimited_quota">不限制额度</a-checkbox>
+          <div class="input-with-checkbox">
+            <a-input-number
+              v-model="form.remain_quota"
+              :min="-1"
+              :precision="0"
+              placeholder="500000"
+              :disabled="form.unlimited_quota"
+              style="flex: 1"
+            />
+            <a-checkbox v-model="form.unlimited_quota">不限制额度</a-checkbox>
+          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -974,6 +973,17 @@ onMounted(async () => {
   font-weight: 500;
   font-size: 13px;
   color: var(--color-text-2);
+}
+
+.input-with-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.input-with-checkbox :deep(.arco-checkbox) {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* ============ 使用指南 ============ */
