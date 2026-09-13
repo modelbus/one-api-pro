@@ -210,7 +210,9 @@
               style="flex: 1"
               :disabled="form.never_expire"
               value-format="timestamp"
-            />
+            >
+              <template #suffix-icon></template>
+            </a-date-picker>
             <a-checkbox v-model="form.never_expire">永不过期</a-checkbox>
           </div>
           <template #extra>
