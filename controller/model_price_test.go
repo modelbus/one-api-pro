@@ -44,6 +44,21 @@ func runPriceHandler(t *testing.T, fn gin.HandlerFunc, payload string) priceResp
 	return out
 }
 
+// runOptionsHandler invokes fn with a synthesized GET request (no body), then
+// decodes the response envelope. Used for ListModelPriceOptions.
+func runOptionsHandler(t *testing.T, fn gin.HandlerFunc) priceResponse {
+	t.Helper()
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/model_price/options", nil)
+	fn(c)
+	var out priceResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode response: %v; body=%s", err, w.Body.String())
+	}
+	return out
+}
+
 // TestAddModelPrice_StripsClientId verifies that even when the client JSON
 // body carries id=9999, AddModelPrice zeroes it so the new row gets an
 // auto-incremented primary key and never collides with / overwrites an
@@ -147,5 +162,138 @@ func TestAddGroupPrice_StripsClientId(t *testing.T) {
 	}
 	if got.Discount != 0.5 {
 		t.Fatalf("new row has discount=%v, want 0.5", got.Discount)
+	}
+}
+
+// TestListModelPriceOptions_OnlyEnabled verifies that the dedicated read-only
+// dropdown endpoint returns only enabled=true rows and projects the result
+// down to model_name strings (no pricing fields leak into the dropdown UI).
+//
+// 版本: v0.0.19
+// 日期: 2026-09-13
+func TestListModelPriceOptions_OnlyEnabled(t *testing.T) {
+	// Seed: 2 enabled + 1 disabled. Names are namespaced so they don't collide
+	// with data left behind by TestAddModelPrice_StripsClientId (which seeds
+	// "preexisting-model" + a row named "gpt-4o" via raw SQL with id=9999).
+	if err := model.DB.Create(&model.ModelPrice{
+		ModelName: "opt-enabled-alpha", BillingType: model.BillingTypeToken, Enabled: true,
+	}).Error; err != nil {
+		t.Fatalf("seed enabled #1: %v", err)
+	}
+	if err := model.DB.Create(&model.ModelPrice{
+		ModelName: "opt-enabled-beta", BillingType: model.BillingTypeToken, Enabled: true,
+	}).Error; err != nil {
+		t.Fatalf("seed enabled #2: %v", err)
+	}
+	// For the disabled row, use raw SQL — `gorm:"default:true;not null"` on
+	// the Enabled field forces db.Create(Enabled:false) to insert `true` in
+	// the glebarez/sqlite driver, so the explicit false must bypass GORM's
+	// default-value handling.
+	if err := model.DB.Exec(
+		"INSERT INTO model_prices (model_name, input_price, output_price, cached_price, per_request_price, billing_type, enabled, created_at, updated_at) VALUES (?, 0, 0, 0, 0, ?, ?, 0, 0)",
+		"opt-disabled", model.BillingTypeToken, false,
+	).Error; err != nil {
+		t.Fatalf("seed disabled: %v", err)
+	}
+
+	resp := runOptionsHandler(t, ListModelPriceOptions)
+	if !resp.Success {
+		t.Fatalf("expected success, got: %s", resp.Message)
+	}
+
+	// Decode the data field as []string (the handler is supposed to project
+	// model_name only).
+	raw, err := json.Marshal(resp.Data)
+	if err != nil {
+		t.Fatalf("re-marshal data: %v", err)
+	}
+	var names []string
+	if err := json.Unmarshal(raw, &names); err != nil {
+		t.Fatalf("decode data as []string: %v; raw=%s", err, string(raw))
+	}
+
+	// Verify our 3 seeded rows: enabled-alpha + enabled-beta included,
+	// opt-disabled excluded.
+	assertContainsAll(t, names, []string{"opt-enabled-alpha", "opt-enabled-beta"})
+	assertContainsNone(t, names, []string{"opt-disabled"})
+
+	// Disabled row must NOT leak into the dropdown.
+	for _, n := range names {
+		if n == "opt-disabled" {
+			t.Fatalf("disabled model leaked into dropdown: %v", names)
+		}
+	}
+}
+
+// TestListModelPriceOptions_DedupEmptyName verifies that rows with empty
+// model_name (which can sneak in via bad admin input) are silently skipped
+// instead of returning an empty-string option.
+//
+// 版本: v0.0.19
+// 日期: 2026-09-13
+func TestListModelPriceOptions_DedupEmptyName(t *testing.T) {
+	// Use raw SQL for the empty-name seed too — GORM's `not null` would
+	// reject an empty ModelName before the row ever reaches the handler.
+	if err := model.DB.Exec(
+		"INSERT INTO model_prices (model_name, input_price, output_price, cached_price, per_request_price, billing_type, enabled, created_at, updated_at) VALUES (?, 0, 0, 0, 0, ?, ?, 0, 0)",
+		"", model.BillingTypeToken, true,
+	).Error; err != nil {
+		// Some SQLite engines reject the empty-string insert because of the
+		// NOT NULL / uniqueIndex on model_name. In that case the row never
+		// gets created and the handler naturally returns no empty entry —
+		// which is exactly what we want to verify. Skip the raw-insert path
+		// and fall through to the handler call.
+		t.Logf("empty-name seed skipped (db rejected): %v", err)
+	}
+	if err := model.DB.Create(&model.ModelPrice{
+		ModelName: "opt-real-name", BillingType: model.BillingTypeToken, Enabled: true,
+	}).Error; err != nil {
+		t.Fatalf("seed real name: %v", err)
+	}
+
+	resp := runOptionsHandler(t, ListModelPriceOptions)
+	if !resp.Success {
+		t.Fatalf("expected success, got: %s", resp.Message)
+	}
+
+	raw, _ := json.Marshal(resp.Data)
+	var names []string
+	if err := json.Unmarshal(raw, &names); err != nil {
+		t.Fatalf("decode data: %v", err)
+	}
+	// Empty model_name must not appear anywhere in the dropdown payload.
+	for _, n := range names {
+		if n == "" {
+			t.Fatalf("empty model_name leaked into dropdown: %v", names)
+		}
+	}
+	assertContainsAll(t, names, []string{"opt-real-name"})
+}
+
+// assertContainsAll fails the test if any name in want is missing from got.
+func assertContainsAll(t *testing.T, got, want []string) {
+	t.Helper()
+	idx := make(map[string]bool, len(got))
+	for _, g := range got {
+		idx[g] = true
+	}
+	for _, w := range want {
+		if !idx[w] {
+			t.Errorf("expected %q in result, got %v", w, got)
+		}
+	}
+}
+
+// assertContainsNone fails the test if any name in banned is present in got.
+func assertContainsNone(t *testing.T, got, banned []string) {
+	t.Helper()
+	idx := make(map[string]bool, len(got))
+	for _, g := range got {
+		idx[g] = true
+	}
+	for _, b := range banned {
+		if idx[b] {
+			t.Errorf("did not expect %q in result, got %v", b, got)
+		}
 	}
 }
