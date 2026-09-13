@@ -196,13 +196,15 @@
           </a-select>
         </a-form-item>
         <a-form-item field="model_mapping" label="模型重定向">
-          <a-textarea
-            v-model="form.model_mapping"
-            placeholder="JSON 对象，键为渠道侧模型名，值为真实模型名。留空表示不重定向"
-            :auto-size="{ minRows: 4, maxRows: 8 }"
-            allow-clear
-          />
-          <span class="form-hint">示例：&#123;"gpt-3.5-turbo-0301":"gpt-3.5-turbo","gpt-4-0314":"gpt-4"&#125;</span>
+          <div class="form-stack">
+            <a-textarea
+              v-model="form.model_mapping"
+              placeholder="JSON 对象，键为渠道侧模型名，值为真实模型名。留空表示不重定向"
+              :auto-size="{ minRows: 4, maxRows: 8 }"
+              allow-clear
+            />
+            <span class="form-hint form-hint-block">示例：&#123;"gpt-3.5-turbo-0301":"gpt-3.5-turbo","gpt-4-0314":"gpt-4"&#125;</span>
+          </div>
         </a-form-item>
         <a-form-item field="groups" label="分组">
           <a-input v-model="form.groups" placeholder="多个分组用逗号分隔" allow-clear />
@@ -860,6 +862,19 @@ onMounted(() => {
   margin-left: 12px;
   font-size: 12px;
   color: var(--color-text-3);
+}
+.form-hint-block {
+  display: block;
+  margin-left: 0;
+  margin-top: 8px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 /* ============ 降级渠道标识 ============ */
