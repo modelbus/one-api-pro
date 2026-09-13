@@ -185,7 +185,15 @@
           <a-input v-model="form.base_url" placeholder="https://api.openai.com" allow-clear />
         </a-form-item>
         <a-form-item field="models" label="模型">
-          <a-input v-model="form.models" placeholder="多个模型用逗号分隔" allow-clear />
+          <a-select
+            v-model="form.models"
+            placeholder="选择可用模型，支持搜索"
+            multiple
+            allow-clear
+            allow-search
+          >
+            <a-option v-for="m in availableModelOptions" :key="m" :value="m" :label="m" />
+          </a-select>
         </a-form-item>
         <a-form-item field="groups" label="分组">
           <a-input v-model="form.groups" placeholder="多个分组用逗号分隔" allow-clear />
@@ -283,7 +291,7 @@ const form = reactive({
   type: 1,
   name: '',
   base_url: '',
-  models: '',
+  models: [],
   groups: '',
   key: '',
   is_fallback: false,
@@ -291,6 +299,8 @@ const form = reactive({
 })
 
 const modalTitle = ref('添加渠道')
+
+const availableModelOptions = ref([])
 
 const pageItems = computed(() => {
   const start = (activePage.value - 1) * pageSize.value
@@ -374,7 +384,7 @@ function openCreateModal() {
   form.type = 1
   form.name = ''
   form.base_url = ''
-  form.models = ''
+  form.models = []
   form.groups = ''
   form.key = ''
   form.is_fallback = false
@@ -389,13 +399,22 @@ function openEditModal(record) {
   form.type = record.type || 1
   form.name = record.name || ''
   form.base_url = record.base_url || ''
-  form.models = record.models || ''
+  form.models = parseModelsField(record.models)
   form.groups = record.groups || ''
   form.key = record.key || ''
   form.is_fallback = !!record.is_fallback
   form.fallback_priority = record.fallback_priority || 0
   modalTitle.value = '编辑渠道'
   modalVisible.value = true
+}
+
+function parseModelsField(val) {
+  if (!val) return []
+  if (Array.isArray(val)) return val.filter(Boolean)
+  return String(val)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 function closeModal() {
@@ -412,7 +431,7 @@ async function handleSubmit() {
       type: form.type,
       name: form.name,
       base_url: form.base_url,
-      models: form.models,
+      models: Array.isArray(form.models) ? form.models.join(',') : form.models,
       groups: form.groups,
       key: form.key,
       is_fallback: form.is_fallback,
@@ -436,6 +455,25 @@ async function handleSubmit() {
     Message.error(e.response?.data?.message || e.message || '操作失败')
   } finally {
     submitting.value = false
+  }
+}
+
+async function fetchAvailableModels() {
+  try {
+    const { data } = await api.get('/api/channel/models')
+    const list = data?.data || []
+    const ids = new Set()
+    list.forEach((m) => {
+      if (m && m.id) ids.add(m.id)
+    })
+    if (Array.isArray(form.models)) {
+      form.models.forEach((m) => {
+        if (m) ids.add(m)
+      })
+    }
+    availableModelOptions.value = Array.from(ids).sort()
+  } catch (e) {
+    availableModelOptions.value = []
   }
 }
 
@@ -541,6 +579,7 @@ async function handleDeleteDisabled() {
 
 onMounted(() => {
   fetchChannels()
+  fetchAvailableModels()
 })
 </script>
 
