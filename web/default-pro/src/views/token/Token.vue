@@ -200,15 +200,23 @@
           <a-input v-model="form.subnet" placeholder="192.168.1.0/24, 10.0.0.0/8" allow-clear />
         </a-form-item>
 
-        <a-form-item field="expired_time" label="过期时间" extra="留空表示永不过期">
-          <a-date-picker
-            v-model="form.expired_time"
-            show-time
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder="选择过期时间"
-            style="width: 100%"
-            value-format="timestamp"
-          />
+        <a-form-item field="expired_time" label="过期时间">
+          <div class="input-with-checkbox">
+            <a-date-picker
+              v-model="form.expired_time"
+              show-time
+              format="YYYY-MM-DD HH:mm:ss"
+              placeholder="选择过期时间"
+              style="flex: 1"
+              :disabled="form.never_expire"
+              value-format="timestamp"
+            />
+            <a-checkbox v-model="form.never_expire">永不过期</a-checkbox>
+          </div>
+          <template #extra>
+            <span v-if="form.never_expire">已开启「永不过期」，过期时间已禁用</span>
+            <span v-else>留空表示永不过期</span>
+          </template>
         </a-form-item>
 
         <a-form-item field="remain_quota" label="额度限制">
@@ -318,6 +326,7 @@ const form = reactive({
   models: [],
   subnet: '',
   expired_time: null,
+  never_expire: false,
   remain_quota: 500000,
   unlimited_quota: false,
 })
@@ -504,6 +513,7 @@ function openCreateModal() {
   form.models = []
   form.subnet = ''
   form.expired_time = null
+  form.never_expire = false
   form.remain_quota = 500000
   form.unlimited_quota = false
   modalVisible.value = true
@@ -515,7 +525,9 @@ function openEditModal(record) {
   form.name = record.name || ''
   form.models = parseModelArray(record.models)
   form.subnet = record.subnet || ''
-  form.expired_time = record.expired_time ? record.expired_time * 1000 : null
+  const exp = record.expired_time ? record.expired_time * 1000 : null
+  form.expired_time = exp
+  form.never_expire = !exp
   form.remain_quota = record.remain_quota ?? 500000
   form.unlimited_quota = !!record.unlimited_quota
   modalVisible.value = true
@@ -543,7 +555,7 @@ async function handleSubmit() {
       name: form.name,
       models: form.models.length ? form.models.join(',') : '',
       subnet: form.subnet,
-      expired_time: form.expired_time ? Math.floor(form.expired_time / 1000) : 0,
+      expired_time: form.never_expire || !form.expired_time ? 0 : Math.floor(form.expired_time / 1000),
       remain_quota: form.unlimited_quota ? -1 : form.remain_quota,
       unlimited_quota: form.unlimited_quota,
     }
