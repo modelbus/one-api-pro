@@ -8,6 +8,11 @@ import (
 	"github.com/modelbus/one-api-pro/model"
 )
 
+// ⚠️ Deprecated: 仅 RootAuth 可见，返回 model_price 全量字段（含 enabled=false 与计费详情）。
+//   前端下拉等只读场景请改用 ListModelPriceOptions（路径 /api/model_price/options，AdminAuth）。
+//   本接口仅保留给 root 角色查看完整模型定价。
+//
+// Deprecated: prefer ListModelPriceOptions for read-only model lists used in UI dropdowns.
 func GetAllModelPrices(c *gin.Context) {
 	prices, err := model.GetAllModelPrices()
 	if err != nil {
@@ -21,6 +26,36 @@ func GetAllModelPrices(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    prices,
+	})
+}
+
+// ListModelPriceOptions 返回 model_price 表中所有 enabled=true 模型的 model_name 列表，
+// 仅供前端渠道编辑弹窗等场景作为模型候选下拉使用。AdminAuth 即可访问，
+// 与 RootAuth 保护的 GetAllModelPrices 隔离。
+// 仅返回 model_name 字符串切片，节省带宽，避免把计费字段泄漏到下拉 UI。
+// 版本: v0.0.19
+// 日期: 2026-09-13
+func ListModelPriceOptions(c *gin.Context) {
+	var prices []model.ModelPrice
+	if err := model.DB.Where("enabled = ?", true).
+		Order("model_name asc").
+		Find(&prices).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	names := make([]string, 0, len(prices))
+	for _, p := range prices {
+		if p.ModelName != "" {
+			names = append(names, p.ModelName)
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    names,
 	})
 }
 

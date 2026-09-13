@@ -127,6 +127,9 @@ func SetApiRouter(router *gin.Engine) {
 			modelPriceRoute.PUT("/", controller.UpdateModelPrice)
 			modelPriceRoute.DELETE("/:id", controller.DeleteModelPrice)
 		}
+		// 模型下拉候选（前端渠道编辑弹窗用）：AdminAuth 即可访问，只返 model_name。
+		// 挂在 apiRouter 上而非 modelPriceRoute 内，避免被 RootAuth 拦截。
+		apiRouter.GET("/model_price/options", middleware.AdminAuth(), controller.ListModelPriceOptions)
 		groupPriceRoute := apiRouter.Group("/group_price")
 		groupPriceRoute.Use(middleware.RootAuth())
 		{
