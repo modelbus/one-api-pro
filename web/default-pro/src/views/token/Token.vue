@@ -564,7 +564,7 @@ async function handleSubmit() {
       if (data.success) {
         Message.success('令牌已创建')
         closeModal()
-        page.value = 0
+        activePage.value = 1
         fetchTokens()
       } else {
         Message.error(data.message || '创建失败')
