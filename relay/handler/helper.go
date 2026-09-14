@@ -74,22 +74,38 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 	if err != nil {
 		return preConsumedQuota, openai.ErrorWrapper(err, "get_user_quota_failed", http.StatusInternalServerError)
 	}
+
+	// Guard 1: balance is insufficient — reject immediately, do NOT touch Redis.
 	if userQuota-preConsumedQuota < 0 {
 		return preConsumedQuota, openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
+
+	// Guard 2: balance is large enough to fully trust — skip pre-consume
+	// entirely (no Redis change, no token.quota change). The previous
+	// implementation set preConsumedQuota = 0 only AFTER Redis was already
+	// decreased, causing per-request drift of ~preConsumedQuota on every
+	// "trusted" request. For high-price models (e.g. ¥8.40/M tokens) this
+	// drift is ~80_000 per request — enough to push the cached value into
+	// the dead zone [lowWaterMark, preConsumedQuota) within tens of requests
+	// and produce spurious 403s even though users.quota is still healthy.
+	if userQuota > 100*preConsumedQuota {
+		logger.Info(ctx, fmt.Sprintf("user %d has enough quota %d, trusted and no need to pre-consume", meta.UserId, userQuota))
+		return 0, nil
+	}
+
+	// Only reach here when we actually need to pre-consume.
 	err = dbmodel.CacheDecreaseUserQuota(meta.UserId, preConsumedQuota)
 	if err != nil {
 		return preConsumedQuota, openai.ErrorWrapper(err, "decrease_user_quota_failed", http.StatusInternalServerError)
 	}
-	if userQuota > 100*preConsumedQuota {
-		preConsumedQuota = 0
-		logger.Info(ctx, fmt.Sprintf("user %d has enough quota %d, trusted and no need to pre-consume", meta.UserId, userQuota))
-	}
-	if preConsumedQuota > 0 {
-		err := dbmodel.PreConsumeTokenQuota(meta.TokenId, preConsumedQuota)
-		if err != nil {
-			return preConsumedQuota, openai.ErrorWrapper(err, "pre_consume_token_quota_failed", http.StatusForbidden)
+	err = dbmodel.PreConsumeTokenQuota(meta.TokenId, preConsumedQuota)
+	if err != nil {
+		// Roll back the Redis decrement so the cache does not drift further
+		// from users.quota when the DB-side pre-consume fails.
+		if rbErr := dbmodel.CacheIncreaseUserQuota(meta.UserId, preConsumedQuota); rbErr != nil {
+			logger.Error(ctx, fmt.Sprintf("rollback CacheIncreaseUserQuota failed for user %d: %s", meta.UserId, rbErr.Error()))
 		}
+		return preConsumedQuota, openai.ErrorWrapper(err, "pre_consume_token_quota_failed", http.StatusForbidden)
 	}
 	return preConsumedQuota, nil
 }
