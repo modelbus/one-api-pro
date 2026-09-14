@@ -404,9 +404,20 @@ func IncreaseUserQuota(id int, quota int64) (err error) {
 	}
 	if config.BatchUpdateEnabled {
 		addNewRecord(BatchUpdateTypeUserQuota, id, quota)
+		// Batch mode: actual DB write + cache refresh happen in batchUpdate().
 		return nil
 	}
-	return increaseUserQuota(id, quota)
+	if err = increaseUserQuota(id, quota); err != nil {
+		return err
+	}
+	// DB write succeeded — keep the Redis cache in sync with users.quota so the
+	// next request sees the new balance instead of a stale value. Use an
+	// independent context because the caller's context may have been canceled
+	// by the time we reach this point (e.g. on shutdown).
+	if cerr := CacheUpdateUserQuota(context.Background(), id); cerr != nil {
+		logger.SysError(fmt.Sprintf("IncreaseUserQuota: cache refresh failed for user %d: %s", id, cerr.Error()))
+	}
+	return nil
 }
 
 func increaseUserQuota(id int, quota int64) (err error) {
