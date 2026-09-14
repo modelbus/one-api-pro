@@ -28,7 +28,7 @@ type Token struct {
 	Name           string  `json:"name" gorm:"index" `
 	CreatedTime    int64   `json:"created_time" gorm:"bigint"`
 	AccessedTime   int64   `json:"accessed_time" gorm:"bigint"`
-	ExpiredTime    int64   `json:"expired_time" gorm:"bigint;default:-1"` // -1 means never expired
+	ExpiredTime    int64   `json:"expired_time" gorm:"bigint;default:-1"` // <=0 means never expired (legacy: -1)
 	RemainQuota    int64   `json:"remain_quota" gorm:"bigint;default:0"`
 	UnlimitedQuota bool    `json:"unlimited_quota" gorm:"default:false"`
 	UsedQuota      int64   `json:"used_quota" gorm:"bigint;default:0"` // used quota
@@ -80,7 +80,7 @@ func ValidateUserToken(key string) (token *Token, err error) {
 	if token.Status != TokenStatusEnabled {
 		return nil, errors.New("该令牌状态不可用")
 	}
-	if token.ExpiredTime != -1 && token.ExpiredTime < helper.GetTimestamp() {
+	if token.ExpiredTime > 0 && token.ExpiredTime < helper.GetTimestamp() {
 		if !common.RedisEnabled {
 			token.Status = TokenStatusExpired
 			err := token.SelectUpdate()

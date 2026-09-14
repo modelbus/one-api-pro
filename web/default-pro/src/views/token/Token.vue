@@ -377,6 +377,7 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
+import { buildTokenExpiredTime, formatExpiredTime } from '@/utils/token'
 
 const statusStore = useStatusStore()
 
@@ -545,15 +546,6 @@ function formatQuota(val) {
   return String(n)
 }
 
-function formatExpiredTime(ts) {
-  if (!ts) return '永不过期'
-  const t = Number(ts)
-  if (isNaN(t) || t <= 0) return '永不过期'
-  const d = new Date(t * 1000)
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
 async function copyText(text, successMsg) {
   try {
     await navigator.clipboard.writeText(text)
@@ -678,7 +670,7 @@ async function handleSubmit() {
       name: form.name,
       models: form.models.length ? form.models.join(',') : '',
       subnet: form.subnet,
-      expired_time: form.never_expire || !form.expired_time ? 0 : Math.floor(form.expired_time / 1000),
+      expired_time: buildTokenExpiredTime(form),
       remain_quota: form.unlimited_quota ? -1 : form.remain_quota,
       unlimited_quota: form.unlimited_quota,
     }

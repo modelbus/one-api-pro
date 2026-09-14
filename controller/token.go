@@ -214,7 +214,7 @@ func UpdateToken(c *gin.Context) {
 		return
 	}
 	if token.Status == model.TokenStatusEnabled {
-		if cleanToken.Status == model.TokenStatusExpired && cleanToken.ExpiredTime <= helper.GetTimestamp() && cleanToken.ExpiredTime != -1 {
+		if cleanToken.Status == model.TokenStatusExpired && cleanToken.ExpiredTime > 0 && cleanToken.ExpiredTime <= helper.GetTimestamp() {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期",
