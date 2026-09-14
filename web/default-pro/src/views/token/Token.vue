@@ -75,6 +75,7 @@
           <div class="col col-name">令牌</div>
           <div class="col col-key">密钥</div>
           <div class="col col-quota">剩余 / 已用</div>
+          <div class="col col-models">可用模型</div>
           <div class="col col-status">状态</div>
           <div class="col col-expire">过期时间</div>
           <div class="col col-action">操作</div>
@@ -96,6 +97,11 @@
             <div class="col col-key">
               <div class="key-cell">
                 <code class="key-text">{{ maskKey(t.key) }}</code>
+                <a-tooltip content="查看完整密钥">
+                  <a-button type="text" size="mini" @click="openKeyModal(t)">
+                    <template #icon><icon-eye :size="14" /></template>
+                  </a-button>
+                </a-tooltip>
                 <a-tooltip content="复制完整密钥">
                   <a-button type="text" size="mini" @click="copyText(withSkPrefix(t.key), '完整密钥已复制')">
                     <template #icon><icon-copy :size="14" /></template>
@@ -109,8 +115,20 @@
                 <span :class="t.unlimited_quota ? 'quota-unlimited' : 'quota-value'">
                   {{ t.unlimited_quota ? '无限制' : formatQuota(t.remain_quota) }}
                 </span>
+                <span class="quota-sep">/</span>
                 <span class="quota-used">{{ formatQuota(t.used_quota) }}</span>
               </div>
+            </div>
+
+            <div class="col col-models">
+              <button
+                type="button"
+                class="models-link"
+                @click="openModelsModal(t)"
+              >
+                <span>{{ formatModelCount(t.models) }}</span>
+                <icon-eye :size="12" class="models-link-icon" />
+              </button>
             </div>
 
             <div class="col col-status">
@@ -237,6 +255,73 @@
       </a-form>
     </a-modal>
 
+    <!-- 密钥查看弹窗 -->
+    <a-modal
+      :visible="keyModalVisible"
+      @update:visible="(v) => (keyModalVisible = v)"
+      @cancel="keyModalVisible = false"
+      :width="520"
+      :footer="false"
+      unmount-on-close
+      title="查看密钥"
+    >
+      <div v-if="keyModalToken" class="key-modal-body">
+        <div class="key-modal-meta">
+          <span class="key-modal-label">名称</span>
+          <span class="key-modal-name">{{ keyModalToken.name }} <span class="key-modal-id">#{{ keyModalToken.id }}</span></span>
+        </div>
+        <div class="key-modal-value-row">
+          <code class="key-modal-value">{{ withSkPrefix(keyModalToken.key) }}</code>
+        </div>
+        <p class="key-modal-warning">
+          <icon-lock :size="14" />
+          请妥善保管，切勿泄露至公开仓库或前端代码
+        </p>
+        <div class="key-modal-actions">
+          <a-button type="primary" @click="handleKeyModalCopy">
+            <template #icon><icon-copy :size="14" /></template>
+            复制
+          </a-button>
+          <a-button @click="keyModalVisible = false">关闭</a-button>
+        </div>
+      </div>
+    </a-modal>
+
+    <!-- 可用模型弹窗 -->
+    <a-modal
+      :visible="modelsModalVisible"
+      @update:visible="(v) => (modelsModalVisible = v)"
+      @cancel="modelsModalVisible = false"
+      :width="520"
+      :footer="false"
+      unmount-on-close
+      :title="modelsModalToken ? `${modelsModalToken.name} · 可用模型` : '可用模型'"
+    >
+      <div v-if="modelsModalToken" class="models-modal-body">
+        <div class="models-modal-meta">
+          <span v-if="currentModalModels.length === 0" class="models-modal-empty">
+            当前令牌未限制模型，以下为全部可用模型
+          </span>
+          <span v-else class="models-modal-count">
+            共 {{ currentModalModels.length }} 个可用模型
+          </span>
+        </div>
+        <div v-if="currentModalModels.length > 0" class="models-modal-list">
+          <div
+            v-for="m in currentModalModels"
+            :key="m"
+            class="models-modal-item"
+          >
+            <span class="models-modal-dot"></span>
+            <code class="models-modal-name">{{ m }}</code>
+          </div>
+        </div>
+        <div class="key-modal-actions">
+          <a-button @click="modelsModalVisible = false">关闭</a-button>
+        </div>
+      </div>
+    </a-modal>
+
     <!-- 使用指南弹窗 -->
     <a-modal
       v-model:visible="showGuide"
@@ -289,7 +374,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { Message } from '@arco-design/web-vue'
-import { IconPlus, IconCopy, IconBook, IconLock } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
 
@@ -318,9 +403,21 @@ const totalCountForPager = computed(() => {
   return tokens.value.length + pageSize.value
 })
 
+const currentModalModels = computed(() => {
+  if (!modelsModalToken.value) return []
+  const arr = parseModelArray(modelsModalToken.value.models)
+  if (arr.length > 0) return arr
+  return availableModels.value || []
+})
+
 const showGuide = ref(false)
 const guideTab = ref('quickstart')
 const guideKeyId = ref(null)
+
+const keyModalVisible = ref(false)
+const keyModalToken = ref(null)
+const modelsModalVisible = ref(false)
+const modelsModalToken = ref(null)
 
 const formRef = ref(null)
 const form = reactive({
@@ -405,6 +502,30 @@ const configExample = computed(() => {
 function withSkPrefix(key) {
   if (!key) return key
   return key.startsWith('sk-') ? key : 'sk-' + key
+}
+
+function openKeyModal(token) {
+  keyModalToken.value = token
+  keyModalVisible.value = true
+}
+
+function handleKeyModalCopy() {
+  if (!keyModalToken.value) {
+    keyModalVisible.value = false
+    return
+  }
+  copyText(withSkPrefix(keyModalToken.value.key), '完整密钥已复制')
+}
+
+function formatModelCount(val) {
+  const arr = parseModelArray(val)
+  if (arr.length === 0) return '不限制'
+  return `${arr.length}个`
+}
+
+function openModelsModal(token) {
+  modelsModalToken.value = token
+  modelsModalVisible.value = true
 }
 
 function maskKey(key) {
@@ -765,7 +886,7 @@ onMounted(async () => {
 .list-head,
 .list-row {
   display: grid;
-  grid-template-columns: 1.4fr 2fr 1.2fr 1fr 1.2fr 1.2fr;
+  grid-template-columns: 1.2fr 2fr 1.2fr 1fr 1fr 1.2fr 1.2fr;
   align-items: center;
   padding: 0 20px;
 }
@@ -853,8 +974,10 @@ onMounted(async () => {
 
 .quota-cell {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
 }
 .quota-value {
   font-variant-numeric: tabular-nums;
@@ -867,10 +990,44 @@ onMounted(async () => {
   font-weight: 500;
   font-size: 13px;
 }
-.quota-used {
-  font-size: 11px;
+.quota-sep {
   color: var(--color-text-4);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+.quota-used {
+  font-size: 12px;
+  color: var(--color-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ 可用模型链接 ============ */
+.models-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: var(--color-fill-1);
+  border: 1px solid var(--color-fill-3);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-2);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.models-link:hover {
+  color: rgb(var(--primary-6));
+  border-color: rgb(var(--primary-6));
+  background: rgba(var(--primary-6), 0.06);
+}
+.models-link-icon {
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.models-link:hover .models-link-icon {
+  opacity: 1;
 }
 
 /* ============ 状态 chip ============ */
@@ -1000,6 +1157,120 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
+/* ============ 密钥查看弹窗 ============ */
+.key-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.key-modal-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.key-modal-label {
+  color: var(--color-text-3);
+  font-weight: 500;
+}
+.key-modal-name {
+  color: var(--color-text-1);
+  font-weight: 500;
+}
+.key-modal-id {
+  font-size: 11px;
+  color: var(--color-text-4);
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+}
+.key-modal-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.key-modal-value {
+  flex: 1;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--color-text-1);
+  background: var(--color-fill-1);
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--color-fill-3);
+  word-break: break-all;
+  user-select: all;
+}
+.key-modal-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-3);
+  background: rgba(22, 93, 255, 0.06);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(22, 93, 255, 0.12);
+}
+.key-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ============ 可用模型弹窗 ============ */
+.models-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 60vh;
+  overflow: hidden;
+}
+.models-modal-meta {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+.models-modal-empty {
+  color: rgb(var(--primary-6));
+}
+.models-modal-count {
+  font-weight: 500;
+}
+.models-modal-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  padding: 4px;
+  margin: 0 -4px;
+}
+.models-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--color-fill-1);
+  border: 1px solid var(--color-fill-3);
+  border-radius: 4px;
+  min-width: 0;
+}
+.models-modal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgb(var(--primary-6));
+  flex-shrink: 0;
+}
+.models-modal-name {
+  flex: 1;
+  min-width: 0;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--color-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ============ 使用指南 ============ */
 .guide-tabs :deep(.arco-tabs-nav) {
   margin-bottom: 16px;
@@ -1057,12 +1328,13 @@ onMounted(async () => {
 }
 
 /* ============ 响应式 ============ */
-@media (max-width: 1024px) {
+@media (max-width: 1280px) {
   .list-head,
   .list-row {
-    grid-template-columns: 1fr 1.5fr 1fr 1fr 1.2fr;
+    grid-template-columns: 1fr 1.4fr 1fr 1fr 1fr 1.2fr;
   }
-  .col-expire {
+  .col-expire,
+  .col-models {
     display: none;
   }
 }
