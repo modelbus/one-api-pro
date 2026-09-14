@@ -14,6 +14,7 @@ import (
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/ctxkey"
 	"github.com/modelbus/one-api-pro/common/i18n"
+	"github.com/modelbus/one-api-pro/common/logger"
 	"github.com/modelbus/one-api-pro/common/random"
 	"github.com/modelbus/one-api-pro/model"
 )
@@ -446,6 +447,11 @@ func UpdateUser(c *gin.Context) {
 	}
 	if originUser.Quota != updatedUser.Quota {
 		model.RecordLog(ctx, originUser.Id, model.LogTypeManage, fmt.Sprintf("管理员将用户额度从 %s修改为 %s", common.LogQuota(originUser.Quota), common.LogQuota(updatedUser.Quota)))
+		// DB quota field was overwritten — refresh Redis so the next request
+		// sees the new balance instead of a stale cached value.
+		if cerr := model.CacheUpdateUserQuota(ctx, updatedUser.Id); cerr != nil {
+			logger.SysError(fmt.Sprintf("UpdateUser: cache refresh failed for user %d: %s", updatedUser.Id, cerr.Error()))
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
