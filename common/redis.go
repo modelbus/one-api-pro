@@ -79,3 +79,14 @@ func RedisDecrease(key string, value int64) error {
 	ctx := context.Background()
 	return RDB.DecrBy(ctx, key, value).Err()
 }
+
+// RedisIncrease adds value to the integer stored at key (atomic INCRBY).
+// Used to roll back a previous RedisDecrease when the corresponding DB write
+// fails, so the cache does not drift further from users.quota.
+// RedisIncrease 将 value 加到 key 存储的整数上（原子 INCRBY）。
+// 用于对应的 DB 写入失败时回滚此前已执行的 RedisDecrease，
+// 避免缓存进一步偏离 users.quota。
+func RedisIncrease(key string, value int64) error {
+	ctx := context.Background()
+	return RDB.IncrBy(ctx, key, value).Err()
+}
