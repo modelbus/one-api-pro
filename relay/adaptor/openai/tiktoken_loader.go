@@ -60,20 +60,27 @@ func (l *httpBpeLoader) readFileCached(blobpath string) ([]byte, error) {
 		return os.ReadFile(blobpath)
 	}
 
+	// 1) 编译期内嵌的 BPE 文件（默认路径，无需任何环境变量配置）。
+	//    这是兜底，避免在无法访问 openaipublic.blob.core.windows.net
+	//    的网络环境下因为 tiktoken 初始化失败导致 defaultTokenEncoder 为 nil。
+	if data, ok := lookupEmbeddedBpe(blobpath); ok {
+		return data, nil
+	}
+
+	// 2) 用户在 TIKTOKEN_CACHE_DIR 显式提供的 BPE 文件（可选覆盖）。
 	cacheDir := os.Getenv("TIKTOKEN_CACHE_DIR")
 	if cacheDir == "" {
 		cacheDir = os.Getenv("DATA_GYM_CACHE_DIR")
 	}
-	if cacheDir == "" {
-		cacheDir = filepath.Join(os.TempDir(), "data-gym-cache")
+	if cacheDir != "" {
+		cacheKey := fmt.Sprintf("%x", sha1.Sum([]byte(blobpath)))
+		cachePath := filepath.Join(cacheDir, cacheKey)
+		if data, err := os.ReadFile(cachePath); err == nil {
+			return data, nil
+		}
 	}
 
-	cacheKey := fmt.Sprintf("%x", sha1.Sum([]byte(blobpath)))
-	cachePath := filepath.Join(cacheDir, cacheKey)
-	if data, err := os.ReadFile(cachePath); err == nil {
-		return data, nil
-	}
-
+	// 3) HTTP 下载（最后的回退，依赖网络）。
 	resp, err := l.client.Get(blobpath)
 	if err != nil {
 		return nil, err
@@ -88,7 +95,7 @@ func (l *httpBpeLoader) readFileCached(blobpath string) ([]byte, error) {
 	}
 
 	if err := os.MkdirAll(cacheDir, os.ModePerm); err == nil {
-		_ = os.WriteFile(cachePath, data, 0644)
+		_ = os.WriteFile(filepath.Join(cacheDir, fmt.Sprintf("%x", sha1.Sum([]byte(blobpath)))), data, 0644)
 	}
 	return data, nil
 }
