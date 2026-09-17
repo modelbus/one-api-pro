@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.png" width="150" height="150" alt="one-api-pro logo">
+  <img src="../docs/logo.png" width="150" height="150" alt="one-api-pro logo">
 </p>
 
 <p align="center">
@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"></a>
+  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"></a>
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/language-Go-00ADD8.svg?logo=go&logoColor=white" alt="language"></a>
   <a href="https://gin-gonic.com/"><img src="https://img.shields.io/badge/framework-Gin-008080.svg?logo=go&logoColor=white" alt="framework"></a>
   <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/frontend-Vue%203-42B883.svg?logo=vue.js&logoColor=white" alt="frontend"></a>
@@ -26,21 +26,21 @@
 </p>
 
 <p align="center">
-  <a href="README.md">简体中文</a>
+  <strong>简体中文</strong>
   &nbsp;·&nbsp;
-  <a href="readme/README.en.md">English</a>
+  <a href="README.en.md">English</a>
   &nbsp;·&nbsp;
-  <a href="readme/README.zh-TW.md">繁體中文</a>
+  <a href="README.zh-TW.md">繁體中文</a>
   &nbsp;·&nbsp;
-  <a href="readme/README.ja.md">日本語</a>
+  <a href="README.ja.md">日本語</a>
   &nbsp;·&nbsp;
-  <a href="readme/README.ru.md">Русский</a>
+  <a href="README.ru.md">Русский</a>
   &nbsp;·&nbsp;
-  <a href="readme/README.ko.md">한국어</a>
+  <a href="README.ko.md">한국어</a>
   &nbsp;·&nbsp;
-  <a href="readme/README.ar.md">العربية</a>
+  <a href="README.ar.md">العربية</a>
   &nbsp;·&nbsp;
-  <a href="readme/README.de.md">Deutsch</a>
+  <a href="README.de.md">Deutsch</a>
 </p>
 
 ---
@@ -174,7 +174,7 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 | 核心指标卡 | 使用趋势图 |
 |:---:|:---:|
-| ![仪表盘首页](docs/Demo-Index.png) | ![仪表盘首页](docs/Demo-Index.png) |
+| ![仪表盘首页](../docs/Demo-Index.png) | ![仪表盘首页](../docs/Demo-Index.png) |
 
 ### 🔑 精细的令牌管理
 
@@ -182,7 +182,7 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 | 令牌管理 |
 |:---:|
-| ![令牌管理](docs/Demo-Token.png) |
+| ![令牌管理](../docs/Demo-Token.png) |
 
 ### 📦 套餐订阅体系
 
@@ -190,7 +190,7 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 | 套餐管理 | 订阅管理 |
 |:---:|:---:|
-| ![套餐管理](docs/Demo-Plan.png) | ![订阅管理](docs/Demo-Subscribe.png) |
+| ![套餐管理](../docs/Demo-Plan.png) | ![订阅管理](../docs/Demo-Subscribe.png) |
 
 ### 💳 订单与真实支付
 
@@ -213,7 +213,7 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 | 集群节点管理 |
 |:---:|
-| ![集群节点管理](docs/Demo-cluster.png) |
+| ![集群节点管理](../docs/Demo-cluster.png) |
 
 ### 🧩 其他核心能力
 
@@ -243,19 +243,19 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 ## 📸 截图展示
 
 ### 🖥️ 仪表盘
-![仪表盘首页](docs/Demo-Index.png)
+![仪表盘首页](../docs/Demo-Index.png)
 
 ### 🔑 令牌管理
-![令牌管理](docs/Demo-Token.png)
+![令牌管理](../docs/Demo-Token.png)
 
 ### 📦 套餐管理
-![套餐管理](docs/Demo-Plan.png)
+![套餐管理](../docs/Demo-Plan.png)
 
 ### 🔄 订阅管理
-![订阅管理](docs/Demo-Subscribe.png)
+![订阅管理](../docs/Demo-Subscribe.png)
 
 ### 🌐 集群节点管理
-![集群节点管理](docs/Demo-cluster.png)
+![集群节点管理](../docs/Demo-cluster.png)
 
 ---
 
@@ -325,7 +325,7 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 20. `SQLITE_BUSY_TIMEOUT`：SQLite 锁等待超时设置，单位为毫秒，默认 `3000`。
 21. `GEMINI_SAFETY_SETTING`：Gemini 的安全设置，默认 `BLOCK_NONE`。
 22. `GEMINI_VERSION`：One Api Pro 所使用的 Gemini 版本，默认为 `v1`。
-23. `THEME`：系统的主题设置，默认为 `default-pro`（Vue 3 管理后台），也可切换为 `default` / `berry` / `air`（旧 React 主题），具体可选值参考[此处](./web/README.md)。
+23. `THEME`：系统的主题设置，默认为 `default-pro`（Vue 3 管理后台），也可切换为 `default` / `berry` / `air`（旧 React 主题），具体可选值参考[此处](../web/README.md)。
 24. `ENABLE_METRIC`：是否根据请求成功率禁用渠道，默认不开启，可选值为 `true` 和 `false`。
 25. `METRIC_QUEUE_SIZE`：请求成功率统计队列大小，默认为 `10`。
 26. `METRIC_SUCCESS_RATE_THRESHOLD`：请求成功率阈值，默认为 `0.8`。
@@ -388,14 +388,14 @@ One Api Pro 是一个**企业级 AI API 网关**，基于 Go 语言 + Vue 3 全�
 
 ## 📖 接口文档
 
-完整的接口文档已独立维护在 [docs/API.md](docs/API.md)，涵盖：
+完整的接口文档已独立维护在 [docs/API.md](../docs/API.md)，涵盖：
 
 - **鉴权机制**：Cookie Session / Access Token / API Key（Bearer Token）三种鉴权方式
 - **管理接口**：模型定价、分组折扣、渠道、令牌、用户、日志、兑换码、套餐、订阅等完整 CRUD
 - **OpenAI 兼容接口**：`/v1/models`、`/v1/chat/completions`、`/v1/embeddings`、图片、音频、内容审核等
 - **集群管理 API**：节点发现、心跳、数据同步等去中心化集群接口
 
-👉 [查看完整接口文档 →](docs/API.md)
+👉 [查看完整接口文档 →](../docs/API.md)
 
 ---
 
@@ -903,7 +903,7 @@ curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
 
 或在管理后台：**设置 → 节点管理** 页面查看节点列表、状态、最后心跳时间等。
 
-> 💡 集群管理 API 详见 [docs/API.md 附录 E：集群管理 API](docs/API.md#附录-e集群管理-api)
+> 💡 集群管理 API 详见 [docs/API.md 附录 E：集群管理 API](../docs/API.md#附录-e集群管理-api)
 
 #### ⚠️ 注意事项
 
@@ -1048,4 +1048,4 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 
 ## License
 
-[MIT License](LICENSE)
+[MIT License](../LICENSE)
