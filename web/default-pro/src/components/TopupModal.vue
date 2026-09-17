@@ -17,7 +17,7 @@
   -->
   <a-modal
     :visible="modelValue"
-    :title="title"
+    :title="modalTitle"
     :footer="false"
     :mask-closable="true"
     :width="480"
@@ -28,7 +28,7 @@
     <div v-if="hasUsableConfig" class="topup-body">
       <!-- 快捷金额 chips + 可选的自定义金额 chip（仅开关开启时显示） -->
       <div class="topup-section">
-        <div class="topup-label">选择金额</div>
+        <div class="topup-label">{{ $t('topupModalPage.selectAmount') }}</div>
         <div class="topup-presets">
           <button
             v-for="(p, idx) in settings.presets"
@@ -39,7 +39,7 @@
             @click="selectPreset(idx)"
           >
             <span class="preset-amount">¥{{ p.amount }}</span>
-            <span class="preset-bonus">送 {{ formatNumber(p.bonus_quota) }}</span>
+            <span class="preset-bonus">{{ $t('topupModalPage.bonus', { n: formatNumber(p.bonus_quota) }) }}</span>
           </button>
           <!-- 最后一个固定为「自定义金额」chip（前提：allow_custom=true） -->
           <button
@@ -49,8 +49,8 @@
             :class="{ active: selectedIdx === CUSTOM_IDX }"
             @click="selectCustom"
           >
-            <span class="preset-amount">自定义</span>
-            <span class="preset-bonus">输入金额</span>
+            <span class="preset-amount">{{ $t('topupModalPage.custom') }}</span>
+            <span class="preset-bonus">{{ $t('topupModalPage.inputAmount') }}</span>
           </button>
         </div>
       </div>
@@ -62,17 +62,17 @@
           :min="0.01"
           :step="1"
           :precision="2"
-          placeholder="请输入充值金额"
+          :placeholder="$t('topupModalPage.amountPlaceholder')"
           size="large"
           style="width: 100%"
           @change="onCustomChange"
         />
-        <div class="topup-hint">将获得 {{ formatNumber(calcCustomBonus) }} 额度</div>
+        <div class="topup-hint">{{ $t('topupModalPage.willReceive', { n: formatNumber(calcCustomBonus) }) }}</div>
       </div>
 
       <!-- 支付方式 -->
       <div class="topup-section">
-        <div class="topup-label">支付方式</div>
+        <div class="topup-label">{{ $t('topupModalPage.payMethod') }}</div>
         <div class="pay-picker-list">
           <button
             v-for="m in availableMethods"
@@ -87,31 +87,31 @@
             <span v-if="selectedPayMethod === m.name" class="pay-picker-check">✓</span>
           </button>
           <div v-if="availableMethods.length === 0" class="pay-picker-empty">
-            暂无可用的支付方式
+            {{ $t('topupModalPage.noPayMethods') }}
           </div>
         </div>
       </div>
 
       <div class="topup-summary">
-        <span>支付金额</span>
+        <span>{{ $t('topupModalPage.payAmount') }}</span>
         <span class="summary-amount">¥{{ formatAmount(finalPayAmount) }}</span>
       </div>
 
       <div class="topup-footer">
-        <a-button @click="close">取消</a-button>
+        <a-button @click="close">{{ $t('topupModalPage.cancel') }}</a-button>
         <a-button
           type="primary"
           :loading="submitting"
           :disabled="!canSubmit"
           @click="onConfirm"
         >
-          确认充值
+          {{ $t('topupModalPage.confirm') }}
         </a-button>
       </div>
     </div>
 
     <!-- 加载中 / 无配置时 -->
-    <div v-else class="topup-loading">正在加载充值配置…</div>
+    <div v-else class="topup-loading">{{ $t('topupModalPage.loadingConfig') }}</div>
   </a-modal>
 </template>
 
@@ -120,6 +120,7 @@
 // 日期: 2026-09-06
 // 作者: opencode
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconWechatpay, IconAlipayCircle, IconSafe } from '@arco-design/web-vue/es/icon'
 import topupApi from '@/api/topup'
@@ -129,9 +130,14 @@ import { formatNumber, formatAmount, calcCustomBonus as calcCustomBonusFn } from
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   settings: { type: Object, default: () => null },
-  title: { type: String, default: '在线充值' },
+  title: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue', 'success', 'error', 'pay'])
+
+const { t } = useI18n()
+
+// 弹窗标题：优先使用父组件传入的 title，否则回退到本地化默认值
+const modalTitle = computed(() => props.title || t('topupModalPage.title'))
 
 // 选中状态：
 //   selectedIdx === CUSTOM_IDX(-1)  表示选中「自定义金额」chip
@@ -232,8 +238,8 @@ async function onConfirm() {
     const res = await topupApi.createOrder(payload)
     const data = res?.data
     if (!data?.success) {
-      Message.error(data?.message || '下单失败')
-      emit('error', data?.message || '下单失败')
+      Message.error(data?.message || t('topupModalPage.orderFailed'))
+      emit('error', data?.message || t('topupModalPage.orderFailed'))
       return
     }
     emit('success', data)
@@ -246,10 +252,10 @@ async function onConfirm() {
     } else if (pay.status === 'success' && pay.note) {
       emit('pay', { note: pay.note, payMethod: selectedPayMethod.value, amount: data.amount })
     } else if (pay.status === 'warning') {
-      Message.error(pay.warning || '发起支付失败，请稍后重试')
+      Message.error(pay.warning || t('topupModalPage.payInitFailed'))
     }
   } catch (e) {
-    const msg = e.response?.data?.message || e.message || '下单失败'
+    const msg = e.response?.data?.message || e.message || t('topupModalPage.orderFailed')
     Message.error(msg)
     emit('error', msg)
   } finally {
