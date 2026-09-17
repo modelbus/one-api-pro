@@ -1,27 +1,27 @@
 <template>
   <AuthLayout>
     <div class="auth-heading">
-      <h1 id="auth-title">重置密码</h1>
-      <p>设置您的新密码</p>
+      <h1 id="auth-title">{{ $t('auth.resetPassword') }}</h1>
+      <p>{{ $t('auth.resetConfirmSubtitle') }}</p>
     </div>
     <a-form class="auth-form" :model="form" layout="vertical" size="large" @submit="handleSubmit" aria-labelledby="auth-title">
       <a-form-item field="password" hide-label>
-        <a-input-password v-model="form.password" placeholder="新密码" allow-clear aria-label="新密码">
+        <a-input-password v-model="form.password" :placeholder="$t('auth.newPasswordPlaceholder')" allow-clear :aria-label="$t('auth.newPasswordPlaceholder')">
           <template #prefix><icon-lock /></template>
         </a-input-password>
       </a-form-item>
       <a-form-item field="password2" hide-label>
-        <a-input-password v-model="form.password2" placeholder="确认新密码" allow-clear aria-label="确认新密码">
+        <a-input-password v-model="form.password2" :placeholder="$t('auth.confirmNewPassword')" allow-clear :aria-label="$t('auth.confirmNewPassword')">
           <template #prefix><icon-lock /></template>
         </a-input-password>
       </a-form-item>
       <a-form-item>
         <a-button type="primary" html-type="submit" long :loading="loading" size="large">
-          重置密码
+          {{ $t('auth.resetPassword') }}
         </a-button>
       </a-form-item>
       <div class="form-extra">
-        <a-link @click="$router.push('/login')">返回登录</a-link>
+        <a-link @click="$router.push('/login')">{{ $t('auth.backToLogin') }}</a-link>
       </div>
       <div v-if="message" class="form-alert">
         <a-alert :type="success ? 'success' : 'error'" :show-icon="false">{{ message }}</a-alert>
@@ -33,12 +33,14 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { IconLock } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 
 const form = ref({ password: '', password2: '' })
 const loading = ref(false)
@@ -46,7 +48,7 @@ const message = ref('')
 const success = ref(false)
 
 async function handleSubmit() {
-  if (form.value.password !== form.value.password2) { message.value = '两次密码不一致'; return }
+  if (form.value.password !== form.value.password2) { message.value = t('auth.passwordMismatch'); return }
   loading.value = true
   message.value = ''
   try {
@@ -56,11 +58,11 @@ async function handleSubmit() {
       password2: form.value.password2,
     })
     success.value = true
-    message.value = '密码重置成功，即将跳转登录...'
+    message.value = t('auth.resetAndLogin')
     setTimeout(() => router.push('/login'), 1500)
   } catch (e) {
     success.value = false
-    message.value = e.response?.data?.message || '重置失败'
+    message.value = e.response?.data?.message || t('auth.resetFailed')
   } finally {
     loading.value = false
   }
