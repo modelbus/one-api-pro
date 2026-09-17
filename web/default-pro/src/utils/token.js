@@ -32,12 +32,13 @@ export function buildTokenExpiredTime(form) {
  * 后端约定 <=0 都是"永不过期"，UI 一律显示「永不过期」。
  *
  * @param {number|null|undefined} ts 秒级 unix 时间戳（<=0 表示永不过期）
+ * @param {string} neverText 「永不过期」的展示文案（可传入本地化文案）
  * @returns {string} 展示文案
  */
-export function formatExpiredTime(ts) {
-  if (!ts) return '永不过期'
+export function formatExpiredTime(ts, neverText = '永不过期') {
+  if (!ts) return neverText
   const t = Number(ts)
-  if (Number.isNaN(t) || t <= 0) return '永不过期'
+  if (Number.isNaN(t) || t <= 0) return neverText
   const d = new Date(t * 1000)
   const pad = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
