@@ -1,10 +1,10 @@
 <template>
   <a-spin :loading="loading" class="setting-container">
     <a-tabs v-model:active-key="tab" size="large">
-      <a-tab-pane key="model" title="模型定价">
+      <a-tab-pane key="model" :title="$t('settingPage.pricing.modelTab')">
         <div class="section-header">
-          <h3>模型定价</h3>
-          <a-button type="primary" @click="openModelPrice()"><template #icon><icon-plus /></template>添加</a-button>
+          <h3>{{ $t('settingPage.pricing.modelTab') }}</h3>
+          <a-button type="primary" @click="openModelPrice()"><template #icon><icon-plus /></template>{{ $t('settingPage.pricing.add') }}</a-button>
         </div>
         <a-table
           row-key="id"
@@ -15,23 +15,23 @@
           :scroll="mpScroll"
         >
           <template #billing="{ record }">
-            <a-tag :color="record.billing_type==='token'?'blue':'green'" size="small">{{ record.billing_type==='token'?'Token':'请求' }}</a-tag>
+            <a-tag :color="record.billing_type==='token'?'blue':'green'" size="small">{{ record.billing_type==='token' ? $t('settingPage.pricing.billingToken') : $t('settingPage.pricing.billingRequest') }}</a-tag>
           </template>
           <template #actions="{ record }">
             <a-space>
-              <a-button type="text" size="small" @click="openModelPrice(record)">编辑</a-button>
-              <a-popconfirm content="确定删除该定价？" @ok="handleDelMP(record.id)">
-                <a-button type="text" size="small" status="danger">删除</a-button>
+              <a-button type="text" size="small" @click="openModelPrice(record)">{{ $t('settingPage.pricing.edit') }}</a-button>
+              <a-popconfirm :content="$t('settingPage.pricing.confirmDeleteModel')" @ok="handleDelMP(record.id)">
+                <a-button type="text" size="small" status="danger">{{ $t('settingPage.pricing.delete') }}</a-button>
               </a-popconfirm>
             </a-space>
           </template>
         </a-table>
       </a-tab-pane>
 
-      <a-tab-pane key="group" title="分组折扣">
+      <a-tab-pane key="group" :title="$t('settingPage.pricing.groupTab')">
         <div class="section-header">
-          <h3>分组折扣</h3>
-          <a-button type="primary" @click="openGroupPrice()"><template #icon><icon-plus /></template>添加</a-button>
+          <h3>{{ $t('settingPage.pricing.groupTab') }}</h3>
+          <a-button type="primary" @click="openGroupPrice()"><template #icon><icon-plus /></template>{{ $t('settingPage.pricing.add') }}</a-button>
         </div>
         <a-table
           row-key="id"
@@ -43,9 +43,9 @@
         >
           <template #actions="{ record }">
             <a-space>
-              <a-button type="text" size="small" @click="openGroupPrice(record)">编辑</a-button>
-              <a-popconfirm content="确定删除该分组折扣？" @ok="handleDelGP(record.id)">
-                <a-button type="text" size="small" status="danger">删除</a-button>
+              <a-button type="text" size="small" @click="openGroupPrice(record)">{{ $t('settingPage.pricing.edit') }}</a-button>
+              <a-popconfirm :content="$t('settingPage.pricing.confirmDeleteGroup')" @ok="handleDelGP(record.id)">
+                <a-button type="text" size="small" status="danger">{{ $t('settingPage.pricing.delete') }}</a-button>
               </a-popconfirm>
             </a-space>
           </template>
@@ -53,48 +53,48 @@
       </a-tab-pane>
     </a-tabs>
 
-    <a-modal v-model:visible="mpVisible" :title="mpEditing?'编辑模型定价':'添加模型定价'" @ok="handleSaveMP" :ok-loading="mpSaving" width="640">
+    <a-modal v-model:visible="mpVisible" :title="mpEditing ? $t('settingPage.pricing.editModelTitle') : $t('settingPage.pricing.addModelTitle')" @ok="handleSaveMP" :ok-loading="mpSaving" width="640">
       <a-form :model="mpForm" layout="vertical">
-        <a-form-item label="模型名称" required>
+        <a-form-item :label="$t('settingPage.pricing.modelName')" required>
           <a-input v-model="mpForm.model_name" placeholder="gpt-4o" />
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="输入价格 (每 1M Tokens)"><a-input-number v-model="mpForm.input_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
+            <a-form-item :label="$t('settingPage.pricing.inputPrice')"><a-input-number v-model="mpForm.input_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="输出价格 (每 1M Tokens)"><a-input-number v-model="mpForm.output_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
+            <a-form-item :label="$t('settingPage.pricing.outputPrice')"><a-input-number v-model="mpForm.output_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
           </a-col>
         </a-row>
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="缓存价格 (每 1M Tokens)"><a-input-number v-model="mpForm.cached_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
+            <a-form-item :label="$t('settingPage.pricing.cachedPrice')"><a-input-number v-model="mpForm.cached_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="每次请求价格"><a-input-number v-model="mpForm.per_request_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
+            <a-form-item :label="$t('settingPage.pricing.perRequestPrice')"><a-input-number v-model="mpForm.per_request_price" :style="{ width: '100%' }" :precision="6" /></a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="计费方式">
+        <a-form-item :label="$t('settingPage.pricing.billingType')">
           <a-select v-model="mpForm.billing_type">
-            <a-option value="token">按 Token</a-option>
-            <a-option value="per_request">按请求</a-option>
+            <a-option value="token">{{ $t('settingPage.pricing.billingByToken') }}</a-option>
+            <a-option value="per_request">{{ $t('settingPage.pricing.billingByRequest') }}</a-option>
           </a-select>
         </a-form-item>
       </a-form>
     </a-modal>
 
-    <a-modal v-model:visible="gpVisible" :title="gpEditing?'编辑分组折扣':'添加分组折扣'" @ok="handleSaveGP" :ok-loading="gpSaving" width="520">
+    <a-modal v-model:visible="gpVisible" :title="gpEditing ? $t('settingPage.pricing.editGroupTitle') : $t('settingPage.pricing.addGroupTitle')" @ok="handleSaveGP" :ok-loading="gpSaving" width="520">
       <a-form :model="gpForm" layout="vertical">
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="分组名称" required><a-input v-model="gpForm.group_name" placeholder="vip" /></a-form-item>
+            <a-form-item :label="$t('settingPage.pricing.groupName')" required><a-input v-model="gpForm.group_name" placeholder="vip" /></a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="模型名称" required><a-input v-model="gpForm.model_name" placeholder="gpt-4o" /></a-form-item>
+            <a-form-item :label="$t('settingPage.pricing.modelName')" required><a-input v-model="gpForm.model_name" placeholder="gpt-4o" /></a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="折扣倍数">
-          <a-input-number v-model="gpForm.discount" :style="{ width: '100%' }" :precision="4" :min="0" placeholder="1.0(不打折)" />
+        <a-form-item :label="$t('settingPage.pricing.discount')">
+          <a-input-number v-model="gpForm.discount" :style="{ width: '100%' }" :precision="4" :min="0" :placeholder="$t('settingPage.pricing.discountPlaceholder')" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -102,10 +102,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
+
+const { t } = useI18n()
 
 const tab = ref('model')
 const loading = ref(false)
@@ -120,23 +123,23 @@ const groupPrices = ref([])
 //    would override the component's CSS min-width:100% and pin the table
 //    to a fixed pixel width, producing a blank trailing column)
 //  - fixed: 'right' keeps the 操作 column pinned while scrolling
-const mpColumns = [
-  { title: '模型', dataIndex: 'model_name' },
-  { title: '输入价格', dataIndex: 'input_price', width: 110 },
-  { title: '输出价格', dataIndex: 'output_price', width: 110 },
-  { title: '缓存价格', dataIndex: 'cached_price', width: 110 },
-  { title: '请求价格', dataIndex: 'per_request_price', width: 110 },
-  { title: '方式', slotName: 'billing', width: 90 },
-  { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
-]
+const mpColumns = computed(() => [
+  { title: t('settingPage.pricing.colModel'), dataIndex: 'model_name' },
+  { title: t('settingPage.pricing.colInputPrice'), dataIndex: 'input_price', width: 110 },
+  { title: t('settingPage.pricing.colOutputPrice'), dataIndex: 'output_price', width: 110 },
+  { title: t('settingPage.pricing.colCachedPrice'), dataIndex: 'cached_price', width: 110 },
+  { title: t('settingPage.pricing.colRequestPrice'), dataIndex: 'per_request_price', width: 110 },
+  { title: t('settingPage.pricing.colBilling'), slotName: 'billing', width: 90 },
+  { title: t('settingPage.pricing.colAction'), slotName: 'actions', width: 160, fixed: 'right' },
+])
 const mpScroll = { x: 870 }
 
-const gpColumns = [
-  { title: '分组', dataIndex: 'group_name' },
-  { title: '模型', dataIndex: 'model_name', width: 220 },
-  { title: '折扣', dataIndex: 'discount', width: 110 },
-  { title: '操作', slotName: 'actions', width: 160, fixed: 'right' },
-]
+const gpColumns = computed(() => [
+  { title: t('settingPage.pricing.colGroup'), dataIndex: 'group_name' },
+  { title: t('settingPage.pricing.colModel'), dataIndex: 'model_name', width: 220 },
+  { title: t('settingPage.pricing.colDiscount'), dataIndex: 'discount', width: 110 },
+  { title: t('settingPage.pricing.colAction'), slotName: 'actions', width: 160, fixed: 'right' },
+])
 const gpScroll = { x: 650 }
 
 const mpVisible = ref(false), mpEditing = ref(false), mpSaving = ref(false)
@@ -165,9 +168,9 @@ async function handleSaveMP() {
     const b = { ...mpForm }; if (mpEditing.value) b.id = mpForm.id
     const { data } = mpEditing.value ? await api.put('/api/model_price/', b) : await api.post('/api/model_price/', b)
     if (data.success) { mpVisible.value = false; loadData() } else Message.error(data.message)
-  } catch (e) { Message.error('操作失败') } finally { mpSaving.value = false }
+  } catch (e) { Message.error(t('settingPage.pricing.opFailed')) } finally { mpSaving.value = false }
 }
-async function handleDelMP(id) { try { await api.delete(`/api/model_price/${id}`); loadData() } catch (e) { Message.error('删除失败') } }
+async function handleDelMP(id) { try { await api.delete(`/api/model_price/${id}`); loadData() } catch (e) { Message.error(t('settingPage.pricing.deleteFailed')) } }
 
 function openGroupPrice(r) {
   gpEditing.value = !!r
@@ -180,9 +183,9 @@ async function handleSaveGP() {
     const b = { ...gpForm }; if (gpEditing.value) b.id = gpForm.id
     const { data } = gpEditing.value ? await api.put('/api/group_price/', b) : await api.post('/api/group_price/', b)
     if (data.success) { gpVisible.value = false; loadData() } else Message.error(data.message)
-  } catch (e) { Message.error('操作失败') } finally { gpSaving.value = false }
+  } catch (e) { Message.error(t('settingPage.pricing.opFailed')) } finally { gpSaving.value = false }
 }
-async function handleDelGP(id) { try { await api.delete(`/api/group_price/${id}`); loadData() } catch (e) { Message.error('删除失败') } }
+async function handleDelGP(id) { try { await api.delete(`/api/group_price/${id}`); loadData() } catch (e) { Message.error(t('settingPage.pricing.deleteFailed')) } }
 
 onMounted(() => { loadData() })
 </script>
