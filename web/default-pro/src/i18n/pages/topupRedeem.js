@@ -1,0 +1,71 @@
+// topupRedeem.js 充值弹窗与兑换页 i18n
+// Top-up modal and redeem page i18n.
+// 版本: v0.0.21
+// 日期: 2026-09-17
+// 作者: opencode
+export default {
+  zh: {
+    topupModalPage: {
+      title: '在线充值',
+      selectAmount: '选择金额',
+      bonus: '送 {n}',
+      custom: '自定义',
+      inputAmount: '输入金额',
+      amountPlaceholder: '请输入充值金额',
+      willReceive: '将获得 {n} 额度',
+      payMethod: '支付方式',
+      noPayMethods: '暂无可用的支付方式',
+      payAmount: '支付金额',
+      cancel: '取消',
+      confirm: '确认充值',
+      loadingConfig: '正在加载充值配置…',
+      orderFailed: '下单失败',
+      payInitFailed: '发起支付失败，请稍后重试',
+    },
+    redeemPage: {
+      title: '兑换码',
+      subtitle: '输入兑换码获取额度',
+      placeholder: '请输入兑换码',
+      submit: '立即兑换',
+      hint: '兑换码通常为 16 位字母数字组合，如：TBUS-XXXX-XXXX-XXXX',
+      currentQuota: '当前额度',
+      usage: '已使用',
+      enterCode: '请输入兑换码',
+      invalidCode: '兑换码格式不正确',
+      successInline: '兑换成功，已到账 {amount} 额度',
+      failed: '兑换失败',
+    },
+  },
+  en: {
+    topupModalPage: {
+      title: 'Online Top-up',
+      selectAmount: 'Select Amount',
+      bonus: 'Bonus {n}',
+      custom: 'Custom',
+      inputAmount: 'Enter amount',
+      amountPlaceholder: 'Enter top-up amount',
+      willReceive: 'You will receive {n} credits',
+      payMethod: 'Payment Method',
+      noPayMethods: 'No payment methods available',
+      payAmount: 'Pay Amount',
+      cancel: 'Cancel',
+      confirm: 'Confirm Top-up',
+      loadingConfig: 'Loading top-up settings...',
+      orderFailed: 'Failed to create order',
+      payInitFailed: 'Failed to initiate payment, please try again later',
+    },
+    redeemPage: {
+      title: 'Redeem Code',
+      subtitle: 'Enter a redeem code to top up your quota',
+      placeholder: 'Enter redemption code',
+      submit: 'Redeem Now',
+      hint: 'Redemption codes are usually 16 alphanumeric chars, e.g. TBUS-XXXX-XXXX-XXXX',
+      currentQuota: 'Current Quota',
+      usage: 'Used',
+      enterCode: 'Please enter a redemption code',
+      invalidCode: 'Invalid redemption code format',
+      successInline: 'Redeemed successfully — {amount} credits added',
+      failed: 'Redemption failed',
+    },
+  },
+}
