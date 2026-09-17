@@ -11,6 +11,8 @@
 
 <p align="center">
   👉 <strong>查看線上 Demo</strong>：<a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  &nbsp;·&nbsp;
+  👉 <strong>演示帳號</strong>：<code>root</code> / <code>123456</code>
 </p>
 
 <p align="center">
