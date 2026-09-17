@@ -3,17 +3,17 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">日志</h1>
-        <p class="welcome-desc">查看系统调用记录与操作流水</p>
+        <h1 class="welcome-title">{{ $t('logPage.title') }}</h1>
+        <p class="welcome-desc">{{ $t('logPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
         <a-select v-model="logType" @change="refresh" size="small" style="width: 110px">
-          <a-option :value="0" label="全部类型" />
-          <a-option :value="1" label="充值" />
-          <a-option :value="2" label="消费" />
-          <a-option :value="3" label="管理" />
-          <a-option :value="4" label="系统" />
-          <a-option :value="5" label="测试" />
+          <a-option :value="0" :label="$t('logPage.typeAll')" />
+          <a-option :value="1" :label="$t('logPage.typeTopup')" />
+          <a-option :value="2" :label="$t('logPage.typeConsume')" />
+          <a-option :value="3" :label="$t('logPage.typeManage')" />
+          <a-option :value="4" :label="$t('logPage.typeSystem')" />
+          <a-option :value="5" :label="$t('logPage.typeTest')" />
         </a-select>
       </div>
     </div>
@@ -22,11 +22,11 @@
     <div v-if="showStat" class="tip-bar">
       <span class="tip-dot"></span>
       <span class="tip-text">
-        总配额 <strong>{{ stat.quota || 0 }}</strong>
+        {{ $t('logPage.totalQuota') }} <strong>{{ stat.quota || 0 }}</strong>
         <span class="meta-sep">·</span>
-        普通配额 {{ stat.normal_quota || 0 }}
+        {{ $t('logPage.normalQuota') }} {{ stat.normal_quota || 0 }}
         <span class="meta-sep">·</span>
-        订阅配额 {{ stat.subscription_quota || 0 }}
+        {{ $t('logPage.subscriptionQuota') }} {{ stat.subscription_quota || 0 }}
       </span>
     </div>
 
@@ -35,24 +35,24 @@
       <div class="search-left">
         <a-input-search
           v-model="keyword"
-          placeholder="搜索日志..."
+          :placeholder="$t('logPage.searchPlaceholder')"
           allow-clear
           @search="handleSearch"
           @clear="refresh"
           :style="{ width: '260px' }"
         />
-        <a-input v-model="filters.token_name" placeholder="令牌名称" size="medium" allow-clear :style="{ width: '160px' }" />
-        <a-input v-model="filters.model_name" placeholder="模型名称" size="medium" allow-clear :style="{ width: '160px' }" />
-        <a-input v-if="isAdmin" v-model="filters.username" placeholder="用户名" size="medium" allow-clear :style="{ width: '160px' }" />
-        <a-input v-if="isAdmin" v-model="filters.channel" placeholder="渠道 ID" size="medium" allow-clear :style="{ width: '140px' }" />
-        <a-date-picker v-model="filters.start_timestamp" placeholder="开始时间" size="medium" :style="{ width: '180px' }" show-time />
-        <a-date-picker v-model="filters.end_timestamp" placeholder="结束时间" size="medium" :style="{ width: '180px' }" show-time />
+        <a-input v-model="filters.token_name" :placeholder="$t('logPage.tokenName')" size="medium" allow-clear :style="{ width: '160px' }" />
+        <a-input v-model="filters.model_name" :placeholder="$t('logPage.modelName')" size="medium" allow-clear :style="{ width: '160px' }" />
+        <a-input v-if="isAdmin" v-model="filters.username" :placeholder="$t('logPage.username')" size="medium" allow-clear :style="{ width: '160px' }" />
+        <a-input v-if="isAdmin" v-model="filters.channel" :placeholder="$t('logPage.channelId')" size="medium" allow-clear :style="{ width: '140px' }" />
+        <a-date-picker v-model="filters.start_timestamp" :placeholder="$t('logPage.startTime')" size="medium" :style="{ width: '180px' }" show-time />
+        <a-date-picker v-model="filters.end_timestamp" :placeholder="$t('logPage.endTime')" size="medium" :style="{ width: '180px' }" show-time />
       </div>
       <div class="search-right">
-        <a-button @click="toggleStat">{{ showStat ? '隐藏统计' : '统计' }}</a-button>
+        <a-button @click="toggleStat">{{ showStat ? $t('logPage.hideStat') : $t('logPage.stat') }}</a-button>
         <a-button type="primary" size="large" @click="refresh" :loading="loading">
           <template #icon><icon-search :size="14" /></template>
-          查询
+          {{ $t('logPage.query') }}
         </a-button>
       </div>
     </div>
@@ -63,26 +63,26 @@
         <div class="empty-icon">
           <icon-file :size="32" />
         </div>
-        <p class="empty-title">暂无日志记录</p>
-        <p class="empty-desc">尝试调整筛选条件或刷新</p>
+        <p class="empty-title">{{ $t('logPage.emptyTitle') }}</p>
+        <p class="empty-desc">{{ $t('logPage.emptyDesc') }}</p>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head" :style="{ gridTemplateColumns: headGrid }">
-          <div class="col">时间</div>
-          <div v-if="isAdmin" class="col">渠道</div>
-          <div class="col">来源</div>
-          <div class="col">套餐</div>
-          <div class="col">类型</div>
-          <div class="col">模型</div>
-          <div v-if="isAdmin" class="col">用户</div>
-          <div class="col">令牌</div>
+          <div class="col">{{ $t('logPage.colTime') }}</div>
+          <div v-if="isAdmin" class="col">{{ $t('logPage.colChannel') }}</div>
+          <div class="col">{{ $t('logPage.colSource') }}</div>
+          <div class="col">{{ $t('logPage.colPlan') }}</div>
+          <div class="col">{{ $t('logPage.colType') }}</div>
+          <div class="col">{{ $t('logPage.colModel') }}</div>
+          <div v-if="isAdmin" class="col">{{ $t('logPage.colUser') }}</div>
+          <div class="col">{{ $t('logPage.colToken') }}</div>
           <template v-if="logType !== 5">
             <div class="col col-num">Prompt</div>
             <div class="col col-num">Completion</div>
-            <div class="col col-num">配额</div>
+            <div class="col col-num">{{ $t('logPage.colQuota') }}</div>
           </template>
-          <div class="col">详情</div>
+          <div class="col">{{ $t('logPage.colDetail') }}</div>
         </div>
 
         <a-spin :loading="loading && !loadingMore" style="width: 100%">
@@ -98,7 +98,7 @@
             </div>
             <div class="col">
               <a-tag :color="r.billing_source === 1 ? 'arcoblue' : 'gray'" size="small">
-                {{ r.billing_source === 1 ? '订阅' : '额度' }}
+                {{ r.billing_source === 1 ? $t('logPage.billingSubscription') : $t('logPage.billingQuota') }}
               </a-tag>
             </div>
             <div class="col">
@@ -127,7 +127,7 @@
               <div class="detail-tags">
                 <a-tag v-if="r.elapsed_time" :color="elapsedColor(r.elapsed_time)" size="small">{{ r.elapsed_time }}ms</a-tag>
                 <a-tag v-if="r.is_stream" color="pink" size="small">Stream</a-tag>
-                <a-tag v-if="r.system_prompt_reset" color="red" size="small">提示词重置</a-tag>
+                <a-tag v-if="r.system_prompt_reset" color="red" size="small">{{ $t('logPage.systemPromptReset') }}</a-tag>
               </div>
             </div>
           </div>
@@ -135,13 +135,13 @@
 
         <div v-if="loadingMore" class="load-more-row">
           <a-spin :loading="true" :size="14" />
-          <span class="load-more-text">正在加载更多…</span>
+          <span class="load-more-text">{{ $t('logPage.loadingMore') }}</span>
         </div>
         <div
           v-else-if="isReachedEnd && logs.length > pageSize && !loading"
           class="load-end-row"
         >
-          已显示全部 {{ logs.length }} 条数据
+          {{ $t('logPage.allLoaded', { n: logs.length }) }}
         </div>
       </div>
 
@@ -164,12 +164,14 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconSearch, IconFile } from '@arco-design/web-vue/es/icon'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 const isAdmin = computed(() => authStore.isAdmin)
 
 const logs = ref([])
@@ -216,13 +218,19 @@ const totalCountForPager = computed(() => {
   return logs.value.length + pageSize.value
 })
 
-function typeLabel(t) {
-  const m = { 1: '充值', 2: '消费', 3: '管理', 4: '系统', 5: '测试' }
-  return m[t] || '未知'
+const typeLabels = computed(() => ({
+  1: t('logPage.typeTopup'),
+  2: t('logPage.typeConsume'),
+  3: t('logPage.typeManage'),
+  4: t('logPage.typeSystem'),
+  5: t('logPage.typeTest'),
+}))
+function typeLabel(tp) {
+  return typeLabels.value[tp] || t('logPage.typeUnknown')
 }
-function typeColor(t) {
+function typeColor(tp) {
   const m = { 1: 'green', 2: 'olive', 3: 'orange', 4: 'purple', 5: 'violet' }
-  return m[t] || ''
+  return m[tp] || ''
 }
 function elapsedColor(ms) {
   if (!ms) return ''
@@ -242,9 +250,9 @@ async function copyId(id) {
   if (!id) return
   try {
     await navigator.clipboard.writeText(id)
-    Message.success(`已复制：${id}`)
+    Message.success(t('logPage.copiedWithId', { id }))
   } catch {
-    Message.warning('复制失败')
+    Message.warning(t('logPage.copyFailed'))
   }
 }
 
