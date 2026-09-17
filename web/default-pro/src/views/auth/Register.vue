@@ -1,59 +1,59 @@
 <template>
   <AuthLayout>
     <div class="auth-heading">
-      <h1 id="auth-title">创建账号</h1>
-      <p>填写以下信息完成注册</p>
+      <h1 id="auth-title">{{ $t('auth.registerHeading') }}</h1>
+      <p>{{ $t('auth.registerSubtitle') }}</p>
     </div>
     <a-form class="auth-form" :model="form" layout="vertical" size="large" @submit="handleRegister" aria-labelledby="auth-title">
       <a-form-item field="username" hide-label>
-        <a-input v-model="form.username" placeholder="用户名" allow-clear aria-label="用户名">
+        <a-input v-model="form.username" :placeholder="$t('auth.username')" allow-clear :aria-label="$t('auth.username')">
           <template #prefix><icon-user /></template>
         </a-input>
       </a-form-item>
       <a-form-item field="password" hide-label>
-        <a-input-password v-model="form.password" placeholder="密码" allow-clear aria-label="密码">
+        <a-input-password v-model="form.password" :placeholder="$t('auth.password')" allow-clear :aria-label="$t('auth.password')">
           <template #prefix><icon-lock /></template>
         </a-input-password>
       </a-form-item>
       <a-form-item field="password2" hide-label>
-        <a-input-password v-model="form.password2" placeholder="确认密码" allow-clear aria-label="确认密码">
+        <a-input-password v-model="form.password2" :placeholder="$t('auth.confirmPassword')" allow-clear :aria-label="$t('auth.confirmPassword')">
           <template #prefix><icon-lock /></template>
         </a-input-password>
       </a-form-item>
       <a-form-item v-if="statusStore.status?.email_verification" field="email" hide-label>
-        <a-input v-model="form.email" placeholder="邮箱" allow-clear aria-label="邮箱">
+        <a-input v-model="form.email" :placeholder="$t('auth.email')" allow-clear :aria-label="$t('auth.email')">
           <template #prefix><icon-email /></template>
         </a-input>
       </a-form-item>
       <a-form-item v-if="statusStore.status?.email_verification" field="verification_code" hide-label>
         <div class="verify-row">
-          <a-input v-model="form.verification_code" placeholder="验证码" :style="{ flex: 1 }" aria-label="验证码" />
+          <a-input v-model="form.verification_code" :placeholder="$t('auth.verificationCode')" :style="{ flex: 1 }" :aria-label="$t('auth.verificationCode')" />
           <a-button type="outline" size="large" @click="sendVerifyCode" :loading="sending" :disabled="countdown > 0">
-            {{ countdown > 0 ? `${countdown}s` : '发送验证码' }}
+            {{ countdown > 0 ? `${countdown}s` : $t('auth.sendCode') }}
           </a-button>
         </div>
       </a-form-item>
       <a-form-item field="aff_code" hide-label>
-        <a-input v-model="form.aff_code" placeholder="邀请码（选填）" allow-clear aria-label="邀请码（选填）">
+        <a-input v-model="form.aff_code" :placeholder="$t('auth.inviteCode')" allow-clear :aria-label="$t('auth.inviteCode')">
           <template #prefix><icon-gift /></template>
         </a-input>
       </a-form-item>
       <div class="agreement-row">
-        <a-checkbox v-model="agreedToTerms" aria-label="同意服务条款和隐私政策" />
+        <a-checkbox v-model="agreedToTerms" :aria-label="$t('auth.agreeTermsFirst')" />
         <span class="agreement-copy">
-          我同意
-          <router-link to="/terms" class="agreement-link">《服务条款》</router-link>
-          和
-          <router-link to="/privacy" class="agreement-link">《隐私政策》</router-link>
+          {{ $t('auth.agreementPrefix') }}
+          <router-link to="/terms" class="agreement-link">《{{ $t('auth.terms') }}》</router-link>
+          {{ $t('auth.agreementAnd') }}
+          <router-link to="/privacy" class="agreement-link">《{{ $t('auth.privacy') }}》</router-link>
         </span>
       </div>
       <a-form-item>
         <a-button type="primary" html-type="submit" long :loading="loading" size="large">
-          创建账号
+          {{ $t('auth.registerButton') }}
         </a-button>
       </a-form-item>
       <div class="form-extra">
-        <a-link @click="$router.push('/login')">已有账号？去登录</a-link>
+        <a-link @click="$router.push('/login')">{{ $t('auth.hasAccountLink') }}</a-link>
       </div>
       <div v-if="errorMsg" class="form-alert">
         <a-alert type="error" :show-icon="false" closable @close="errorMsg = ''">{{ errorMsg }}</a-alert>
@@ -65,6 +65,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
@@ -74,6 +75,7 @@ import api from '@/api'
 const router = useRouter()
 const authStore = useAuthStore()
 const statusStore = useStatusStore()
+const { t } = useI18n()
 
 const form = ref({ username: '', password: '', password2: '', email: '', verification_code: '', aff_code: '' })
 const agreedToTerms = ref(false)
@@ -94,7 +96,7 @@ async function sendVerifyCode() {
     countdown.value = 60
     const timer = setInterval(() => { countdown.value--; if (countdown.value <= 0) clearInterval(timer) }, 1000)
   } catch (e) {
-    errorMsg.value = '发送验证码失败'
+    errorMsg.value = t('auth.sendCodeFailed')
   } finally {
     sending.value = false
   }
@@ -102,11 +104,11 @@ async function sendVerifyCode() {
 
 async function handleRegister() {
   if (!agreedToTerms.value) {
-    errorMsg.value = '请先阅读并同意服务条款和隐私政策'
+    errorMsg.value = t('auth.agreeTermsFirst')
     return
   }
   if (form.value.password !== form.value.password2) {
-    errorMsg.value = '两次密码不一致'
+    errorMsg.value = t('auth.passwordMismatch')
     return
   }
   loading.value = true
@@ -115,7 +117,7 @@ async function handleRegister() {
     await authStore.register({ ...form.value })
     router.push('/login')
   } catch (e) {
-    errorMsg.value = e.response?.data?.message || e.message || '注册失败'
+    errorMsg.value = e.response?.data?.message || e.message || t('auth.registerFailed')
   } finally {
     loading.value = false
   }
