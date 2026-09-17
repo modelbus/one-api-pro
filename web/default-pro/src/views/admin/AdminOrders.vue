@@ -11,11 +11,11 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">订单</h1>
-        <p class="welcome-desc">管理全部用户订单 · 含套餐订阅与充值</p>
+        <h1 class="welcome-title">{{ $t('adminOrdersPage.title') }}</h1>
+        <p class="welcome-desc">{{ $t('adminOrdersPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">共 {{ totalCountForPager }} 条</span>
+        <span class="meta-chip">{{ $t('adminOrdersPage.total', { n: totalCountForPager }) }}</span>
       </div>
     </div>
 
@@ -24,32 +24,32 @@
       <div class="search-left">
         <a-input-search
           v-model="searchKeyword"
-          placeholder="订单号 / 支付流水号"
+          :placeholder="$t('adminOrdersPage.searchPlaceholder')"
           allow-clear
           style="width: 240px"
           @search="handleSearch"
           @clear="handleSearchClear"
         />
-        <a-select v-model="filterType" placeholder="类型" allow-clear style="width: 110px" @change="handleFilterChange">
-          <a-option :value="1">套餐</a-option>
-          <a-option :value="2">充值</a-option>
+        <a-select v-model="filterType" :placeholder="$t('adminOrdersPage.typePlaceholder')" allow-clear style="width: 110px" @change="handleFilterChange">
+          <a-option :value="1">{{ $t('adminOrdersPage.typePlan') }}</a-option>
+          <a-option :value="2">{{ $t('adminOrdersPage.typeTopup') }}</a-option>
         </a-select>
-        <a-select v-model="filterStatus" placeholder="状态" allow-clear style="width: 120px" @change="handleFilterChange">
-          <a-option :value="0">待支付</a-option>
-          <a-option :value="1">已支付</a-option>
-          <a-option :value="2">已取消</a-option>
-          <a-option :value="3">已退款</a-option>
+        <a-select v-model="filterStatus" :placeholder="$t('adminOrdersPage.statusPlaceholder')" allow-clear style="width: 120px" @change="handleFilterChange">
+          <a-option :value="0">{{ $t('adminOrdersPage.statusPending') }}</a-option>
+          <a-option :value="1">{{ $t('adminOrdersPage.statusPaid') }}</a-option>
+          <a-option :value="2">{{ $t('adminOrdersPage.statusCanceled') }}</a-option>
+          <a-option :value="3">{{ $t('adminOrdersPage.statusRefunded') }}</a-option>
         </a-select>
-        <a-select v-model="filterSource" placeholder="来源" allow-clear style="width: 120px" @change="handleFilterChange">
-          <a-option :value="1">用户自助</a-option>
-          <a-option :value="2">管理员</a-option>
+        <a-select v-model="filterSource" :placeholder="$t('adminOrdersPage.sourcePlaceholder')" allow-clear style="width: 120px" @change="handleFilterChange">
+          <a-option :value="1">{{ $t('adminOrdersPage.sourceSelf') }}</a-option>
+          <a-option :value="2">{{ $t('adminOrdersPage.sourceAdmin') }}</a-option>
         </a-select>
       </div>
       <div class="search-right">
-        <a-button @click="handleResetFilters" :disabled="!hasActiveFilter">重置筛选</a-button>
+        <a-button @click="handleResetFilters" :disabled="!hasActiveFilter">{{ $t('adminOrdersPage.resetFilters') }}</a-button>
         <a-button @click="handleRefresh">
           <template #icon><icon-refresh :size="14" /></template>
-          刷新
+          {{ $t('adminOrdersPage.refresh') }}
         </a-button>
       </div>
     </div>
@@ -60,24 +60,24 @@
         <div class="empty-icon">
           <icon-storage :size="32" />
         </div>
-        <p class="empty-title">暂无订单</p>
-        <p class="empty-desc">没有匹配的订单记录</p>
-        <a-button v-if="hasActiveFilter" type="primary" @click="handleResetFilters">重置筛选</a-button>
+        <p class="empty-title">{{ $t('adminOrdersPage.emptyTitle') }}</p>
+        <p class="empty-desc">{{ $t('adminOrdersPage.emptyDesc') }}</p>
+        <a-button v-if="hasActiveFilter" type="primary" @click="handleResetFilters">{{ $t('adminOrdersPage.resetFilters') }}</a-button>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head">
-          <div class="col">ID</div>
-          <div class="col">订单号</div>
-          <div class="col">类型</div>
-          <div class="col">用户</div>
-          <div class="col">套餐/额度</div>
-          <div class="col">金额</div>
-          <div class="col">支付方式</div>
-          <div class="col">状态</div>
-          <div class="col">来源</div>
-          <div class="col">创建时间</div>
-          <div class="col col-action">操作</div>
+          <div class="col">{{ $t('adminOrdersPage.colId') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colOrderNo') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colType') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colUser') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colPlanOrAmount') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colAmount') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colPayMethod') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colStatus') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colSource') }}</div>
+          <div class="col">{{ $t('adminOrdersPage.colCreateTime') }}</div>
+          <div class="col col-action">{{ $t('adminOrdersPage.colAction') }}</div>
         </div>
 
         <a-spin :loading="loading" style="width: 100%">
@@ -129,26 +129,26 @@
             </div>
 
             <div class="col col-action">
-              <a-button type="text" size="small" @click="openDetail(o)">查看</a-button>
+              <a-button type="text" size="small" @click="openDetail(o)">{{ $t('adminOrdersPage.view') }}</a-button>
               <a-button
                 v-if="o.status === 0"
                 type="text"
                 size="small"
                 @click="openMarkPaid(o)"
-              >标记已付</a-button>
+              >{{ $t('adminOrdersPage.markPaid') }}</a-button>
               <a-popconfirm
                 v-if="o.status === 1"
-                content="确认将该订单标记为退款？"
+                :content="$t('adminOrdersPage.confirmRefund')"
                 @ok="handleMarkRefunded(o)"
               >
-                <a-button type="text" size="small">退款</a-button>
+                <a-button type="text" size="small">{{ $t('adminOrdersPage.refund') }}</a-button>
               </a-popconfirm>
               <a-popconfirm
                 v-if="authStore.isRoot && o.status !== 1"
-                :content="`确认删除订单 ${o.order_no}？`"
+                :content="$t('adminOrdersPage.confirmDelete', { no: o.order_no })"
                 @ok="handleDelete(o)"
               >
-                <a-button type="text" size="small" class="danger-btn">删除</a-button>
+                <a-button type="text" size="small" class="danger-btn">{{ $t('adminOrdersPage.delete') }}</a-button>
               </a-popconfirm>
             </div>
           </div>
@@ -176,55 +176,55 @@
       @update:visible="(v) => (detailVisible = v)"
       @cancel="detailVisible = false"
       :footer="false"
-      title="订单详情"
+      :title="$t('adminOrdersPage.detailTitle')"
       width="560"
     >
       <a-spin :loading="detailLoading" style="width: 100%">
         <div v-if="currentOrder" class="detail-grid">
           <div class="detail-row">
-            <span class="detail-label">订单号</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailOrderNo') }}</span>
             <span class="detail-value cell-mono">{{ currentOrder.order_no }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">类型</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailType') }}</span>
             <span class="detail-value">{{ typeNameMap[currentOrder.type] || '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">来源</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailSource') }}</span>
             <span class="detail-value">{{ sourceNameMap[currentOrder.source] || '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">用户</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailUser') }}</span>
             <span class="detail-value">
               {{ userDisplay(currentOrder) }} <span class="cell-muted">#{{ currentOrder.user_id }}</span>
             </span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">套餐/额度</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailPlanOrAmount') }}</span>
             <span class="detail-value">{{ planOrAmount(currentOrder) }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">金额</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailAmount') }}</span>
             <span class="detail-value cell-mono">¥{{ formatAmount(currentOrder.amount) }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">支付方式</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailPayMethod') }}</span>
             <span class="detail-value">{{ payNameMap[currentOrder.pay_method] || currentOrder.pay_method || '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">支付流水号</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailPayTradeNo') }}</span>
             <span class="detail-value cell-mono">{{ currentOrder.pay_trade_no || '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">状态</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailStatus') }}</span>
             <span class="detail-value">{{ statusNameMap[currentOrder.status] || '-' }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">创建时间</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailCreateTime') }}</span>
             <span class="detail-value">{{ formatTime(currentOrder.create_time) }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">支付时间</span>
+            <span class="detail-label">{{ $t('adminOrdersPage.detailPayTime') }}</span>
             <span class="detail-value">{{ formatTime(currentOrder.pay_time) }}</span>
           </div>
         </div>
@@ -238,23 +238,23 @@
       @cancel="closeMarkPaid"
       @ok="submitMarkPaid"
       :ok-loading="markPaidSubmitting"
-      title="标记订单为已支付"
+      :title="$t('adminOrdersPage.markPaidTitle')"
       width="480"
-      ok-text="确认标记"
-      cancel-text="取消"
+      :ok-text="$t('adminOrdersPage.markPaidOk')"
+      :cancel-text="$t('adminOrdersPage.cancel')"
     >
       <a-form :model="markPaidForm" layout="vertical">
-        <a-form-item label="支付方式" required>
-          <a-select v-model="markPaidForm.pay_method" placeholder="选择支付方式">
-            <a-option value="wechat">微信</a-option>
-            <a-option value="alipay">支付宝</a-option>
-            <a-option value="bank">银行转账</a-option>
-            <a-option value="offline">线下</a-option>
-            <a-option value="free">免费</a-option>
+        <a-form-item :label="$t('adminOrdersPage.payMethodLabel')" required>
+          <a-select v-model="markPaidForm.pay_method" :placeholder="$t('adminOrdersPage.payMethodPlaceholder')">
+            <a-option value="wechat">{{ $t('adminOrdersPage.payWechat') }}</a-option>
+            <a-option value="alipay">{{ $t('adminOrdersPage.payAlipay') }}</a-option>
+            <a-option value="bank">{{ $t('adminOrdersPage.payBank') }}</a-option>
+            <a-option value="offline">{{ $t('adminOrdersPage.payOffline') }}</a-option>
+            <a-option value="free">{{ $t('adminOrdersPage.payFree') }}</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="支付流水号（选填）">
-          <a-input v-model="markPaidForm.pay_trade_no" placeholder="留空则使用订单号" allow-clear />
+        <a-form-item :label="$t('adminOrdersPage.payTradeNoLabel')">
+          <a-input v-model="markPaidForm.pay_trade_no" :placeholder="$t('adminOrdersPage.payTradeNoPlaceholder')" allow-clear />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -267,26 +267,37 @@
 // 版本: v0.0.13
 // 日期: 2026-09-08
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconRefresh, IconStorage } from '@arco-design/web-vue/es/icon'
 import orderApi from '@/api/order'
 import { useAuthStore } from '@/stores/auth'
 
+const { t } = useI18n()
+
 const authStore = useAuthStore()
 
 // 常量映射
-const typeNameMap = { 1: '套餐', 2: '充值' }
+const typeNameMap = computed(() => ({ 1: t('adminOrdersPage.typePlan'), 2: t('adminOrdersPage.typeTopup') }))
 const typeColorMap = { 1: 'arcoblue', 2: 'orange' }
-const statusNameMap = { 0: '待支付', 1: '已支付', 2: '已取消', 3: '已退款' }
-const sourceNameMap = { 1: '用户自助', 2: '管理员' }
-const payNameMap = {
+const statusNameMap = computed(() => ({
+  0: t('adminOrdersPage.statusPending'),
+  1: t('adminOrdersPage.statusPaid'),
+  2: t('adminOrdersPage.statusCanceled'),
+  3: t('adminOrdersPage.statusRefunded'),
+}))
+const sourceNameMap = computed(() => ({
+  1: t('adminOrdersPage.sourceSelf'),
+  2: t('adminOrdersPage.sourceAdmin'),
+}))
+const payNameMap = computed(() => ({
   '': '-',
-  wechat: '微信',
-  alipay: '支付宝',
-  bank: '银行',
-  offline: '线下',
-  free: '免费',
-}
+  wechat: t('adminOrdersPage.payWechat'),
+  alipay: t('adminOrdersPage.payAlipay'),
+  bank: t('adminOrdersPage.payBankShort'),
+  offline: t('adminOrdersPage.payOffline'),
+  free: t('adminOrdersPage.payFree'),
+}))
 
 function statusClass(status) {
   if (status === 1) return 'status-on'
@@ -387,10 +398,10 @@ async function fetchOrders() {
       Object.keys(userMap).forEach((k) => delete userMap[k])
       Object.assign(userMap, um)
     } else {
-      Message.error(data.message || '加载失败')
+      Message.error(data.message || t('adminOrdersPage.loadFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '加载失败')
+    Message.error(e.response?.data?.message || e.message || t('adminOrdersPage.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -469,7 +480,7 @@ function closeMarkPaid() {
 async function submitMarkPaid() {
   if (!markPaidTarget.value) return
   if (!markPaidForm.pay_method) {
-    Message.warning('请选择支付方式')
+    Message.warning(t('adminOrdersPage.selectPayMethod'))
     return
   }
   markPaidSubmitting.value = true
@@ -480,14 +491,14 @@ async function submitMarkPaid() {
       pay_trade_no: markPaidForm.pay_trade_no,
     })
     if (data.success) {
-      Message.success('订单已支付')
+      Message.success(t('adminOrdersPage.orderPaid'))
       closeMarkPaid()
       fetchOrders()
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('adminOrdersPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('adminOrdersPage.opFailed'))
   } finally {
     markPaidSubmitting.value = false
   }
@@ -497,13 +508,13 @@ async function handleMarkRefunded(o) {
   try {
     const { data } = await orderApi.markPaid(o.id, { status: 3 })
     if (data.success) {
-      Message.success('订单已标记为退款')
+      Message.success(t('adminOrdersPage.orderRefunded'))
       fetchOrders()
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('adminOrdersPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('adminOrdersPage.opFailed'))
   }
 }
 
@@ -511,13 +522,13 @@ async function handleDelete(o) {
   try {
     const { data } = await orderApi.delete(o.id)
     if (data.success) {
-      Message.success('订单已删除')
+      Message.success(t('adminOrdersPage.orderDeleted'))
       fetchOrders()
     } else {
-      Message.error(data.message || '删除失败')
+      Message.error(data.message || t('adminOrdersPage.deleteFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '删除失败')
+    Message.error(e.response?.data?.message || e.message || t('adminOrdersPage.deleteFailed'))
   }
 }
 
