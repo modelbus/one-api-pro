@@ -11,6 +11,8 @@
 
 <p align="center">
   👉 <strong>Посмотреть онлайн-демо</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  &nbsp;·&nbsp;
+  👉 <strong>Демо-аккаунт</strong>: <code>root</code> / <code>123456</code>
 </p>
 
 <p align="center">
