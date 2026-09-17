@@ -3,11 +3,11 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">兑换码</h1>
-        <p class="welcome-desc">生成和管理可用于兑换额度的兑换码</p>
+        <h1 class="welcome-title">{{ $t('redemptionPage.title') }}</h1>
+        <p class="welcome-desc">{{ $t('redemptionPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">共 {{ redemptions.length }} 个</span>
+        <span class="meta-chip">{{ $t('redemptionPage.total', { n: redemptions.length }) }}</span>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <div class="search-left">
         <a-input-search
           v-model="keyword"
-          placeholder="搜索名称或密钥..."
+          :placeholder="$t('redemptionPage.searchPlaceholder')"
           allow-clear
           @search="handleSearch"
           @clear="handleSearchClear"
@@ -26,11 +26,11 @@
       <div class="search-right">
         <a-button @click="refresh" :loading="loading && !loadingMore">
           <template #icon><icon-refresh :size="14" /></template>
-          刷新
+          {{ $t('redemptionPage.refresh') }}
         </a-button>
         <a-button type="primary" size="large" @click="openCreateModal">
           <template #icon><icon-plus :size="14" /></template>
-          生成兑换码
+          {{ $t('redemptionPage.generate') }}
         </a-button>
       </div>
     </div>
@@ -41,23 +41,23 @@
         <div class="empty-icon">
           <icon-gift :size="32" />
         </div>
-        <p class="empty-title">还没有任何兑换码</p>
-        <p class="empty-desc">生成第一个兑换码即可分发</p>
+        <p class="empty-title">{{ $t('redemptionPage.emptyTitle') }}</p>
+        <p class="empty-desc">{{ $t('redemptionPage.emptyDesc') }}</p>
         <a-button type="primary" @click="openCreateModal">
           <template #icon><icon-plus :size="14" /></template>
-          立即生成
+          {{ $t('redemptionPage.createNow') }}
         </a-button>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head">
           <div class="col col-sort" :class="sortClass('id')" @click="sortBy('id')">ID</div>
-          <div class="col col-sort" :class="sortClass('name')" @click="sortBy('name')">名称</div>
-          <div class="col col-sort" :class="sortClass('status')" @click="sortBy('status')">状态</div>
-          <div class="col col-num col-sort" :class="sortClass('quota')" @click="sortBy('quota')">额度</div>
-          <div class="col col-sort" :class="sortClass('created_time')" @click="sortBy('created_time')">创建时间</div>
-          <div class="col col-sort" :class="sortClass('redeemed_time')" @click="sortBy('redeemed_time')">兑换时间</div>
-          <div class="col col-action">操作</div>
+          <div class="col col-sort" :class="sortClass('name')" @click="sortBy('name')">{{ $t('redemptionPage.colName') }}</div>
+          <div class="col col-sort" :class="sortClass('status')" @click="sortBy('status')">{{ $t('redemptionPage.colStatus') }}</div>
+          <div class="col col-num col-sort" :class="sortClass('quota')" @click="sortBy('quota')">{{ $t('redemptionPage.colQuota') }}</div>
+          <div class="col col-sort" :class="sortClass('created_time')" @click="sortBy('created_time')">{{ $t('redemptionPage.colCreated') }}</div>
+          <div class="col col-sort" :class="sortClass('redeemed_time')" @click="sortBy('redeemed_time')">{{ $t('redemptionPage.colRedeemed') }}</div>
+          <div class="col col-action">{{ $t('redemptionPage.colAction') }}</div>
         </div>
 
         <a-spin :loading="loading && !loadingMore" style="width: 100%">
@@ -65,7 +65,7 @@
             <div class="col"><span class="cell-mono">#{{ r.id }}</span></div>
 
             <div class="col">
-              <span class="cell-strong ellipsis" :title="r.name">{{ r.name || '未命名' }}</span>
+              <span class="cell-strong ellipsis" :title="r.name">{{ r.name || $t('redemptionPage.unnamed') }}</span>
             </div>
 
             <div class="col">
@@ -85,23 +85,23 @@
 
             <div class="col">
               <span v-if="r.redeemed_time" class="cell-mono">{{ formatTime(r.redeemed_time) }}</span>
-              <span v-else class="cell-muted">未兑换</span>
+              <span v-else class="cell-muted">{{ $t('redemptionPage.unredeemed') }}</span>
             </div>
 
             <div class="col col-action">
-              <a-button type="text" size="small" @click="copyKey(r)">复制</a-button>
+              <a-button type="text" size="small" @click="copyKey(r)">{{ $t('redemptionPage.copy') }}</a-button>
               <a-popconfirm
                 v-if="r.status !== 3"
-                :content="r.status === 1 ? '确定要禁用该兑换码？' : '确定要启用该兑换码？'"
+                :content="r.status === 1 ? $t('redemptionPage.confirmDisable') : $t('redemptionPage.confirmEnable')"
                 @ok="toggleStatus(r)"
               >
                 <a-button type="text" size="small">
-                  {{ r.status === 1 ? '禁用' : '启用' }}
+                  {{ r.status === 1 ? $t('redemptionPage.disable') : $t('redemptionPage.enable') }}
                 </a-button>
               </a-popconfirm>
-              <a-button type="text" size="small" @click="openEditModal(r)">编辑</a-button>
-              <a-popconfirm content="确定要删除该兑换码吗？" @ok="handleDelete(r)">
-                <a-button type="text" size="small" class="danger-btn">删除</a-button>
+              <a-button type="text" size="small" @click="openEditModal(r)">{{ $t('redemptionPage.edit') }}</a-button>
+              <a-popconfirm :content="$t('redemptionPage.confirmDelete')" @ok="handleDelete(r)">
+                <a-button type="text" size="small" class="danger-btn">{{ $t('redemptionPage.delete') }}</a-button>
               </a-popconfirm>
             </div>
           </div>
@@ -110,7 +110,7 @@
         <!-- 追加加载中提示 -->
         <div v-if="loadingMore" class="load-more-row">
           <a-spin :loading="true" :size="14" />
-          <span class="load-more-text">正在加载更多…</span>
+          <span class="load-more-text">{{ $t('redemptionPage.loadingMore') }}</span>
         </div>
 
         <!-- 末尾提示：已加载全部 -->
@@ -118,7 +118,7 @@
           v-else-if="isReachedEnd && redemptions.length > pageSize && !loading"
           class="load-end-row"
         >
-          已显示全部 {{ redemptions.length }} 条数据
+          {{ $t('redemptionPage.allLoaded', { n: redemptions.length }) }}
         </div>
       </div>
 
@@ -140,32 +140,32 @@
     <!-- 编辑 / 新建弹窗 -->
     <a-modal
       v-model:visible="modalVisible"
-      :title="editingRecord ? '编辑兑换码' : '生成兑换码'"
+      :title="editingRecord ? $t('redemptionPage.editTitle') : $t('redemptionPage.createTitle')"
       :width="460"
       @ok="handleSubmit"
       @cancel="modalVisible = false"
       :ok-loading="submitting"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="$t('redemptionPage.save')"
+      :cancel-text="$t('redemptionPage.cancel')"
     >
       <a-form ref="formRef" :model="form" layout="vertical" class="redemption-form">
-        <a-form-item field="name" label="名称" :rules="[{ required: true, message: '请输入名称' }]">
-          <a-input v-model="form.name" placeholder="兑换码名称" allow-clear />
+        <a-form-item field="name" :label="$t('redemptionPage.nameLabel')" :rules="nameRules">
+          <a-input v-model="form.name" :placeholder="$t('redemptionPage.namePlaceholder')" allow-clear />
         </a-form-item>
-        <a-form-item v-if="!editingRecord" field="count" label="生成数量" :rules="[{ required: true, message: '请输入数量' }]">
+        <a-form-item v-if="!editingRecord" field="count" :label="$t('redemptionPage.countLabel')" :rules="countRules">
           <a-input-number
             v-model="form.count"
             :min="1"
-            placeholder="生成数量"
+            :placeholder="$t('redemptionPage.countPlaceholder')"
             style="width: 100%"
           />
         </a-form-item>
-        <a-form-item field="quota" label="额度" :rules="[{ required: true, message: '请输入额度' }]">
+        <a-form-item field="quota" :label="$t('redemptionPage.quotaLabel')" :rules="quotaRules">
           <a-input-number
             v-model="form.quota"
             :min="0"
             :precision="2"
-            placeholder="额度"
+            :placeholder="$t('redemptionPage.quotaPlaceholder')"
             style="width: 100%"
           />
         </a-form-item>
@@ -176,9 +176,12 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconCopy, IconGift, IconRefresh } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
+
+const { t } = useI18n()
 
 const ITEMS_PER_PAGE = 10
 
@@ -203,17 +206,22 @@ const form = reactive({
   quota: 0,
 })
 
+// ============ 表单校验规则 ============
+const nameRules = computed(() => [{ required: true, message: t('redemptionPage.nameRequired') }])
+const countRules = computed(() => [{ required: true, message: t('redemptionPage.countRequired') }])
+const quotaRules = computed(() => [{ required: true, message: t('redemptionPage.quotaRequired') }])
+
 // ============ 状态映射（对齐 web-back：1=未用 2=禁用 3=已用）============
-const statusMap = {
-  1: { text: '未使用', class: 'status-on' },
-  2: { text: '已禁用', class: 'status-off' },
-  3: { text: '已使用', class: 'status-used' },
-}
+const statusMap = computed(() => ({
+  1: { text: t('redemptionPage.statusUnused'), class: 'status-on' },
+  2: { text: t('redemptionPage.statusDisabled'), class: 'status-off' },
+  3: { text: t('redemptionPage.statusUsed'), class: 'status-used' },
+}))
 function statusText(s) {
-  return statusMap[s]?.text || '未知'
+  return statusMap.value[s]?.text || t('redemptionPage.statusUnknown')
 }
 function statusClass(s) {
-  return statusMap[s]?.class || 'status-off'
+  return statusMap.value[s]?.class || 'status-off'
 }
 
 // ============ 排序 + 分页 slice ============
@@ -286,7 +294,7 @@ async function fetchData({ append = false, pageIdx = 0 } = {}) {
       isReachedEnd.value = list.length < pageSize.value
     }
   } catch (err) {
-    Message.error(err?.response?.data?.message || '获取兑换码列表失败')
+    Message.error(err?.response?.data?.message || t('redemptionPage.listLoadFailed'))
     if (!append) {
       redemptions.value = []
       activePage.value = 1
@@ -351,14 +359,14 @@ function sortClass(key) {
 async function copyKey(record) {
   const key = record.key || record.show_key
   if (!key) {
-    Message.warning('该兑换码无完整密钥')
+    Message.warning(t('redemptionPage.noKey'))
     return
   }
   try {
     await navigator.clipboard.writeText(key)
-    Message.success('已复制到剪贴板')
+    Message.success(t('redemptionPage.copied'))
   } catch {
-    Message.warning('复制失败，请手动复制')
+    Message.warning(t('redemptionPage.copyFailed'))
     keyword.value = key
   }
 }
@@ -390,19 +398,19 @@ async function handleSubmit() {
         name: form.name,
         quota: form.quota,
       })
-      Message.success('兑换码已更新')
+      Message.success(t('redemptionPage.updated'))
     } else {
       await api.post('/api/redemption/', {
         name: form.name,
         count: form.count,
         quota: form.quota,
       })
-      Message.success('兑换码已生成')
+      Message.success(t('redemptionPage.created'))
     }
     modalVisible.value = false
     refresh()
   } catch (err) {
-    Message.error(err?.response?.data?.message || '操作失败')
+    Message.error(err?.response?.data?.message || t('redemptionPage.opFailed'))
   } finally {
     submitting.value = false
   }
@@ -415,24 +423,24 @@ async function toggleStatus(record) {
       id: record.id,
       status: newStatus,
     }, { params: { status_only: true } })
-    Message.success(newStatus === 1 ? '已启用' : '已禁用')
+    Message.success(newStatus === 1 ? t('redemptionPage.enabled') : t('redemptionPage.disabled'))
     record.status = newStatus
   } catch (e) {
-    Message.error(e?.response?.data?.message || e.message || '操作失败')
+    Message.error(e?.response?.data?.message || e.message || t('redemptionPage.opFailed'))
   }
 }
 
 async function handleDelete(record) {
   try {
     await api.delete(`/api/redemption/${record.id}/`)
-    Message.success('兑换码已删除')
+    Message.success(t('redemptionPage.deleted'))
     // 当前页删除空时回退到上一页
     if (pageItems.value.length === 1 && activePage.value > 1) {
       activePage.value -= 1
     }
     refresh()
   } catch (err) {
-    Message.error(err?.response?.data?.message || '删除兑换码失败')
+    Message.error(err?.response?.data?.message || t('redemptionPage.deleteFailed'))
   }
 }
 
