@@ -3,11 +3,11 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">渠道</h1>
-        <p class="welcome-desc">管理 API 渠道配置，启用后可在令牌中调用</p>
+        <h1 class="welcome-title">{{ $t('channelPage.title') }}</h1>
+        <p class="welcome-desc">{{ $t('channelPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">共 {{ total }} 条</span>
+        <span class="meta-chip">{{ $t('channelPage.total', { n: channels.length }) }}</span>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <div class="search-left">
         <a-input-search
           v-model="searchKeyword"
-          placeholder="搜索渠道名称..."
+          :placeholder="$t('channelPage.searchPlaceholder')"
           allow-clear
           @search="handleSearch"
           @clear="handleSearchClear"
@@ -24,14 +24,14 @@
         />
       </div>
       <div class="search-right">
-        <a-button @click="handleTestAll" :loading="testingAll">测试全部</a-button>
-        <a-button @click="handleUpdateBalance" :loading="updatingBalance">更新余额</a-button>
-        <a-popconfirm content="确认删除所有已禁用的渠道？" @ok="handleDeleteDisabled">
-          <a-button status="danger" :loading="deletingDisabled">删除已禁用</a-button>
+        <a-button @click="handleTestAll" :loading="testingAll">{{ $t('channelPage.testAll') }}</a-button>
+        <a-button @click="handleUpdateBalance" :loading="updatingBalance">{{ $t('channelPage.updateBalance') }}</a-button>
+        <a-popconfirm :content="$t('channelPage.confirmDeleteDisabled')" @ok="handleDeleteDisabled">
+          <a-button status="danger" :loading="deletingDisabled">{{ $t('channelPage.deleteDisabled') }}</a-button>
         </a-popconfirm>
         <a-button type="primary" size="large" @click="openCreateModal">
           <template #icon><icon-plus :size="14" /></template>
-          添加渠道
+          {{ $t('channelPage.addChannel') }}
         </a-button>
       </div>
     </div>
@@ -42,26 +42,26 @@
         <div class="empty-icon">
           <icon-apps :size="32" />
         </div>
-        <p class="empty-title">还没有任何渠道</p>
-        <p class="empty-desc">添加第一个 API 渠道即可开始接入</p>
+        <p class="empty-title">{{ $t('channelPage.emptyTitle') }}</p>
+        <p class="empty-desc">{{ $t('channelPage.emptyDesc') }}</p>
         <a-button type="primary" @click="openCreateModal">
           <template #icon><icon-plus :size="14" /></template>
-          立即添加
+          {{ $t('channelPage.addNow') }}
         </a-button>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head">
           <div class="col">ID</div>
-          <div class="col">类型</div>
-          <div class="col">名称</div>
+          <div class="col">{{ $t('channelPage.colType') }}</div>
+          <div class="col">{{ $t('channelPage.colName') }}</div>
           <div class="col">Base URL</div>
-          <div class="col">模型</div>
-          <div class="col">分组</div>
-          <div class="col">状态</div>
-          <div class="col">响应时间</div>
-          <div class="col">降级渠道</div>
-          <div class="col col-action">操作</div>
+          <div class="col">{{ $t('channelPage.colModels') }}</div>
+          <div class="col">{{ $t('channelPage.colGroups') }}</div>
+          <div class="col">{{ $t('channelPage.colStatus') }}</div>
+          <div class="col">{{ $t('channelPage.colResponseTime') }}</div>
+          <div class="col">{{ $t('channelPage.colFallback') }}</div>
+          <div class="col col-action">{{ $t('channelPage.colAction') }}</div>
         </div>
 
         <a-spin :loading="loading && !loadingMore" style="width: 100%">
@@ -103,13 +103,13 @@
 
             <div class="col">
               <div v-if="c.is_fallback" class="fallback-cell">
-                <a-tooltip :content="$t('channel.fallbackHint')">
+                <a-tooltip :content="$t('channelPage.fallbackHint')">
                   <a-tag color="orangered" size="small" class="fallback-tag">
                     <template #icon><icon-swap :size="12" /></template>
-                    {{ $t('channel.fallbackTag') }}
+                    {{ $t('channelPage.fallbackTag') }}
                   </a-tag>
                 </a-tooltip>
-                <span v-if="c.fallback_priority" class="fallback-priority" :title="$t('channel.fallbackPriorityHint')">
+                <span v-if="c.fallback_priority" class="fallback-priority" :title="$t('channelPage.fallbackPriorityHint')">
                   P{{ c.fallback_priority }}
                 </span>
               </div>
@@ -117,18 +117,18 @@
             </div>
 
             <div class="col col-action">
-              <a-button type="text" size="small" @click="openEditModal(c)">编辑</a-button>
+              <a-button type="text" size="small" @click="openEditModal(c)">{{ $t('channelPage.edit') }}</a-button>
               <a-popconfirm
-                :content="c.status === 1 ? '确定禁用该渠道？' : '确定启用该渠道？'"
+                :content="c.status === 1 ? $t('channelPage.confirmDisable') : $t('channelPage.confirmEnable')"
                 @ok="handleToggleStatus(c)"
               >
                 <a-button type="text" size="small">
-                  {{ c.status === 1 ? '禁用' : '启用' }}
+                  {{ c.status === 1 ? $t('channelPage.disable') : $t('channelPage.enable') }}
                 </a-button>
               </a-popconfirm>
-              <a-button type="text" size="small" :loading="testingIds.includes(c.id)" @click="handleTest(c)">测试</a-button>
-              <a-popconfirm content="确定删除该渠道？" @ok="handleDelete(c.id)">
-                <a-button type="text" size="small" class="danger-btn">删除</a-button>
+              <a-button type="text" size="small" :loading="testingIds.includes(c.id)" @click="handleTest(c)">{{ $t('channelPage.test') }}</a-button>
+              <a-popconfirm :content="$t('channelPage.confirmDelete')" @ok="handleDelete(c.id)">
+                <a-button type="text" size="small" class="danger-btn">{{ $t('channelPage.delete') }}</a-button>
               </a-popconfirm>
             </div>
           </div>
@@ -136,13 +136,13 @@
 
         <div v-if="loadingMore" class="load-more-row">
           <a-spin :loading="true" :size="14" />
-          <span class="load-more-text">正在加载更多…</span>
+          <span class="load-more-text">{{ $t('channelPage.loadingMore') }}</span>
         </div>
         <div
           v-else-if="isReachedEnd && channels.length > pageSize && !loading"
           class="load-end-row"
         >
-          已显示全部 {{ channels.length }} 条数据
+          {{ $t('channelPage.allLoaded', { n: channels.length }) }}
         </div>
       </div>
 
@@ -169,22 +169,22 @@
       @ok="handleSubmit"
       @cancel="closeModal"
       :ok-loading="submitting"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="$t('channelPage.save')"
+      :cancel-text="$t('channelPage.cancel')"
     >
       <a-form ref="formRef" :model="form" layout="vertical" class="channel-form">
-        <a-form-item field="type" label="类型" required>
-          <a-select v-model="form.type" placeholder="选择渠道类型">
+        <a-form-item field="type" :label="$t('channelPage.labelType')" required>
+          <a-select v-model="form.type" :placeholder="$t('channelPage.selectType')">
             <a-option v-for="(name, key) in typeNameMap" :key="key" :value="Number(key)" :label="name" />
           </a-select>
         </a-form-item>
-        <a-form-item field="name" label="名称" required>
-          <a-input v-model="form.name" placeholder="渠道名称" allow-clear />
+        <a-form-item field="name" :label="$t('channelPage.labelName')" required>
+          <a-input v-model="form.name" :placeholder="$t('channelPage.channelName')" allow-clear />
         </a-form-item>
-        <a-form-item field="groups" label="分组">
+        <a-form-item field="groups" :label="$t('channelPage.labelGroups')">
           <a-select
             v-model="form.groups"
-            placeholder="选择分组，可多选"
+            :placeholder="$t('channelPage.selectGroups')"
             multiple
             allow-clear
             allow-search
@@ -195,10 +195,10 @@
         <a-form-item field="base_url" label="Base URL">
           <a-input v-model="form.base_url" placeholder="https://api.openai.com" allow-clear />
         </a-form-item>
-        <a-form-item field="models" label="模型">
+        <a-form-item field="models" :label="$t('channelPage.labelModels')">
           <a-select
             v-model="form.models"
-            placeholder="选择可用模型，支持搜索"
+            :placeholder="$t('channelPage.selectModels')"
             multiple
             allow-clear
             allow-search
@@ -206,29 +206,29 @@
             <a-option v-for="m in availableModelOptions" :key="m" :value="m" :label="m" />
           </a-select>
         </a-form-item>
-        <a-form-item field="model_mapping" label="模型重定向">
+        <a-form-item field="model_mapping" :label="$t('channelPage.labelModelMapping')">
           <div class="form-stack">
             <a-textarea
               v-model="form.model_mapping"
-              placeholder="JSON 对象，键为渠道侧模型名，值为真实模型名。留空表示不重定向"
+              :placeholder="$t('channelPage.modelMappingPlaceholder')"
               :auto-size="{ minRows: 4, maxRows: 8 }"
               allow-clear
             />
-            <span class="form-hint form-hint-block">示例：&#123;"gpt-3.5-turbo-0301":"gpt-3.5-turbo","gpt-4-0314":"gpt-4"&#125;</span>
+            <span class="form-hint form-hint-block">{{ $t('channelPage.modelMappingExample') }}&#123;"gpt-3.5-turbo-0301":"gpt-3.5-turbo","gpt-4-0314":"gpt-4"&#125;</span>
           </div>
         </a-form-item>
-        <a-form-item field="key" label="密钥" :required="!isEdit">
-          <a-input-password v-model="form.key" :placeholder="isEdit ? '留空表示不修改密钥' : 'API Key'" />
-          <span v-if="isEdit" class="form-hint">留空表示不修改密钥</span>
+        <a-form-item field="key" :label="$t('channelPage.labelKey')" :required="!isEdit">
+          <a-input-password v-model="form.key" :placeholder="isEdit ? $t('channelPage.keyKeepHint') : 'API Key'" />
+          <span v-if="isEdit" class="form-hint">{{ $t('channelPage.keyKeepHint') }}</span>
         </a-form-item>
         <a-divider :margin="6" />
-        <a-form-item field="is_fallback" :label="$t('channel.fallback')">
+        <a-form-item field="is_fallback" :label="$t('channelPage.fallback')">
           <a-switch v-model="form.is_fallback" />
-          <span class="form-hint">{{ $t('channel.fallbackHint') }}</span>
+          <span class="form-hint">{{ $t('channelPage.fallbackHint') }}</span>
         </a-form-item>
-        <a-form-item v-if="form.is_fallback" field="fallback_priority" :label="$t('channel.fallbackPriority')">
+        <a-form-item v-if="form.is_fallback" field="fallback_priority" :label="$t('channelPage.fallbackPriority')">
           <a-input-number v-model="form.fallback_priority" :min="0" :step="1" />
-          <span class="form-hint">{{ $t('channel.fallbackPriorityHint') }}</span>
+          <span class="form-hint">{{ $t('channelPage.fallbackPriorityHint') }}</span>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -237,28 +237,27 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconApps, IconSwap } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 
+const { t } = useI18n()
+
 // 渠道类型映射（对应后端 relay/registry 的 LegacyType）
-const typeNameMap = {
-  1: 'OpenAI', 50: 'OpenAI 兼容', 14: 'Anthropic', 33: 'AWS',
-  3: 'Azure', 11: 'PaLM2', 24: 'Gemini', 51: 'Gemini (OpenAI)',
-  28: 'Mistral AI', 41: 'Novita', 40: '字节火山引擎', 15: '百度文心千帆',
-  47: '百度文心千帆 V2', 17: '阿里通义千问', 49: '阿里云百炼',
-  18: '讯飞星火认知', 48: '讯飞星火认知 V2', 16: '智谱 ChatGLM',
-  19: '360 智脑', 25: 'Moonshot AI', 23: '腾讯混元', 26: '百川大模型',
-  27: 'MiniMax', 29: 'Groq', 30: 'Ollama', 31: '零一万物',
-  32: '阶跃星辰', 34: 'Coze', 35: 'Cohere', 36: 'DeepSeek',
-  37: 'Cloudflare', 38: 'DeepL', 39: 'together.ai', 42: 'VertexAI',
-  43: 'Proxy', 44: 'SiliconFlow', 45: 'xAI', 46: 'Replicate',
-  8: '自定义渠道', 22: '知识库：FastGPT', 21: '知识库：AI Proxy',
-  20: 'OpenRouter', 2: '代理：API2D', 5: '代理：OpenAI-SB',
-  7: '代理：OhMyGPT', 10: '代理：AI Proxy', 4: '代理：CloseAI',
-  6: '代理：OpenAI Max', 9: '代理：AI.LS', 12: '代理：API2GPT',
-  13: '代理：AIGC2D',
-}
+const channelTypeIds = [
+  1, 50, 14, 33, 3, 11, 24, 51, 28, 41, 40, 15,
+  47, 17, 49, 18, 48, 16, 19, 25, 23, 26, 27, 29,
+  30, 31, 32, 34, 35, 36, 37, 38, 39, 42, 43, 44,
+  45, 46, 8, 22, 21, 20, 2, 5, 7, 10, 4, 6, 9, 12, 13,
+]
+const typeNameMap = computed(() => {
+  const map = {}
+  channelTypeIds.forEach((id) => {
+    map[id] = t(`channelPage.types.${id}`)
+  })
+  return map
+})
 const typeColorMap = {
   1: 'arcoblue', 50: 'green', 14: 'gray', 33: 'gray',
   3: 'cyan', 11: 'orange', 24: 'orange', 51: 'orange',
@@ -278,10 +277,10 @@ const typeColorMap = {
 
 // 渠道状态（对齐后端 model/channel.go）：1=启用 2=手动禁用 3=自动禁用
 function statusText(status) {
-  if (status === 1) return '已启用'
-  if (status === 2) return '已禁用'
-  if (status === 3) return '自动禁用'
-  return '未知'
+  if (status === 1) return t('channelPage.statusEnabled')
+  if (status === 2) return t('channelPage.statusDisabled')
+  if (status === 3) return t('channelPage.statusAutoDisabled')
+  return t('channelPage.statusUnknown')
 }
 function statusClass(status) {
   if (status === 1) return 'status-on'
@@ -318,7 +317,9 @@ const form = reactive({
   fallback_priority: 0,
 })
 
-const modalTitle = ref('添加渠道')
+const modalTitle = computed(() =>
+  isEdit.value ? t('channelPage.editChannel') : t('channelPage.addChannel'),
+)
 
 const availableModelOptions = ref([])
 const availableGroups = ref([])
@@ -354,10 +355,10 @@ async function fetchChannels({ append = false, pageIdx = 0 } = {}) {
         isReachedEnd.value = list.length < pageSize.value
       }
     } else {
-      Message.error(data.message || '加载失败')
+      Message.error(data.message || t('channelPage.loadFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '加载失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.loadFailed'))
   } finally {
     loading.value = false
     loadingMore.value = false
@@ -375,7 +376,7 @@ function handleSearch() {
         isReachedEnd.value = true
       }
     })
-    .catch((e) => Message.error(e.response?.data?.message || e.message || '搜索失败'))
+    .catch((e) => Message.error(e.response?.data?.message || e.message || t('channelPage.searchFailed')))
     .finally(() => { loading.value = false })
 }
 
@@ -411,7 +412,6 @@ function openCreateModal() {
   form.key = ''
   form.is_fallback = false
   form.fallback_priority = 0
-  modalTitle.value = '添加渠道'
   modalVisible.value = true
 }
 
@@ -427,7 +427,6 @@ function openEditModal(record) {
   form.key = record.key || ''
   form.is_fallback = !!record.is_fallback
   form.fallback_priority = record.fallback_priority || 0
-  modalTitle.value = '编辑渠道'
   modalVisible.value = true
 }
 
@@ -452,11 +451,11 @@ async function handleSubmit() {
     try {
       const parsed = JSON.parse(form.model_mapping)
       if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
-        Message.error('模型重定向必须是 JSON 对象')
+        Message.error(t('channelPage.modelMappingMustBeObject'))
         return
       }
     } catch {
-      Message.error('模型重定向 JSON 格式错误')
+      Message.error(t('channelPage.modelMappingInvalidJson'))
       return
     }
   }
@@ -481,14 +480,14 @@ async function handleSubmit() {
       res = await api.post('/api/channel/', payload)
     }
     if (res.data.success) {
-      Message.success(isEdit.value ? '渠道已更新' : '渠道已添加')
+      Message.success(isEdit.value ? t('channelPage.channelUpdated') : t('channelPage.channelAdded'))
       closeModal()
       fetchChannels()
     } else {
-      Message.error(res.data.message || '操作失败')
+      Message.error(res.data.message || t('channelPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.opFailed'))
   } finally {
     submitting.value = false
   }
@@ -536,13 +535,13 @@ async function handleDelete(id) {
   try {
     const { data } = await api.delete(`/api/channel/${id}/`)
     if (data.success) {
-      Message.success('渠道已删除')
+      Message.success(t('channelPage.channelDeleted'))
       fetchChannels()
     } else {
-      Message.error(data.message || '删除失败')
+      Message.error(data.message || t('channelPage.deleteFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '删除失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.deleteFailed'))
   }
 }
 
@@ -553,13 +552,13 @@ async function handleTest(record) {
     const model = record.models ? record.models.split(',')[0] : ''
     const { data } = await api.get(`/api/channel/test/${record.id}`, { params: { model } })
     if (data.success) {
-      Message.success(`测试通过 · 耗时 ${data.time}s`)
+      Message.success(t('channelPage.testPassed', { time: data.time }))
       fetchChannels()
     } else {
-      Message.error(data.message || '测试失败')
+      Message.error(data.message || t('channelPage.testFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '测试失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.testFailed'))
   } finally {
     testingIds.value = testingIds.value.filter((id) => id !== record.id)
   }
@@ -571,12 +570,12 @@ async function handleTestAll() {
     // 全部测试：GET /api/channel/test?scope=all（异步启动）
     const { data } = await api.get('/api/channel/test', { params: { scope: 'all' } })
     if (data.success) {
-      Message.info('全部渠道测试已开始，完成后将自动通知')
+      Message.info(t('channelPage.testAllStarted'))
     } else {
-      Message.error(data.message || '批量测试失败')
+      Message.error(data.message || t('channelPage.testAllFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '批量测试失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.testAllFailed'))
   } finally {
     testingAll.value = false
   }
@@ -587,13 +586,13 @@ async function handleToggleStatus(record) {
   try {
     const { data } = await api.put('/api/channel/', { id: record.id, status: newStatus })
     if (data.success) {
-      Message.success(newStatus === 1 ? '渠道已启用' : '渠道已禁用')
+      Message.success(newStatus === 1 ? t('channelPage.channelEnabled') : t('channelPage.channelDisabled'))
       record.status = newStatus
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('channelPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.opFailed'))
   }
 }
 
@@ -603,13 +602,13 @@ async function handleUpdateBalance() {
     // 全部更新余额：GET /api/channel/update_balance
     const { data } = await api.get('/api/channel/update_balance')
     if (data.success) {
-      Message.success('余额更新已开始')
+      Message.success(t('channelPage.balanceUpdateStarted'))
       fetchChannels()
     } else {
-      Message.error(data.message || '更新余额失败')
+      Message.error(data.message || t('channelPage.balanceUpdateFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '更新余额失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.balanceUpdateFailed'))
   } finally {
     updatingBalance.value = false
   }
@@ -620,13 +619,13 @@ async function handleDeleteDisabled() {
   try {
     const { data } = await api.delete('/api/channel/disabled')
     if (data.success) {
-      Message.success('已删除所有禁用的渠道')
+      Message.success(t('channelPage.disabledDeleted'))
       fetchChannels()
     } else {
-      Message.error(data.message || '删除失败')
+      Message.error(data.message || t('channelPage.deleteFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '删除失败')
+    Message.error(e.response?.data?.message || e.message || t('channelPage.deleteFailed'))
   } finally {
     deletingDisabled.value = false
   }
