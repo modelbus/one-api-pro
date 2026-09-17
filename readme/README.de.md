@@ -849,16 +849,17 @@ Wenn nach der Bereitstellung eine leere Seite erscheint, siehe [#97](https://git
 - [x] **Aufladungs-Einstellungen**: der neue Tab **Einstellungen → Aufladung** ersetzt den bisherigen `plan.allow_topup`-Platzhalter; konfiguriert Hauptschalter, Preset-Beträge, benutzerdefinierten Betrag und Umrechnungskurs (Standard 1:1); nutzt die bestehenden Zahlungseinstellungen und die `system_settings`-Tabelle.
 - [x] **Einheitliche Bestellverwaltung (Admin-Sicht)**: Das Admin-Bestellzentrum unterstützt Liste / Suche / Details / Bearbeiten / Löschen mit mehrdimensionalen Filtern nach Status, Typ, Quelle, Benutzer und Paket; Administratoren können Bestellungen manuell als **bezahlt** (Offline / Bank aktiviert sofort) oder **erstattet** (nur Statusmarkierung) kennzeichnen.
 - [x] **Kanaldiagnose und intelligente Routenoptimierung (Basis)**: automatische Kühlung (`CooldownFilter`), Fallback-Degradierung (`FallbackFilter`) und automatische Deaktivierung bei niedriger Erfolgsrate (`monitor`) sind aktiv.
+- [x] **Mehrsprachigkeit (i18n)**: vollständige Abdeckung (zh/en) für Admin-Interface, Landingpage und Rechtsseiten; Menüs, Seitentexte und Arco-Design-Komponenten wechseln in Echtzeit, die Sprachwahl wird gespeichert und mit `<html lang>` synchronisiert; Sprachpakete sind pro Seitenmodul aufgeteilt und werden automatisch tief zusammengeführt.
 
 ### 🔄 In Umsetzung
 
 - [ ] **Kanaldiagnose und intelligente Routenoptimierung (Erweiterung)**: aufbauend auf der aktiven Kühlung / dem Fallback / der automatischen Deaktivierung folgen ein eigenständiges Diagnose-Panel, Knoten-Ping und ein manueller Prüfablauf.
 - [ ] Umfangreichere Nutzungsanalyse-Berichte und Exporte.
-- [ ] Vervollständigung der Mehrsprachigkeit (i18n).
 - [ ] **Erstattungsschleife**: Bestellungen mit `status=3` ändern derzeit nur den Status, das Guthaben wird nicht zurückgebucht; folgt nach Einführung der Erstattungsfunktion.
 
 ### 🔭 Geplant
 
+- [ ] **Weitere Sprachen**: über Chinesisch / Englisch hinaus auch traditionelles Chinesisch, Japanisch, Koreanisch, Russisch, Deutsch, Arabisch usw. (abgestimmt auf die README-Übersetzungen)
 - [ ] **Erweiterung der Zahlungskanäle**: Apple Pay, UnionPay, Stripe usw.
 - [ ] **Bestellerstattung**: asynchrone Erstattungs-API + automatisierte Erstattungsbuchungen; Rückbuchung von Abonnement und Guthaben bei Paket- oder Aufladungserstattungen, mit visueller Erstattungschronik.
 - [ ] **Finanzanbindung an gängige Plattformen**: Anbindung an gängige Finanz-/Abstimmungsplattformen; automatische Synchronisation von Aufladungen, Verbrauch und Erstattungen.
