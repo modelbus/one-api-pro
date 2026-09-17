@@ -29,15 +29,15 @@
         </a-menu-item>
         <a-menu-item key="/redeem">
           <template #icon><icon-gift /></template>
-          兑换
+          {{ $t('menu.redeem') }}
         </a-menu-item>
         <a-menu-item key="/plans">
           <template #icon><icon-gift /></template>
-          套餐
+          {{ $t('menu.plans') }}
         </a-menu-item>
         <a-menu-item key="/orders">
           <template #icon><icon-storage /></template>
-          订单
+          {{ $t('menu.orders') }}
         </a-menu-item>
         <a-menu-item key="/log">
           <template #icon><icon-file /></template>
@@ -56,7 +56,7 @@
           </a-menu-item>
           <a-menu-item key="/admin/orders">
             <template #icon><icon-storage /></template>
-            订单
+            {{ $t('menu.orders') }}
           </a-menu-item>
           <a-menu-item key="/redemption">
             <template #icon><icon-gift /></template>
@@ -82,15 +82,12 @@
       <a-layout-header class="top-navbar">
         <div class="navbar-left">
           <a-breadcrumb>
-            <a-breadcrumb-item>首页</a-breadcrumb-item>
+            <a-breadcrumb-item>{{ $t('layout.breadcrumbHome') }}</a-breadcrumb-item>
             <a-breadcrumb-item v-if="currentTitle">{{ currentTitle }}</a-breadcrumb-item>
           </a-breadcrumb>
         </div>
         <div class="navbar-right">
-          <a-select v-model="currentLang" size="small" style="width:80px" @change="changeLang">
-            <a-option value="zh">中文</a-option>
-            <a-option value="en">English</a-option>
-          </a-select>
+          <LangSwitcher size="small" width="110px" />
           <a-dropdown trigger="hover" position="br">
             <a-space class="user-trigger">
               <span class="username">{{ authStore.user?.username }}</span>
@@ -100,15 +97,15 @@
             <template #content>
               <a-doption @click="showProfile = true">
                 <template #icon><icon-user /></template>
-                个人信息
+                {{ $t('layout.profile') }}
               </a-doption>
               <a-doption @click="handleGenToken">
                 <template #icon><icon-code /></template>
-                访问令牌
+                {{ $t('layout.accessToken') }}
               </a-doption>
               <a-doption @click="handleLogout">
                 <template #icon><icon-export /></template>
-                退出登录
+                {{ $t('layout.logout') }}
               </a-doption>
             </template>
           </a-dropdown>
@@ -120,32 +117,32 @@
       </a-layout-content>
 
       <a-layout-footer class="admin-footer">
-        One Api Pro 企业级私有化大模型 API 网关
+        {{ $t('layout.footer') }}
       </a-layout-footer>
     </a-layout>
 
     <!-- Profile Modal -->
-    <a-modal v-model:visible="showProfile" title="个人信息" @ok="saveProfile" :ok-loading="profileSaving" width="480">
+    <a-modal v-model:visible="showProfile" :title="$t('layout.profile')" @ok="saveProfile" :ok-loading="profileSaving" width="480">
       <a-form :model="profileForm" layout="vertical">
-        <a-form-item label="显示名称">
-          <a-input v-model="profileForm.display_name" placeholder="请输入显示名称" />
+        <a-form-item :label="$t('layout.displayName')">
+          <a-input v-model="profileForm.display_name" :placeholder="$t('layout.displayNamePlaceholder')" />
         </a-form-item>
-        <a-form-item label="新密码">
-          <a-input-password v-model="profileForm.password" placeholder="留空则不修改" />
+        <a-form-item :label="$t('layout.newPassword')">
+          <a-input-password v-model="profileForm.password" :placeholder="$t('layout.passwordKeepPlaceholder')" />
         </a-form-item>
-        <a-form-item label="确认密码">
-          <a-input-password v-model="profileForm.password_confirm" placeholder="请再次输入新密码" />
+        <a-form-item :label="$t('layout.confirmPassword')">
+          <a-input-password v-model="profileForm.password_confirm" :placeholder="$t('layout.confirmPasswordPlaceholder')" />
         </a-form-item>
       </a-form>
     </a-modal>
 
     <!-- Token Modal -->
-    <a-modal v-model:visible="showToken" title="访问令牌" :footer="false" width="520">
+    <a-modal v-model:visible="showToken" :title="$t('layout.accessToken')" :footer="false" width="520">
       <a-input v-if="accessToken" :model-value="accessToken" readonly size="large" />
-      <a-button v-if="accessToken" type="text" size="small" @click="copyToken" style="margin-top:8px">复制</a-button>
+      <a-button v-if="accessToken" type="text" size="small" @click="copyToken" style="margin-top:8px">{{ $t('common.copy') }}</a-button>
       <div v-if="!accessToken && !tokenLoading" style="text-align:center;padding:20px 0">
-        <p style="color:var(--color-text-3);margin-bottom:16px">确认生成新的访问令牌？</p>
-        <a-button type="primary" @click="genToken">确认生成</a-button>
+        <p style="color:var(--color-text-3);margin-bottom:16px">{{ $t('layout.generateConfirm') }}</p>
+        <a-button type="primary" @click="genToken">{{ $t('layout.generate') }}</a-button>
       </div>
       <a-spin v-if="tokenLoading" style="display:flex;justify-content:center;padding:40px 0" />
     </a-modal>
@@ -160,10 +157,11 @@ import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
 import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown, IconStorage, IconBarChart } from '@arco-design/web-vue/es/icon'
+import LangSwitcher from '@/components/LangSwitcher.vue'
 import api from '@/api'
 import logoPng from '@/assets/logo.png'
 
-const { locale } = useI18n()
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
@@ -171,11 +169,10 @@ const statusStore = useStatusStore()
 
 const collapsed = ref(false)
 const selectedKeys = ref([route.path])
-const currentLang = ref(locale.value)
 
 const systemName = computed(() => statusStore.status?.system_name || 'One Api Pro')
 const chatLink = computed(() => statusStore.status?.chat_link || '')
-const currentTitle = computed(() => route.meta?.title || '')
+const currentTitle = computed(() => (route.meta?.title ? t(route.meta.title) : ''))
 
 const logoFallback = computed(() => statusStore.status?.logo || '')
 const logoSrc = ref(logoPng)
@@ -186,14 +183,13 @@ function onLogoError() {
 }
 
 const roleText = computed(() => {
-  if (authStore.isRoot) return locale.value === 'zh' ? '超级管理员' : 'Super Admin'
-  if (authStore.isAdmin) return locale.value === 'zh' ? '管理员' : 'Admin'
-  return locale.value === 'zh' ? '普通用户' : 'User'
+  if (authStore.isRoot) return t('layout.roleRoot')
+  if (authStore.isAdmin) return t('layout.roleAdmin')
+  return t('layout.roleUser')
 })
 const roleColor = computed(() => authStore.isRoot ? 'orangered' : authStore.isAdmin ? 'arcoblue' : 'gray')
 
 const handleMenuClick = (key) => { router.push(key) }
-const changeLang = (val) => { locale.value = val; localStorage.setItem('lang', val) }
 const handleLogout = async () => { await authStore.logout(); router.push('/login') }
 
 // Profile Modal
@@ -210,15 +206,15 @@ watch(showProfile, (val) => {
 })
 
 async function saveProfile() {
-  if (profileForm.password && profileForm.password !== profileForm.password_confirm) { Message.warning('两次密码不一致'); return }
+  if (profileForm.password && profileForm.password !== profileForm.password_confirm) { Message.warning(t('layout.passwordMismatch')); return }
   profileSaving.value = true
   try {
     const b = { display_name: profileForm.display_name }
     if (profileForm.password) b.password = profileForm.password
     const { data } = await api.put('/api/user/self', b)
-    if (data.success) { showProfile.value = false; Message.success('已保存'); if (data.data) authStore.user = data.data }
+    if (data.success) { showProfile.value = false; Message.success(t('layout.saved')); if (data.data) authStore.user = data.data }
     else Message.error(data.message)
-  } catch (e) { Message.error('保存失败') } finally { profileSaving.value = false }
+  } catch (e) { Message.error(t('layout.saveFailed')) } finally { profileSaving.value = false }
 }
 
 // Token
@@ -238,11 +234,11 @@ async function genToken() {
     const { data } = await api.get('/api/user/token')
     if (data.success) accessToken.value = data.data || data.message
     else Message.error(data.message)
-  } catch (e) { Message.error('获取失败') } finally { tokenLoading.value = false }
+  } catch (e) { Message.error(t('layout.tokenLoadFailed')) } finally { tokenLoading.value = false }
 }
 
 function copyToken() {
-  navigator.clipboard?.writeText(accessToken.value).then(() => Message.success('已复制'))
+  navigator.clipboard?.writeText(accessToken.value).then(() => Message.success(t('common.copied')))
 }
 
 watch(() => route.path, (path) => { selectedKeys.value = [path] })
