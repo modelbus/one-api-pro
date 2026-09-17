@@ -847,18 +847,20 @@ Wenn nach der Bereitstellung eine leere Seite erscheint, siehe [#97](https://git
 - [x] **Zahlungs-/Paketbetrieb-Einstellungen**: unter „Betriebseinstellungen“ neu hinzugekommen: „Paketbetrieb“ (Aufpreis-Upgrade vs. Additiv) und „Zahlung“ (WeChat / Alipay / Bank als drei unabhängige Schalter + Zertifikats-Upload + Benachrichtigungs-URL); Formulare erscheinen bedarfsweise.
 - [x] **Online-Aufladung des Guthabens (Quota)**: Nutzer laden ihr Konto über die Kachel „Mein Guthaben“ im Dashboard auf; dieselben WeChat- / Alipay-Zahlungskanäle werden wiederverwendet. Im Backend wird `OrderTypeTopup=2` mit der `orders`-Tabelle geteilt (Bestellnummern-Präfix `TP`), Aktivierung ist idempotent; `ActivateTopupByOrder` ruft `IncreaseUserQuota` auf und schreibt `RecordTopupLog`.
 - [x] **Aufladungs-Einstellungen**: der neue Tab **Einstellungen → Aufladung** ersetzt den bisherigen `plan.allow_topup`-Platzhalter; konfiguriert Hauptschalter, Preset-Beträge, benutzerdefinierten Betrag und Umrechnungskurs (Standard 1:1); nutzt die bestehenden Zahlungseinstellungen und die `system_settings`-Tabelle.
+- [x] **Einheitliche Bestellverwaltung (Admin-Sicht)**: Das Admin-Bestellzentrum unterstützt Liste / Suche / Details / Bearbeiten / Löschen mit mehrdimensionalen Filtern nach Status, Typ, Quelle, Benutzer und Paket; Administratoren können Bestellungen manuell als **bezahlt** (Offline / Bank aktiviert sofort) oder **erstattet** (nur Statusmarkierung) kennzeichnen.
+- [x] **Kanaldiagnose und intelligente Routenoptimierung (Basis)**: automatische Kühlung (`CooldownFilter`), Fallback-Degradierung (`FallbackFilter`) und automatische Deaktivierung bei niedriger Erfolgsrate (`monitor`) sind aktiv.
 
 ### 🔄 In Umsetzung
 
-- [ ] **Bessere Kanaldiagnose und intelligentere Routenoptimierung**: automatische Kühlung (`CooldownFilter`), Fallback-Degradierung (`FallbackFilter`) und automatische Deaktivierung bei niedriger Erfolgsrate (`monitor`) sind vorhanden; als Nächstes folgen ein eigenständiges Diagnose-Panel, Knoten-Ping und ein manueller Prüfablauf.
+- [ ] **Kanaldiagnose und intelligente Routenoptimierung (Erweiterung)**: aufbauend auf der aktiven Kühlung / dem Fallback / der automatischen Deaktivierung folgen ein eigenständiges Diagnose-Panel, Knoten-Ping und ein manueller Prüfablauf.
 - [ ] Umfangreichere Nutzungsanalyse-Berichte und Exporte.
 - [ ] Vervollständigung der Mehrsprachigkeit (i18n).
-- [ ] **Aufladungs-Erstattungsschleife**: aktuell werden Aufladungsbestellungen mit `status=3` nur markiert, ohne das Guthaben zurückzubuchen; folgt nach der Einführung der einheitlichen Bestellverwaltung.
+- [ ] **Erstattungsschleife**: Bestellungen mit `status=3` ändern derzeit nur den Status, das Guthaben wird nicht zurückgebucht; folgt nach Einführung der Erstattungsfunktion.
 
 ### 🔭 Geplant
 
-- [ ] **Erweiterung der Zahlungskanäle**: Apple Pay, UnionPay, Stripe usw.; Unterstützung einer asynchronen Erstattungs-API + automatisierter Erstattungsbuchungen.
-- [ ] **Einheitliche Bestellverwaltung (Admin-Sicht)**: CRUD im Admin-Bestellzentrum, Massenoperationen, Statusfilter, visuelle Erstattungschronik.
+- [ ] **Erweiterung der Zahlungskanäle**: Apple Pay, UnionPay, Stripe usw.
+- [ ] **Bestellerstattung**: asynchrone Erstattungs-API + automatisierte Erstattungsbuchungen; Rückbuchung von Abonnement und Guthaben bei Paket- oder Aufladungserstattungen, mit visueller Erstattungschronik.
 - [ ] **Finanzanbindung an gängige Plattformen**: Anbindung an gängige Finanz-/Abstimmungsplattformen; automatische Synchronisation von Aufladungen, Verbrauch und Erstattungen.
 - [ ] **Warnmechanismus für niedrigen Token-Restbestand**: automatische Warnung bei niedrigem Token-Restbestand von Konto/Token; unterstützt Mehrkanal-Benachrichtigungen.
 - [ ] **Log-Audit und Audit-Berichte**: vollständige Betriebs-Audit-Logs und visualisierte Audit-Berichte zur Erfüllung von Compliance-Anforderungen.
