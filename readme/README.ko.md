@@ -11,6 +11,8 @@
 
 <p align="center">
   👉 <strong>온라인 Demo 보기</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  &nbsp;·&nbsp;
+  👉 <strong>Demo 계정</strong>: <code>root</code> / <code>123456</code>
 </p>
 
 <p align="center">
