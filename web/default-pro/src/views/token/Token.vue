@@ -3,18 +3,18 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">令牌管理</h1>
-        <p class="welcome-desc">创建和管理用于调用 API 的访问令牌</p>
+        <h1 class="welcome-title">{{ $t('token.title') }}</h1>
+        <p class="welcome-desc">{{ $t('token.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">共 {{ total }} 个令牌</span>
+        <span class="meta-chip">{{ $t('token.totalCount', { n: total }) }}</span>
       </div>
     </div>
 
     <!-- 提示卡 -->
     <div class="tip-bar">
       <span class="tip-dot"></span>
-      <span class="tip-text">每个令牌相当于访问凭证，请妥善保管，切勿泄露至公开仓库或前端代码</span>
+      <span class="tip-text">{{ $t('token.tip') }}</span>
     </div>
 
     <!-- Base URL 卡片（参考 tbus-web） -->
@@ -23,17 +23,17 @@
         <span class="url-title">Base URL</span>
         <a-button size="small" type="text" @click="showGuide = true">
           <template #icon><icon-book :size="14" /></template>
-          使用指南
+          {{ $t('token.guide') }}
         </a-button>
       </div>
       <div class="url-row">
         <code class="url-code">{{ baseUrl }}/v1</code>
-        <a-button size="small" type="primary" @click="copyText(`${baseUrl}/v1`, 'Base URL 已复制')">
+        <a-button size="small" type="primary" @click="copyText(`${baseUrl}/v1`, $t('token.baseUrlCopied'))">
           <template #icon><icon-copy :size="14" /></template>
-          复制
+          {{ $t('token.copy') }}
         </a-button>
       </div>
-      <p class="url-hint">将此 Base URL 与 API Key 配置到 AI 客户端（OpenAI 兼容模式）即可使用</p>
+      <p class="url-hint">{{ $t('token.urlHint') }}</p>
     </div>
 
     <!-- 独立搜索栏 -->
@@ -41,7 +41,7 @@
       <div class="search-left">
         <a-input-search
           v-model="keyword"
-          placeholder="搜索名称或密钥..."
+          :placeholder="$t('token.searchPlaceholder')"
           allow-clear
           @search="handleSearch"
           @clear="handleSearch"
@@ -51,7 +51,7 @@
       <div class="search-right">
         <a-button type="primary" size="large" @click="openCreateModal">
           <template #icon><icon-plus :size="14" /></template>
-          新建令牌
+          {{ $t('token.addToken') }}
         </a-button>
       </div>
     </div>
@@ -62,23 +62,23 @@
         <div class="empty-icon">
           <icon-lock :size="32" />
         </div>
-        <p class="empty-title">还没有任何令牌</p>
-        <p class="empty-desc">创建第一个 API 令牌即可开始调用</p>
+        <p class="empty-title">{{ $t('token.createFirst') }}</p>
+        <p class="empty-desc">{{ $t('token.createFirstDesc') }}</p>
         <a-button type="primary" @click="openCreateModal">
           <template #icon><icon-plus :size="14" /></template>
-          立即创建
+          {{ $t('token.createNow') }}
         </a-button>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head">
-          <div class="col col-name">令牌</div>
-          <div class="col col-key">密钥</div>
-          <div class="col col-quota">剩余 / 已用</div>
-          <div class="col col-models">可用模型</div>
-          <div class="col col-status">状态</div>
-          <div class="col col-expire">过期时间</div>
-          <div class="col col-action">操作</div>
+          <div class="col col-name">{{ $t('token.colToken') }}</div>
+          <div class="col col-key">{{ $t('token.colKey') }}</div>
+          <div class="col col-quota">{{ $t('token.colQuota') }}</div>
+          <div class="col col-models">{{ $t('token.colModels') }}</div>
+          <div class="col col-status">{{ $t('token.colStatus') }}</div>
+          <div class="col col-expire">{{ $t('token.colExpire') }}</div>
+          <div class="col col-action">{{ $t('token.colAction') }}</div>
         </div>
 
         <a-spin :loading="loading && !loadingMore" style="width: 100%">
@@ -97,13 +97,13 @@
             <div class="col col-key">
               <div class="key-cell">
                 <code class="key-text">{{ maskKey(t.key) }}</code>
-                <a-tooltip content="查看完整密钥">
+                <a-tooltip :content="$t('token.viewFullKey')">
                   <a-button type="text" size="mini" @click="openKeyModal(t)">
                     <template #icon><icon-eye :size="14" /></template>
                   </a-button>
                 </a-tooltip>
-                <a-tooltip content="复制完整密钥">
-                  <a-button type="text" size="mini" @click="copyText(withSkPrefix(t.key), '完整密钥已复制')">
+                <a-tooltip :content="$t('token.copyFullKey')">
+                  <a-button type="text" size="mini" @click="copyText(withSkPrefix(t.key), $t('token.fullKeyCopied'))">
                     <template #icon><icon-copy :size="14" /></template>
                   </a-button>
                 </a-tooltip>
@@ -113,7 +113,7 @@
             <div class="col col-quota">
               <div class="quota-cell">
                 <span :class="t.unlimited_quota ? 'quota-unlimited' : 'quota-value'">
-                  {{ t.unlimited_quota ? '无限制' : formatQuota(t.remain_quota) }}
+                  {{ t.unlimited_quota ? $t('token.unlimited') : formatQuota(t.remain_quota) }}
                 </span>
                 <span class="quota-sep">/</span>
                 <span class="quota-used">{{ formatQuota(t.used_quota) }}</span>
@@ -134,26 +134,26 @@
             <div class="col col-status">
               <span class="status-chip" :class="t.status === 1 ? 'status-on' : 'status-off'">
                 <span class="status-dot"></span>
-                {{ t.status === 1 ? '已启用' : '已禁用' }}
+                {{ t.status === 1 ? $t('token.enabled') : $t('token.disabled') }}
               </span>
             </div>
 
             <div class="col col-expire">
-              <span class="cell-mono">{{ formatExpiredTime(t.expired_time) }}</span>
+              <span class="cell-mono">{{ formatExpiredTime(t.expired_time, $t('token.neverExpire')) }}</span>
             </div>
 
             <div class="col col-action">
-              <a-button type="text" size="small" @click="openEditModal(t)">编辑</a-button>
+              <a-button type="text" size="small" @click="openEditModal(t)">{{ $t('common.edit') }}</a-button>
               <a-popconfirm
-                :content="t.status === 1 ? '确定禁用该令牌？' : '确定启用该令牌？'"
+                :content="t.status === 1 ? $t('token.confirmDisable') : $t('token.confirmEnable')"
                 @ok="toggleStatus(t)"
               >
                 <a-button type="text" size="small">
-                  {{ t.status === 1 ? '禁用' : '启用' }}
+                  {{ t.status === 1 ? $t('common.disable') : $t('common.enable') }}
                 </a-button>
               </a-popconfirm>
-              <a-popconfirm content="确定删除该令牌？删除后无法恢复" @ok="handleDelete(t.id)">
-                <a-button type="text" size="small" class="danger-btn">删除</a-button>
+              <a-popconfirm :content="$t('token.confirmDelete')" @ok="handleDelete(t.id)">
+                <a-button type="text" size="small" class="danger-btn">{{ $t('common.delete') }}</a-button>
               </a-popconfirm>
             </div>
           </div>
@@ -161,13 +161,13 @@
 
         <div v-if="loadingMore" class="load-more-row">
           <a-spin :loading="true" :size="14" />
-          <span class="load-more-text">正在加载更多…</span>
+          <span class="load-more-text">{{ $t('token.loadingMore') }}</span>
         </div>
         <div
           v-else-if="isReachedEnd && tokens.length > pageSize && !loading"
           class="load-end-row"
         >
-          已显示全部 {{ tokens.length }} 条数据
+          {{ $t('token.allLoaded', { n: tokens.length }) }}
         </div>
       </div>
 
@@ -194,18 +194,18 @@
       @ok="handleSubmit"
       @cancel="closeModal"
       :ok-loading="submitting"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="$t('token.save')"
+      :cancel-text="$t('token.cancel')"
     >
       <a-form ref="formRef" :model="form" :rules="rules" layout="vertical" class="token-form">
-        <a-form-item field="name" label="名称" required>
-          <a-input v-model="form.name" placeholder="例如：生产环境、测试脚本" :max-length="50" allow-clear />
+        <a-form-item field="name" :label="$t('token.nameLabel')" required>
+          <a-input v-model="form.name" :placeholder="$t('token.namePlaceholder')" :max-length="50" allow-clear />
         </a-form-item>
 
-        <a-form-item field="models" label="可用模型" extra="留空表示不限制，所有模型均可调用">
+        <a-form-item field="models" :label="$t('token.modelsLabel')" :extra="$t('token.modelsExtra')">
           <a-select
             v-model="form.models"
-            placeholder="选择可用模型"
+            :placeholder="$t('token.modelsPlaceholder')"
             multiple
             allow-clear
             allow-search
@@ -214,32 +214,32 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item field="subnet" label="IP 白名单" extra="CIDR 格式，多个用逗号分隔。留空表示不限制">
+        <a-form-item field="subnet" :label="$t('token.subnetLabel')" :extra="$t('token.subnetExtra')">
           <a-input v-model="form.subnet" placeholder="192.168.1.0/24, 10.0.0.0/8" allow-clear />
         </a-form-item>
 
-        <a-form-item field="expired_time" label="过期时间">
+        <a-form-item field="expired_time" :label="$t('token.expireLabel')">
           <div class="input-with-checkbox">
             <a-date-picker
               v-model="form.expired_time"
               show-time
               format="YYYY-MM-DD HH:mm:ss"
-              placeholder="选择过期时间"
+              :placeholder="$t('token.selectExpire')"
               style="flex: 1"
               :disabled="form.never_expire"
               value-format="timestamp"
             >
               <template #suffix-icon></template>
             </a-date-picker>
-            <a-checkbox v-model="form.never_expire">永不过期</a-checkbox>
+            <a-checkbox v-model="form.never_expire">{{ $t('token.neverExpire') }}</a-checkbox>
           </div>
           <template #extra>
-            <span v-if="form.never_expire">已开启「永不过期」，过期时间已禁用</span>
-            <span v-else>留空表示永不过期</span>
+            <span v-if="form.never_expire">{{ $t('token.neverExpireOn') }}</span>
+            <span v-else>{{ $t('token.neverExpireOff') }}</span>
           </template>
         </a-form-item>
 
-        <a-form-item field="remain_quota" label="额度限制">
+        <a-form-item field="remain_quota" :label="$t('token.quotaLabel')">
           <div class="input-with-checkbox">
             <a-input-number
               v-model="form.remain_quota"
@@ -249,7 +249,7 @@
               :disabled="form.unlimited_quota"
               style="flex: 1"
             />
-            <a-checkbox v-model="form.unlimited_quota">不限制额度</a-checkbox>
+            <a-checkbox v-model="form.unlimited_quota">{{ $t('token.noQuotaLimit') }}</a-checkbox>
           </div>
         </a-form-item>
       </a-form>
@@ -263,11 +263,11 @@
       :width="520"
       :footer="false"
       unmount-on-close
-      title="查看密钥"
+      :title="$t('token.viewKeyTitle')"
     >
       <div v-if="keyModalToken" class="key-modal-body">
         <div class="key-modal-meta">
-          <span class="key-modal-label">名称</span>
+          <span class="key-modal-label">{{ $t('token.nameLabel') }}</span>
           <span class="key-modal-name">{{ keyModalToken.name }} <span class="key-modal-id">#{{ keyModalToken.id }}</span></span>
         </div>
         <div class="key-modal-value-row">
@@ -275,14 +275,14 @@
         </div>
         <p class="key-modal-warning">
           <icon-lock :size="14" />
-          请妥善保管，切勿泄露至公开仓库或前端代码
+          {{ $t('token.keyWarning') }}
         </p>
         <div class="key-modal-actions">
           <a-button type="primary" @click="handleKeyModalCopy">
             <template #icon><icon-copy :size="14" /></template>
-            复制
+            {{ $t('token.copy') }}
           </a-button>
-          <a-button @click="keyModalVisible = false">关闭</a-button>
+          <a-button @click="keyModalVisible = false">{{ $t('token.close') }}</a-button>
         </div>
       </div>
     </a-modal>
@@ -295,15 +295,15 @@
       :width="520"
       :footer="false"
       unmount-on-close
-      :title="modelsModalToken ? `${modelsModalToken.name} · 可用模型` : '可用模型'"
+      :title="modelsModalToken ? `${modelsModalToken.name} · ${$t('token.modelsModalTitle')}` : $t('token.modelsModalTitle')"
     >
       <div v-if="modelsModalToken" class="models-modal-body">
         <div class="models-modal-meta">
           <span v-if="currentModalModels.length === 0" class="models-modal-empty">
-            当前令牌未限制模型，以下为全部可用模型
+            {{ $t('token.modelsNoRestrict') }}
           </span>
           <span v-else class="models-modal-count">
-            共 {{ currentModalModels.length }} 个可用模型
+            {{ $t('token.modelsCount', { n: currentModalModels.length }) }}
           </span>
         </div>
         <div v-if="currentModalModels.length > 0" class="models-modal-list">
@@ -317,7 +317,7 @@
           </div>
         </div>
         <div class="key-modal-actions">
-          <a-button @click="modelsModalVisible = false">关闭</a-button>
+          <a-button @click="modelsModalVisible = false">{{ $t('token.close') }}</a-button>
         </div>
       </div>
     </a-modal>
@@ -325,31 +325,31 @@
     <!-- 使用指南弹窗 -->
     <a-modal
       v-model:visible="showGuide"
-      title="使用指南"
+      :title="$t('token.guide')"
       :width="640"
       :footer="false"
       unmount-on-close
     >
       <a-tabs v-model:active-key="guideTab" size="medium" class="guide-tabs">
-        <a-tab-pane key="quickstart" title="快速接入">
+        <a-tab-pane key="quickstart" :title="$t('token.guideQuickstart')">
           <div class="guide-section">
             <div class="guide-row">
               <span class="guide-label">Base URL</span>
               <div class="guide-value">
                 <code>{{ baseUrl }}/v1</code>
-                <a-button size="mini" @click="copyText(`${baseUrl}/v1`, '已复制')">复制</a-button>
+                <a-button size="mini" @click="copyText(`${baseUrl}/v1`, $t('token.copied'))">{{ $t('token.copy') }}</a-button>
               </div>
             </div>
             <div class="guide-row">
-              <span class="guide-label">API Key</span>
+              <span class="guide-label">{{ $t('token.guideApiKey') }}</span>
               <div class="guide-value">
-                <a-select v-model="guideKeyId" placeholder="选择一个令牌" allow-clear style="min-width: 220px">
+                <a-select v-model="guideKeyId" :placeholder="$t('token.selectToken')" allow-clear style="min-width: 220px">
                   <a-option v-for="k in tokens" :key="k.id" :value="k.id" :label="k.name" />
                 </a-select>
               </div>
             </div>
             <div class="guide-row">
-              <span class="guide-label">调用示例</span>
+              <span class="guide-label">{{ $t('token.guideExample') }}</span>
               <pre class="guide-code"><code>{{ curlExample }}</code></pre>
             </div>
           </div>
@@ -363,7 +363,7 @@
           <pre class="guide-code"><code>{{ nodeExample }}</code></pre>
         </a-tab-pane>
 
-        <a-tab-pane key="config" title="配置文件">
+        <a-tab-pane key="config" title="Config">
           <pre class="guide-code"><code>{{ configExample }}</code></pre>
         </a-tab-pane>
       </a-tabs>
@@ -373,6 +373,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
@@ -380,6 +381,7 @@ import { useStatusStore } from '@/stores/status'
 import { buildTokenExpiredTime, formatExpiredTime } from '@/utils/token'
 
 const statusStore = useStatusStore()
+const { t } = useI18n()
 
 const loading = ref(false)
 const loadingMore = ref(false)
@@ -432,7 +434,7 @@ const form = reactive({
 })
 
 const rules = {
-  name: [{ required: true, message: '请输入令牌名称' }],
+  name: [{ required: true, message: t('token.nameRequired') }],
 }
 
 const baseUrl = computed(() => {
@@ -441,7 +443,7 @@ const baseUrl = computed(() => {
   return u.replace(/\/+$/, '')
 })
 
-const modalTitle = computed(() => (isEdit.value ? '编辑令牌' : '新建令牌'))
+const modalTitle = computed(() => (isEdit.value ? t('token.editToken') : t('token.addToken')))
 
 const selectedKey = computed(() => tokens.value.find((k) => k.id === guideKeyId.value) || tokens.value[0])
 
@@ -515,13 +517,13 @@ function handleKeyModalCopy() {
     keyModalVisible.value = false
     return
   }
-  copyText(withSkPrefix(keyModalToken.value.key), '完整密钥已复制')
+  copyText(withSkPrefix(keyModalToken.value.key), t('token.fullKeyCopied'))
 }
 
 function formatModelCount(val) {
   const arr = parseModelArray(val)
-  if (arr.length === 0) return '不限制'
-  return `${arr.length}个`
+  if (arr.length === 0) return t('token.notLimited')
+  return t('token.modelCountValue', { n: arr.length })
 }
 
 function openModelsModal(token) {
@@ -540,7 +542,7 @@ function formatQuota(val) {
   if (val == null || val === '') return '-'
   const n = Number(val)
   if (isNaN(n)) return val
-  if (n < 0) return '无限制'
+  if (n < 0) return t('token.unlimited')
   if (n >= 1000000) return `${(n / 1000000).toFixed(2)}M`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
@@ -551,7 +553,7 @@ async function copyText(text, successMsg) {
     await navigator.clipboard.writeText(text)
     Message.success(successMsg)
   } catch {
-    Message.warning('复制失败，请手动复制')
+    Message.warning(t('token.copyFailed'))
   }
 }
 
@@ -581,10 +583,10 @@ async function fetchTokens({ append = false, pageIdx = 0 } = {}) {
         isReachedEnd.value = list.length < pageSize.value
       }
     } else {
-      Message.error(data.message || '加载失败')
+      Message.error(data.message || t('token.loadFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '加载失败')
+    Message.error(e.response?.data?.message || e.message || t('token.loadFailed'))
   } finally {
     loading.value = false
     loadingMore.value = false
@@ -679,25 +681,25 @@ async function handleSubmit() {
       payload.id = editingId.value
       const { data } = await api.put('/api/token/', payload)
       if (data.success) {
-        Message.success('令牌已更新')
+        Message.success(t('token.tokenUpdated'))
         closeModal()
         fetchTokens()
       } else {
-        Message.error(data.message || '更新失败')
+        Message.error(data.message || t('token.updateFailed'))
       }
     } else {
       const { data } = await api.post('/api/token/', payload)
       if (data.success) {
-        Message.success('令牌已创建')
+        Message.success(t('token.tokenCreated'))
         closeModal()
         activePage.value = 1
         fetchTokens()
       } else {
-        Message.error(data.message || '创建失败')
+        Message.error(data.message || t('token.createFailed'))
       }
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('token.opFailed'))
   } finally {
     submitting.value = false
   }
@@ -712,13 +714,13 @@ async function toggleStatus(record) {
       { params: { status_only: true } },
     )
     if (data.success) {
-      Message.success(newStatus === 1 ? '已启用' : '已禁用')
+      Message.success(newStatus === 1 ? t('token.enabled') : t('token.disabled'))
       fetchTokens()
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('token.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('token.opFailed'))
   }
 }
 
@@ -726,13 +728,13 @@ async function handleDelete(id) {
   try {
     const { data } = await api.delete(`/api/token/${id}/`)
     if (data.success) {
-      Message.success('令牌已删除')
+      Message.success(t('token.deleteOk'))
       fetchTokens()
     } else {
-      Message.error(data.message || '删除失败')
+      Message.error(data.message || t('token.deleteFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '删除失败')
+    Message.error(e.response?.data?.message || e.message || t('token.deleteFailed'))
   }
 }
 
