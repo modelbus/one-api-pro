@@ -833,18 +833,20 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/m
 - [x] **Payment / plan-operations settings** — two new sub-tabs under **Operations Settings**: `Plan` (price_diff vs stack upgrade toggle) and `Payment` (independent enable/disable + cert upload + notify URL per channel: WeChat / Alipay / Bank).
 - [x] **Online quota top-up** — users top up their account balance from the console's **My balance** card; reuses the same WeChat / Alipay payment channels. New `OrderTypeTopup=2` shares the `orders` table, order-number prefix `TP`, activation is idempotent; `ActivateTopupByOrder` calls `IncreaseUserQuota` and writes `RecordTopupLog`.
 - [x] **Top-up settings center** — new **Settings → Top-up** tab replaces the previous `plan.allow_topup` placeholder; configures the master switch, preset amounts, allow-custom flag, and the exchange rate (default 1:1); reuses existing payment settings and the `system_settings` table.
+- [x] **Unified order management (admin view)** — the admin order center supports list / search / detail / update / delete, with multi-dimensional filters by status, type, source, user and plan; admins can manually mark an order as **paid** (offline / bank activates immediately) or **refunded** (status flag only).
+- [x] **Channel diagnostics & intelligent routing (baseline)** — automatic cooldown (`CooldownFilter`), fallback degradation (`FallbackFilter`) and low-success-rate auto-disable (`monitor`) are live.
 
 ### 🔄 In Progress
 
-- [ ] **Richer channel diagnostics & intelligent routing** — `CooldownFilter`, `FallbackFilter` and the `monitor`'s auto-disable on low success rate are already in place. Remaining: standalone channel-health dashboard, per-node ping endpoint, and a manual-review workflow.
+- [ ] **Channel diagnostics & intelligent routing (enhancement)** — on top of the live cooldown / fallback / low-success-rate auto-disable, complete the standalone diagnostics dashboard, per-node ping and manual-review workflow.
 - [ ] Richer usage analytics reports and exports.
 - [ ] Improved i18n coverage.
-- [ ] **Top-up refund loop** — top-up orders with `status=3` currently only mark refunded without reversing quota; awaiting the unified admin order-management feature.
+- [ ] **Refund loop** — orders with `status=3` currently only flip the status without reversing quota; to be completed once the refund feature ships.
 
 ### 🔭 Planned
 
-- [ ] **More payment channels** — Apple Pay, UnionPay, Stripe, etc.; async refund API + automated refund ledger.
-- [ ] **Unified admin order management** — admin order-center CRUD, bulk operations, status filters, visual refund ledger.
+- [ ] **More payment channels** — Apple Pay, UnionPay, Stripe, etc.
+- [ ] **Order refund capability** — async refund API + automated refund ledger; roll back subscription / quota on plan or top-up refunds, with a visual refund ledger.
 - [ ] **Finance-system integration** — sync top-ups, consumption and refunds with mainstream finance / reconciliation platforms.
 - [ ] **Token-low alerting** — multi-channel notifications when account / token Token balance drops below threshold.
 - [ ] **Audit logs & reports** — full operation audit trail and visual reports for compliance.
