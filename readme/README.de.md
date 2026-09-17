@@ -11,6 +11,8 @@
 
 <p align="center">
   👉 <strong>Live-Demo ansehen</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  &nbsp;·&nbsp;
+  👉 <strong>Demo-Konto</strong>: <code>root</code> / <code>123456</code>
 </p>
 
 <p align="center">
