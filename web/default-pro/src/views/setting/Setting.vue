@@ -2,16 +2,16 @@
   <div class="setting-layout">
     <a-card :bordered="false" class="setting-card">
       <div class="setting-sidebar">
-        <div class="sidebar-title">设置</div>
+        <div class="sidebar-title">{{ $t('settingPage.sidebarTitle') }}</div>
         <a-menu :selected-keys="[activeKey]" @menu-item-click="onMenuClick" class="setting-menu">
-          <a-menu-item key="system"><template #icon><icon-settings /></template>系统</a-menu-item>
-          <a-menu-item key="cluster" v-if="authStore.isRoot"><template #icon><icon-storage /></template>集群</a-menu-item>
-          <a-menu-item key="operation" v-if="authStore.isRoot"><template #icon><icon-tool /></template>运营</a-menu-item>
-          <a-menu-item key="payment" v-if="authStore.isRoot"><template #icon><icon-alipay-circle /></template>支付</a-menu-item>
-          <a-menu-item key="pricing" v-if="authStore.isRoot"><template #icon><icon-tags /></template>定价</a-menu-item>
-          <a-menu-item key="plan" v-if="authStore.isRoot"><template #icon><icon-calendar /></template>套餐</a-menu-item>
-          <a-menu-item key="topup" v-if="authStore.isRoot"><template #icon><icon-subscribe-add /></template>充值</a-menu-item>
-          <a-menu-item key="personal"><template #icon><icon-user /></template>个人</a-menu-item>
+          <a-menu-item key="system"><template #icon><icon-settings /></template>{{ $t('settingPage.menu.system') }}</a-menu-item>
+          <a-menu-item key="cluster" v-if="authStore.isRoot"><template #icon><icon-storage /></template>{{ $t('settingPage.menu.cluster') }}</a-menu-item>
+          <a-menu-item key="operation" v-if="authStore.isRoot"><template #icon><icon-tool /></template>{{ $t('settingPage.menu.operation') }}</a-menu-item>
+          <a-menu-item key="payment" v-if="authStore.isRoot"><template #icon><icon-alipay-circle /></template>{{ $t('settingPage.menu.payment') }}</a-menu-item>
+          <a-menu-item key="pricing" v-if="authStore.isRoot"><template #icon><icon-tags /></template>{{ $t('settingPage.menu.pricing') }}</a-menu-item>
+          <a-menu-item key="plan" v-if="authStore.isRoot"><template #icon><icon-calendar /></template>{{ $t('settingPage.menu.plan') }}</a-menu-item>
+          <a-menu-item key="topup" v-if="authStore.isRoot"><template #icon><icon-subscribe-add /></template>{{ $t('settingPage.menu.topup') }}</a-menu-item>
+          <a-menu-item key="personal"><template #icon><icon-user /></template>{{ $t('settingPage.menu.personal') }}</a-menu-item>
         </a-menu>
       </div>
       <div class="setting-content">
