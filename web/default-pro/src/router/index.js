@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import i18n from '@/i18n'
 
 const routes = [
   {
@@ -51,29 +52,29 @@ const routes = [
     path: '/',
     component: AdminLayout,
     children: [
-      { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/Dashboard.vue'), meta: { title: '仪表盘' } },
-      { path: 'admin/dashboard', name: 'AdminDashboard', component: () => import('@/views/admin/AdminDashboard.vue'), meta: { title: '数据', admin: true } },
-      { path: 'channel', name: 'Channel', component: () => import('@/views/channel/Channel.vue'), meta: { title: '渠道', admin: true } },
-      { path: 'admin/orders', name: 'AdminOrders', component: () => import('@/views/admin/AdminOrders.vue'), meta: { title: '订单', admin: true } },
-      { path: 'token', name: 'Token', component: () => import('@/views/token/Token.vue'), meta: { title: '令牌' } },
-      { path: 'user', name: 'User', component: () => import('@/views/user/User.vue'), meta: { title: '用户', admin: true } },
-      { path: 'redemption', name: 'Redemption', component: () => import('@/views/redemption/Redemption.vue'), meta: { title: '兑换码', admin: true } },
-      { path: 'log', name: 'Log', component: () => import('@/views/log/Log.vue'), meta: { title: '日志' } },
-      { path: 'subscription', name: 'Subscription', component: () => import('@/views/subscription/Subscription.vue'), meta: { title: '订阅' } },
-      { path: 'plans', name: 'Plans', component: () => import('@/views/user/Plans.vue'), meta: { title: '套餐' } },
-      { path: 'orders', name: 'Orders', component: () => import('@/views/user/Orders.vue'), meta: { title: '订单' } },
-      { path: 'setting', name: 'Setting', component: () => import('@/views/setting/Setting.vue'), meta: { title: '设置' }, redirect: '/setting/system', children: [
-        { path: 'system', name: 'SystemSetting', component: () => import('@/views/setting/SystemSetting.vue'), meta: { title: '系统设置' } },
-        { path: 'cluster', name: 'ClusterSetting', component: () => import('@/views/setting/ClusterSetting.vue'), meta: { title: '集群设置' } },
-        { path: 'operation', name: 'OperationSetting', component: () => import('@/views/setting/OperationSetting.vue'), meta: { title: '运营设置' } },
-        { path: 'payment', name: 'PaymentSetting', component: () => import('@/views/setting/PaymentSetting.vue'), meta: { title: '支付设置' } },
-        { path: 'pricing', name: 'PricingSetting', component: () => import('@/views/setting/PricingSetting.vue'), meta: { title: '定价管理' } },
-        { path: 'plan', name: 'PlanSetting', component: () => import('@/views/setting/PlanSetting.vue'), meta: { title: '套餐管理' } },
-        { path: 'topup', name: 'TopupSetting', component: () => import('@/views/setting/TopupSetting.vue'), meta: { title: '充值设置' } },
-        { path: 'personal', name: 'PersonalSetting', component: () => import('@/views/setting/PersonalSetting.vue'), meta: { title: '个人设置' } },
+      { path: 'dashboard', name: 'Dashboard', component: () => import('@/views/dashboard/Dashboard.vue'), meta: { title: 'route.dashboard' } },
+      { path: 'admin/dashboard', name: 'AdminDashboard', component: () => import('@/views/admin/AdminDashboard.vue'), meta: { title: 'route.adminDashboard', admin: true } },
+      { path: 'channel', name: 'Channel', component: () => import('@/views/channel/Channel.vue'), meta: { title: 'route.channel', admin: true } },
+      { path: 'admin/orders', name: 'AdminOrders', component: () => import('@/views/admin/AdminOrders.vue'), meta: { title: 'route.adminOrders', admin: true } },
+      { path: 'token', name: 'Token', component: () => import('@/views/token/Token.vue'), meta: { title: 'route.token' } },
+      { path: 'user', name: 'User', component: () => import('@/views/user/User.vue'), meta: { title: 'route.user', admin: true } },
+      { path: 'redemption', name: 'Redemption', component: () => import('@/views/redemption/Redemption.vue'), meta: { title: 'route.redemption', admin: true } },
+      { path: 'log', name: 'Log', component: () => import('@/views/log/Log.vue'), meta: { title: 'route.log' } },
+      { path: 'subscription', name: 'Subscription', component: () => import('@/views/subscription/Subscription.vue'), meta: { title: 'route.subscription' } },
+      { path: 'plans', name: 'Plans', component: () => import('@/views/user/Plans.vue'), meta: { title: 'route.plans' } },
+      { path: 'orders', name: 'Orders', component: () => import('@/views/user/Orders.vue'), meta: { title: 'route.orders' } },
+      { path: 'setting', name: 'Setting', component: () => import('@/views/setting/Setting.vue'), meta: { title: 'route.setting' }, redirect: '/setting/system', children: [
+        { path: 'system', name: 'SystemSetting', component: () => import('@/views/setting/SystemSetting.vue'), meta: { title: 'route.systemSetting' } },
+        { path: 'cluster', name: 'ClusterSetting', component: () => import('@/views/setting/ClusterSetting.vue'), meta: { title: 'route.clusterSetting' } },
+        { path: 'operation', name: 'OperationSetting', component: () => import('@/views/setting/OperationSetting.vue'), meta: { title: 'route.operationSetting' } },
+        { path: 'payment', name: 'PaymentSetting', component: () => import('@/views/setting/PaymentSetting.vue'), meta: { title: 'route.paymentSetting' } },
+        { path: 'pricing', name: 'PricingSetting', component: () => import('@/views/setting/PricingSetting.vue'), meta: { title: 'route.pricingSetting' } },
+        { path: 'plan', name: 'PlanSetting', component: () => import('@/views/setting/PlanSetting.vue'), meta: { title: 'route.planSetting' } },
+        { path: 'topup', name: 'TopupSetting', component: () => import('@/views/setting/TopupSetting.vue'), meta: { title: 'route.topupSetting' } },
+        { path: 'personal', name: 'PersonalSetting', component: () => import('@/views/setting/PersonalSetting.vue'), meta: { title: 'route.personalSetting' } },
       ] },
-      { path: 'redeem', name: 'Redeem', component: () => import('@/views/redeem/Redeem.vue'), meta: { title: '兑换' } },
-      { path: 'chat', name: 'Chat', component: () => import('@/views/chat/Chat.vue'), meta: { title: '对话' } },
+      { path: 'redeem', name: 'Redeem', component: () => import('@/views/redeem/Redeem.vue'), meta: { title: 'route.redeem' } },
+      { path: 'chat', name: 'Chat', component: () => import('@/views/chat/Chat.vue'), meta: { title: 'route.chat' } },
     ],
   },
   {
@@ -120,9 +121,9 @@ const BASE_TITLE = 'ONE-API-PRO'
 
 router.afterEach((to) => {
   if (to.meta && to.meta.title) {
-    document.title = `${to.meta.title}—${BASE_TITLE}`
+    document.title = `${i18n.global.t(to.meta.title)}—${BASE_TITLE}`
   } else {
-    document.title = `${BASE_TITLE}—企业级AI API 网关`
+    document.title = `${BASE_TITLE}—${i18n.global.t('route.baseTitle')}`
   }
 })
 
