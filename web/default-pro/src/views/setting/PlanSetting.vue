@@ -1,9 +1,9 @@
 <template>
   <a-spin :loading="loading" class="setting-container">
     <div class="section-header">
-      <h3>套餐列表</h3>
+      <h3>{{ $t('settingPage.plan.listTitle') }}</h3>
       <a-space>
-        <a-button type="primary" @click="openModal()"><template #icon><icon-plus /></template>添加套餐</a-button>
+        <a-button type="primary" @click="openModal()"><template #icon><icon-plus /></template>{{ $t('settingPage.plan.addPlan') }}</a-button>
       </a-space>
     </div>
     <a-table :columns="columns" :data="plans" :pagination="false" row-key="id" size="medium" :scroll="{ x: 960 }">
@@ -12,60 +12,60 @@
         <span v-else style="color:#c9cdd4">-</span>
       </template>
       <template #status="{ record }">
-        <a-tag :color="record.status===1?'green':'gray'" size="small">{{ record.status===1?'启用':'禁用' }}</a-tag>
+        <a-tag :color="record.status===1?'green':'gray'" size="small">{{ record.status===1 ? $t('settingPage.plan.enabled') : $t('settingPage.plan.disabled') }}</a-tag>
       </template>
       <template #default_model="{ record }">{{ record.default_model || '-' }}</template>
       <template #actions="{ record }">
         <a-space>
-          <a-button type="text" size="small" @click="openModal(record)">编辑</a-button>
+          <a-button type="text" size="small" @click="openModal(record)">{{ $t('settingPage.plan.edit') }}</a-button>
           <a-button type="text" size="small" @click="toggleStatus(record)" :status="record.status===1?'warning':'success'">
-            {{ record.status===1?'禁用':'启用' }}
+            {{ record.status===1 ? $t('settingPage.plan.disabled') : $t('settingPage.plan.enabled') }}
           </a-button>
-          <a-popconfirm content="确定删除该套餐？" @ok="handleDelete(record.id)">
-            <a-button type="text" size="small" status="danger">删除</a-button>
+          <a-popconfirm :content="$t('settingPage.plan.confirmDelete')" @ok="handleDelete(record.id)">
+            <a-button type="text" size="small" status="danger">{{ $t('settingPage.plan.delete') }}</a-button>
           </a-popconfirm>
         </a-space>
       </template>
     </a-table>
 
-    <a-modal v-model:visible="modalVisible" :title="editing ? '编辑套餐' : '添加套餐'" @ok="handleSave" :ok-loading="saving" :width="900" modal-class="arco-modal-plan-wide">
+    <a-modal v-model:visible="modalVisible" :title="editing ? $t('settingPage.plan.editPlan') : $t('settingPage.plan.addPlan')" @ok="handleSave" :ok-loading="saving" :width="900" modal-class="arco-modal-plan-wide">
       <a-form :model="form" layout="vertical">
-        <a-form-item label="名称" required>
-          <a-input v-model="form.name" placeholder="请输入套餐名称" />
+        <a-form-item :label="$t('settingPage.plan.name')" required>
+          <a-input v-model="form.name" :placeholder="$t('settingPage.plan.namePlaceholder')" />
         </a-form-item>
-        <a-form-item label="描述">
-          <a-textarea v-model="form.description" :auto-size="{ minRows: 2, maxRows: 4 }" placeholder="套餐描述" />
+        <a-form-item :label="$t('settingPage.plan.description')">
+          <a-textarea v-model="form.description" :auto-size="{ minRows: 2, maxRows: 4 }" :placeholder="$t('settingPage.plan.descriptionPlaceholder')" />
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="8">
-            <a-form-item label="价格"><a-input-number v-model="form.price" :style="{ width: '100%' }" :precision="2" /></a-form-item>
+            <a-form-item :label="$t('settingPage.plan.price')"><a-input-number v-model="form.price" :style="{ width: '100%' }" :precision="2" /></a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="有效天数"><a-input-number v-model="form.duration_days" :style="{ width: '100%' }" /></a-form-item>
+            <a-form-item :label="$t('settingPage.plan.durationDays')"><a-input-number v-model="form.duration_days" :style="{ width: '100%' }" /></a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="时长文本"><a-input v-model="form.duration_text" placeholder="如：月" /></a-form-item>
+            <a-form-item :label="$t('settingPage.plan.durationText')"><a-input v-model="form.duration_text" :placeholder="$t('settingPage.plan.durationTextPlaceholder')" /></a-form-item>
           </a-col>
         </a-row>
         <a-row :gutter="16">
           <a-col :span="8">
-            <a-form-item label="排序"><a-input-number v-model="form.sort" :style="{ width: '100%' }" /></a-form-item>
+            <a-form-item :label="$t('settingPage.plan.sort')"><a-input-number v-model="form.sort" :style="{ width: '100%' }" /></a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="状态">
+            <a-form-item :label="$t('settingPage.plan.status')">
               <a-select v-model="form.status">
-                <a-option :value="1" label="启用" />
-                <a-option :value="0" label="禁用" />
+                <a-option :value="1" :label="$t('settingPage.plan.enabled')" />
+                <a-option :value="0" :label="$t('settingPage.plan.disabled')" />
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="推荐">
+            <a-form-item :label="$t('settingPage.plan.recommended')">
               <a-switch v-model="form.recommended" />
             </a-form-item>
           </a-col>
         </a-row>
-        <a-form-item label="特性说明">
+        <a-form-item :label="$t('settingPage.plan.features')">
           <div class="features-editor">
             <div
               v-for="(item, idx) in formFeatures"
@@ -74,7 +74,7 @@
             >
               <a-input
                 :model-value="item"
-                placeholder="如：每月 1000 次 API 调用"
+                :placeholder="$t('settingPage.plan.featurePlaceholder')"
                 allow-clear
                 @update:model-value="(v) => updateFeature(idx, v)"
                 @keyup.enter="addFeatureAfter(idx)"
@@ -86,7 +86,7 @@
                 class="features-editor-remove"
                 :disabled="formFeatures.length === 1 && !item"
                 @click="removeFeature(idx)"
-              >删除</a-button>
+              >{{ $t('settingPage.plan.delete') }}</a-button>
             </div>
             <a-button
               type="dashed"
@@ -96,14 +96,14 @@
               @click="addFeature()"
             >
               <template #icon><icon-plus :size="14" /></template>
-              添加特性
+              {{ $t('settingPage.plan.addFeature') }}
             </a-button>
           </div>
         </a-form-item>
-        <a-form-item label="默认模型">
-          <a-input v-model="form.default_model" placeholder="该套餐的默认模型，如：gpt-4o" />
+        <a-form-item :label="$t('settingPage.plan.defaultModel')">
+          <a-input v-model="form.default_model" :placeholder="$t('settingPage.plan.defaultModelPlaceholder')" />
         </a-form-item>
-        <a-form-item label="模型限制 (JSON)">
+        <a-form-item :label="$t('settingPage.plan.modelLimits')">
           <a-textarea v-model="form.model_limits" :auto-size="{ minRows: 2, maxRows: 6 }" placeholder='{"gpt-4": 1000, "gpt-3.5": 5000}' />
         </a-form-item>
       </a-form>
@@ -116,7 +116,8 @@
 // 版本: v0.0.12
 // 日期: 2026-09-07
 // 作者: opencode
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
@@ -125,6 +126,8 @@ import {
   featuresFromRecord,
   buildEmptyFeaturesForm,
 } from '@/utils/plan'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const plans = ref([])
@@ -143,17 +146,17 @@ const form = reactive({
 // 作者: opencode
 const formFeatures = ref(buildEmptyFeaturesForm())
 
-const columns = [
+const columns = computed(() => [
   { title: 'ID', dataIndex: 'id', width: 60 },
-  { title: '名称', dataIndex: 'name', width: 140 },
-  { title: '价格', dataIndex: 'price', width: 80 },
-  { title: '有效天数', dataIndex: 'duration_days', width: 90 },
-  { title: '默认模型', slotName: 'default_model', width: 120 },
-  { title: '推荐', slotName: 'recommended', width: 60, align: 'center' },
-  { title: '状态', slotName: 'status', width: 70 },
-  { title: '排序', dataIndex: 'sort', width: 60 },
-  { title: '操作', slotName: 'actions', width: 220, fixed: 'right' },
-]
+  { title: t('settingPage.plan.name'), dataIndex: 'name', width: 140 },
+  { title: t('settingPage.plan.price'), dataIndex: 'price', width: 80 },
+  { title: t('settingPage.plan.durationDays'), dataIndex: 'duration_days', width: 90 },
+  { title: t('settingPage.plan.defaultModel'), slotName: 'default_model', width: 120 },
+  { title: t('settingPage.plan.recommended'), slotName: 'recommended', width: 60, align: 'center' },
+  { title: t('settingPage.plan.status'), slotName: 'status', width: 70 },
+  { title: t('settingPage.plan.sort'), dataIndex: 'sort', width: 60 },
+  { title: t('settingPage.plan.action'), slotName: 'actions', width: 220, fixed: 'right' },
+])
 
 async function loadData() {
   loading.value = true
@@ -232,18 +235,18 @@ async function handleSave() {
     }
     if (editing.value) body.id = form.id
     const { data } = editing.value ? await api.put('/api/plan/', body) : await api.post('/api/plan/', body)
-    if (data.success) { modalVisible.value = false; Message.success(editing.value ? '套餐已更新' : '套餐已添加'); loadData() }
-    else Message.error(data.message || '操作失败')
-  } catch (e) { Message.error('操作失败') } finally { saving.value = false }
+    if (data.success) { modalVisible.value = false; Message.success(editing.value ? t('settingPage.plan.updated') : t('settingPage.plan.added')); loadData() }
+    else Message.error(data.message || t('settingPage.plan.opFailed'))
+  } catch (e) { Message.error(t('settingPage.plan.opFailed')) } finally { saving.value = false }
 }
 
-async function handleDelete(id) { try { await api.delete(`/api/plan/${id}/`); Message.success('已删除'); loadData() } catch (e) { Message.error('删除失败') } }
+async function handleDelete(id) { try { await api.delete(`/api/plan/${id}/`); Message.success(t('settingPage.plan.deleted')); loadData() } catch (e) { Message.error(t('settingPage.plan.deleteFailed')) } }
 
 async function toggleStatus(plan) {
   try {
     const { data } = await api.put('/api/plan/', { ...plan, status: plan.status === 1 ? 0 : 1 })
-    if (data.success) { Message.success('状态已切换'); loadData() } else Message.error(data.message)
-  } catch (e) { Message.error('操作失败') }
+    if (data.success) { Message.success(t('settingPage.plan.statusToggled')); loadData() } else Message.error(data.message)
+  } catch (e) { Message.error(t('settingPage.plan.opFailed')) }
 }
 
 onMounted(() => { loadData() })
