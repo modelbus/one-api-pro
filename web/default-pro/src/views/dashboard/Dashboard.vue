@@ -3,8 +3,8 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">控制台</h1>
-        <p class="welcome-desc">{{ greeting }}，{{ authStore.user?.display_name || authStore.user?.username || '用户' }} · 今天 {{ todayStr }}</p>
+        <h1 class="welcome-title">{{ $t('dash.title') }}</h1>
+        <p class="welcome-desc">{{ greeting }}，{{ authStore.user?.display_name || authStore.user?.username || $t('dash.userFallback') }} · {{ $t('dash.today') }} {{ todayStr }}</p>
       </div>
       <div class="welcome-meta">
         <span class="meta-chip" v-if="version">{{ version }}</span>
@@ -53,7 +53,7 @@
         <!-- 趋势图 -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">使用趋势（7天）</h2>
+            <h2 class="panel-title">{{ $t('dash.usageTrend') }}</h2>
           </div>
           <a-row :gutter="12">
             <a-col :xs="24" :sm="8" v-for="t in trendItems" :key="t.field">
@@ -72,18 +72,18 @@
         <!-- 模型分布（7天） -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">模型用量分布（7天）</h2>
-            <span class="panel-extra">Top {{ barModels.length || 0 }} · 近 7 天</span>
+            <h2 class="panel-title">{{ $t('dash.modelDist') }}</h2>
+            <span class="panel-extra">{{ $t('dash.topN', { n: barModels.length || 0 }) }} · {{ $t('dash.last7d') }}</span>
           </div>
           <v-chart v-if="barModels.length > 0" :option="barOption" :style="{ height: '320px' }" autoresize />
-          <div v-else class="chart-empty">暂无数据</div>
+          <div v-else class="chart-empty">{{ $t('dash.noData') }}</div>
         </div>
 
         <!-- 使用明细 -->
         <div class="panel no-pad">
           <div class="panel-head pad-head">
-            <h2 class="panel-title">使用明细</h2>
-            <span class="panel-extra">共 {{ details.length }} 条</span>
+            <h2 class="panel-title">{{ $t('dash.usageDetails') }}</h2>
+            <span class="panel-extra">{{ $t('dash.totalRows', { n: details.length }) }}</span>
           </div>
           <a-table
             :columns="columns"
@@ -113,7 +113,7 @@
               <span class="cell-num">{{ fmtTokens(record.prompt_tokens + record.completion_tokens) }}</span>
             </template>
             <template #empty>
-              <div class="empty-state">暂无使用记录</div>
+              <div class="empty-state">{{ $t('dash.noUsage') }}</div>
             </template>
           </a-table>
         </div>
@@ -121,7 +121,7 @@
         <!-- 快捷操作 -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">快捷操作</h2>
+            <h2 class="panel-title">{{ $t('dash.quickActions') }}</h2>
           </div>
           <div class="quick-grid">
             <button
@@ -148,17 +148,17 @@
               <icon-archive :size="18" />
             </div>
             <div class="balance-title">
-              <span class="balance-label">我的余额</span>
-              <span class="balance-unit">额度</span>
+              <span class="balance-label">{{ $t('dash.balance') }}</span>
+              <span class="balance-unit">{{ $t('dash.balanceUnit') }}</span>
             </div>
           </div>
           <div class="balance-value">
             <span class="balance-num">{{ fmtQuota(balance) }}</span>
           </div>
           <div class="balance-actions">
-            <a class="balance-btn" @click="$router.push('/redeem')">兑换</a>
-            <a class="balance-btn" @click="$router.push('/plans')">订阅</a>
-            <a class="balance-btn" @click="onRechargeClick">充值</a>
+            <a class="balance-btn" @click="$router.push('/redeem')">{{ $t('dash.redeem') }}</a>
+            <a class="balance-btn" @click="$router.push('/plans')">{{ $t('dash.subscribe') }}</a>
+            <a class="balance-btn" @click="onRechargeClick">{{ $t('dash.topup') }}</a>
           </div>
         </div>
 
@@ -166,46 +166,46 @@
         <div class="panel" :class="{ 'is-active': isActiveRoute('/token') }">
           <div class="panel-head">
             <h2 class="panel-title">API Key</h2>
-            <a class="panel-link" @click="$router.push('/token')">管理 ({{ tokenTotal }}) →</a>
+            <a class="panel-link" @click="$router.push('/token')">{{ $t('dash.manageCount', { n: tokenTotal }) }}</a>
           </div>
           <template v-if="latestApiKey">
             <div class="apikey-box">
               <code class="apikey-masked">{{ maskedApiKey }}</code>
               <a-button type="text" size="mini" @click="copyLatestKey">
                 <template #icon><icon-copy :size="14" /></template>
-                复制
+                {{ $t('dash.copy') }}
               </a-button>
             </div>
             <div class="apikey-meta">
-              <span class="meta-name">{{ latestApiKey.name || '默认密钥' }}</span>
+              <span class="meta-name">{{ latestApiKey.name || $t('dash.defaultKey') }}</span>
               <span v-if="latestApiKey.created_time">{{ formatDate(latestApiKey.created_time) }}</span>
             </div>
           </template>
           <div v-else class="apikey-empty">
-            <p class="empty-title">尚未创建 API Key</p>
-            <p class="empty-desc">创建后即可开始调用 API</p>
-            <a-button type="primary" size="small" @click="$router.push('/token')">立即创建</a-button>
+            <p class="empty-title">{{ $t('dash.noApiKey') }}</p>
+            <p class="empty-desc">{{ $t('dash.noApiKeyDesc') }}</p>
+            <a-button type="primary" size="small" @click="$router.push('/token')">{{ $t('dash.createNow') }}</a-button>
           </div>
         </div>
 
         <!-- 公告 -->
         <div class="panel clickable" @click="$router.push('/log')">
           <div class="panel-head">
-            <h2 class="panel-title">系统公告</h2>
-            <span class="panel-link">查看日志 →</span>
+            <h2 class="panel-title">{{ $t('dash.systemNotice') }}</h2>
+            <span class="panel-link">{{ $t('dash.viewLog') }}</span>
           </div>
           <div v-if="notice" class="notice-body" v-html="notice"></div>
           <div v-else class="notice-list">
             <a class="notice-item" href="#">
-              <span class="notice-title">One Api Pro 企业版正式发布</span>
+              <span class="notice-title">{{ $t('admin.announcement1Title') }}</span>
               <span class="notice-time">2026-08-01</span>
             </a>
             <a class="notice-item" href="#">
-              <span class="notice-title">支持 40+ 模型平台统一接入</span>
+              <span class="notice-title">{{ $t('admin.announcement2Title') }}</span>
               <span class="notice-time">2026-07-25</span>
             </a>
             <a class="notice-item" href="#">
-              <span class="notice-title">新增订阅套餐与用量管控</span>
+              <span class="notice-title">{{ $t('admin.announcement3Title') }}</span>
               <span class="notice-time">2026-07-15</span>
             </a>
           </div>
@@ -214,7 +214,7 @@
         <!-- 更新日志 -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">更新日志</h2>
+            <h2 class="panel-title">{{ $t('dash.changelog') }}</h2>
           </div>
           <div class="changelog">
             <div class="cl-item">
@@ -222,14 +222,14 @@
                 <span class="cl-version">{{ version || 'v1.0.0' }}</span>
                 <span class="cl-date">{{ todayStr }}</span>
               </div>
-              <p class="cl-desc">全新仪表盘：核心指标 + 趋势图表 + 模型分布</p>
+              <p class="cl-desc">{{ $t('dash.changelogCurrentDesc') }}</p>
             </div>
             <div class="cl-item">
               <div class="cl-head">
                 <span class="cl-version">v1.0.0</span>
                 <span class="cl-date">2026-06-01</span>
               </div>
-              <p class="cl-desc">One Api Pro 首个稳定版发布</p>
+              <p class="cl-desc">{{ $t('dash.changelogInitialDesc') }}</p>
             </div>
           </div>
         </div>
@@ -237,11 +237,11 @@
         <!-- 联系 -->
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">资源</h2>
+            <h2 class="panel-title">{{ $t('dash.resources') }}</h2>
           </div>
           <div class="contact-list">
             <a class="contact-item" href="http://one-api.pro" target="_blank">
-              <span class="contact-label">官方文档</span>
+              <span class="contact-label">{{ $t('dash.officialDocs') }}</span>
               <span class="contact-value is-active">one-api.pro</span>
               <icon-launch class="contact-arrow" :size="14" />
             </a>
@@ -274,19 +274,19 @@
     >
       <div class="payment-modal-body">
         <div class="qrcode-wrap">
-          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" alt="支付二维码" class="qrcode-img" />
-          <div v-else class="qrcode-loading">{{ qrModalTitle === '转账信息' ? qrModalTip : '正在生成支付二维码...' }}</div>
+          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" :alt="$t('dash.payQrAlt')" class="qrcode-img" />
+          <div v-else class="qrcode-loading">{{ qrIsTransfer ? qrModalTip : $t('dash.generatingQr') }}</div>
         </div>
-        <div v-if="qrModalTitle !== '转账信息'" class="payment-tip">{{ qrModalTip }}</div>
-        <div class="payment-tip-sub">（请在 5 分钟内完成支付）</div>
+        <div v-if="!qrIsTransfer" class="payment-tip">{{ qrModalTip }}</div>
+        <div class="payment-tip-sub">{{ $t('dash.payWithin5min') }}</div>
         <div class="payment-order-info">
           <div class="payment-info-row">
-            <span>充值金额</span>
+            <span>{{ $t('dash.topupAmount') }}</span>
             <span class="payment-info-price">¥{{ qrAmount }}</span>
           </div>
         </div>
         <div class="payment-actions">
-          <a-button long @click="qrModalVisible = false">关闭</a-button>
+          <a-button long @click="qrModalVisible = false">{{ $t('common.close') }}</a-button>
         </div>
       </div>
     </a-modal>
@@ -296,6 +296,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
   IconCodeSquare, IconSend, IconArchive, IconCalendar, IconCode, IconFile, IconGift,
@@ -315,6 +316,7 @@ import { findProviderByName } from '@/constants/providers'
 const authStore = useAuthStore()
 const statusStore = useStatusStore()
 const route = useRoute()
+const { t } = useI18n()
 
 function isActiveRoute(prefix) {
   return route.path === prefix || route.path.startsWith(prefix + '/')
@@ -360,11 +362,11 @@ const maskedApiKey = computed(() => {
 
 const greeting = computed(() => {
   const h = new Date().getHours()
-  if (h < 6) return '夜深了'
-  if (h < 12) return '早上好'
-  if (h < 14) return '中午好'
-  if (h < 18) return '下午好'
-  return '晚上好'
+  if (h < 6) return t('dash.greetingNight')
+  if (h < 12) return t('dash.greetingMorning')
+  if (h < 14) return t('dash.greetingNoon')
+  if (h < 18) return t('dash.greetingAfternoon')
+  return t('dash.greetingEvening')
 })
 
 const todayStr = computed(() => {
@@ -374,50 +376,50 @@ const todayStr = computed(() => {
 })
 
 const roleText = computed(() => {
-  if (authStore.isRoot) return '超级管理员'
-  if (authStore.isAdmin) return '管理员'
-  return '普通用户'
+  if (authStore.isRoot) return t('layout.roleRoot')
+  if (authStore.isAdmin) return t('layout.roleAdmin')
+  return t('layout.roleUser')
 })
 
 const statItems = computed(() => {
   const planFoot = (() => {
     if (currentPlan.value.id > 0 && !planExpired.value) {
       return currentPlan.value.expireDate && currentPlan.value.expireDate !== '-'
-        ? `${currentPlan.value.expireDate} 到期`
-        : '当前生效中'
+        ? t('dash.expireAt', { date: currentPlan.value.expireDate })
+        : t('dash.activeNow')
     }
-    if (planExpired.value) return '已过期 · 请续费'
+    if (planExpired.value) return t('dash.expiredRenew')
     return null
   })()
 
   return [
     {
-      label: '总 Token',
+      label: t('dash.totalTokens'),
       value: fmtNum(statData.total_tokens),
-      foot: '累计消耗',
+      foot: t('dash.totalTokensFoot'),
       icon: IconCodeSquare,
       bg: 'rgba(22,93,255,0.08)',
       color: '#165dff',
     },
     {
-      label: '总请求',
+      label: t('dash.totalRequests'),
       value: fmtNum(statData.total_requests),
-      foot: '累计调用',
+      foot: t('dash.totalRequestsFoot'),
       icon: IconSend,
       bg: 'rgba(0,180,42,0.08)',
       color: '#00b42a',
     },
     {
-      label: '总配额',
+      label: t('dash.totalQuota'),
       value: fmtQuota(statData.total_quota),
-      foot: '累计消耗',
+      foot: t('dash.totalQuotaFoot'),
       icon: IconArchive,
       bg: 'rgba(255,125,0,0.08)',
       color: '#ff7d00',
     },
     {
-      label: '当前套餐',
-      value: currentPlan.value.id > 0 ? currentPlan.value.name : (planExpired.value ? '已过期' : '未订阅'),
+      label: t('dash.currentPlan'),
+      value: currentPlan.value.id > 0 ? currentPlan.value.name : (planExpired.value ? t('dash.expired') : t('dash.notSubscribed')),
       foot: planFoot,
       icon: IconCalendar,
       bg: 'rgba(114,46,209,0.08)',
@@ -427,14 +429,14 @@ const statItems = computed(() => {
 })
 
 const usageItems = computed(() => [
-  { key: 'today', label: '今日用量', percent: todayPercent.value, tokens: todayTokens.value, reset: todayResetTime.value ? `重置 ${todayResetTime.value}` : '' },
-  { key: 'week', label: '7 日用量', percent: monthPercent.value, tokens: sevendayTokens.value, reset: sevendayResetTime.value ? `重置 ${sevendayResetTime.value}` : '' },
+  { key: 'today', label: t('dash.todayUsage'), percent: todayPercent.value, tokens: todayTokens.value, reset: todayResetTime.value ? t('dash.resetAt', { time: todayResetTime.value }) : '' },
+  { key: 'week', label: t('dash.weekUsage'), percent: monthPercent.value, tokens: sevendayTokens.value, reset: sevendayResetTime.value ? t('dash.resetAt', { time: sevendayResetTime.value }) : '' },
 ])
 
 const trendItems = computed(() => [
-  { field: 'requests', label: '请求数', color: '#165dff', total: sumField('requests') },
-  { field: 'quota', label: '额度', color: '#00b42a', total: sumField('quota') },
-  { field: 'tokens', label: 'Token', color: '#ff7d00', total: sumField('tokens') },
+  { field: 'requests', label: t('dash.requests'), color: '#165dff', total: sumField('requests') },
+  { field: 'quota', label: t('dash.quota'), color: '#00b42a', total: sumField('quota') },
+  { field: 'tokens', label: t('admin.chartTokens'), color: '#ff7d00', total: sumField('tokens') },
 ])
 
 function sumField(field) {
@@ -442,18 +444,18 @@ function sumField(field) {
 }
 
 const quickActions = computed(() => [
-  { label: '管理令牌', path: '/token', icon: IconCode, bg: 'rgba(22,93,255,0.08)', color: '#165dff' },
-  { label: '兑换码', path: '/redeem', icon: IconGift, bg: 'rgba(255,125,0,0.08)', color: '#ff7d00' },
-  { label: '使用日志', path: '/log', icon: IconFile, bg: 'rgba(15,198,194,0.08)', color: '#0fc6c2' },
+  { label: t('dash.manageTokens'), path: '/token', icon: IconCode, bg: 'rgba(22,93,255,0.08)', color: '#165dff' },
+  { label: t('dash.redeemCode'), path: '/redeem', icon: IconGift, bg: 'rgba(255,125,0,0.08)', color: '#ff7d00' },
+  { label: t('dash.usageLog'), path: '/log', icon: IconFile, bg: 'rgba(15,198,194,0.08)', color: '#0fc6c2' },
 ])
 
-const columns = [
-  { title: '模型', dataIndex: 'model_name', slotName: 'model', width: 220, ellipsis: true, tooltip: true },
-  { title: '日期', dataIndex: 'day', slotName: 'date', width: 120 },
-  { title: '请求数', dataIndex: 'request_count', slotName: 'requests', width: 110, align: 'right' },
-  { title: '额度消耗', dataIndex: 'quota', slotName: 'quota', width: 120, align: 'right' },
-  { title: 'Token 用量', slotName: 'tokens', width: 130, align: 'right' },
-]
+const columns = computed(() => [
+  { title: t('dash.model'), dataIndex: 'model_name', slotName: 'model', width: 220, ellipsis: true, tooltip: true },
+  { title: t('dash.date'), dataIndex: 'day', slotName: 'date', width: 120 },
+  { title: t('dash.requests'), dataIndex: 'request_count', slotName: 'requests', width: 110, align: 'right' },
+  { title: t('dash.quotaUsage'), dataIndex: 'quota', slotName: 'quota', width: 120, align: 'right' },
+  { title: t('dash.tokenUsage'), slotName: 'tokens', width: 130, align: 'right' },
+])
 
 function fmtNum(n) { return Number(n || 0).toLocaleString() }
 function fmtQuota(n) {
@@ -612,7 +614,7 @@ async function loadLogsFallback() {
         const pad = (n) => String(n).padStart(2, '0')
         return {
           day: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-          model_name: l.model_name || '其他',
+          model_name: l.model_name || t('dash.other'),
           quota: l.quota || 0,
           prompt_tokens: l.prompt_tokens || 0,
           completion_tokens: l.completion_tokens || 0,
@@ -648,8 +650,8 @@ function copyLatestKey() {
   if (raw) {
     const key = raw.startsWith('sk-') ? raw : 'sk-' + raw
     navigator.clipboard?.writeText(key)
-      .then(() => Message.success('API Key 已复制到剪贴板'))
-      .catch(() => Message.error('复制失败，请手动复制'))
+      .then(() => Message.success(t('dash.apiKeyCopied')))
+      .catch(() => Message.error(t('dash.copyFailed')))
   }
 }
 
@@ -658,8 +660,9 @@ const topupModalVisible = ref(false)
 const topupSettings = ref(null)
 const qrModalVisible = ref(false)
 const qrcodeDataUrl = ref('')
-const qrModalTitle = ref('扫码支付')
-const qrModalTip = ref('请使用微信扫码支付')
+const qrModalTitle = ref('')
+const qrModalTip = ref('')
+const qrIsTransfer = ref(false)
 const qrAmount = ref(0)
 
 async function loadTopupSettings() {
@@ -680,21 +683,21 @@ async function onRechargeClick() {
   try {
     await loadTopupSettings()
     if (!topupSettings.value) {
-      Message.warning('无法读取充值配置，请稍后重试')
+      Message.warning(t('dash.topupNoConfig'))
       return
     }
     if (!topupSettings.value.enabled) {
-      Message.warning('充值功能未开启，请联系管理员在「设置-充值」中开启')
+      Message.warning(t('dash.topupDisabled'))
       return
     }
     const presetsEmpty = !topupSettings.value.presets || topupSettings.value.presets.length === 0
     if (presetsEmpty && !topupSettings.value.allow_custom) {
-      Message.warning('管理员尚未配置充值金额')
+      Message.warning(t('dash.topupNoAmount'))
       return
     }
     topupModalVisible.value = true
   } catch (e) {
-    Message.error('充值功能异常，请稍后重试')
+    Message.error(t('dash.topupError'))
   }
 }
 
@@ -703,13 +706,15 @@ function formatAmount(n) { return Number(n || 0).toFixed(2) }
 async function onTopupPay({ url, note, payMethod, amount }) {
   qrAmount.value = formatAmount(amount)
   if (url) {
-    qrModalTitle.value = payMethod === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
-    qrModalTip.value = payMethod === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+    qrIsTransfer.value = false
+    qrModalTitle.value = payMethod === 'alipay' ? t('dash.alipayScanTitle') : t('dash.wechatScanTitle')
+    qrModalTip.value = payMethod === 'alipay' ? t('dash.alipayScanTip') : t('dash.wechatScanTip')
     try {
       qrcodeDataUrl.value = await QRCode.toDataURL(url, { width: 220, margin: 2 })
     } catch (e) { qrcodeDataUrl.value = '' }
   } else if (note) {
-    qrModalTitle.value = '转账信息'
+    qrIsTransfer.value = true
+    qrModalTitle.value = t('dash.transferInfo')
     qrModalTip.value = note
     qrcodeDataUrl.value = ''
   }
@@ -741,7 +746,7 @@ async function loadSubscription() {
         const first = p[0]
         currentPlan.value = {
           id: first.id || 1,
-          name: first.plan_name || first.name || '套餐',
+          name: first.plan_name || first.name || t('dash.planFallback'),
           expireDate: first.end_time ? formatDate(first.end_time) : '-',
         }
         planExpired.value = !!(first.end_time && new Date(first.end_time) < new Date())
@@ -836,7 +841,7 @@ function buildCharts(logs) {
     const quota = pick(item, 'quota', 'Quota')
     const prompt = pick(item, 'prompt_tokens', 'PromptTokens')
     const completion = pick(item, 'completion_tokens', 'CompletionTokens')
-    const modelName = item.ModelName ?? item.model_name ?? '其他'
+    const modelName = item.ModelName ?? item.model_name ?? t('dash.other')
     const tokens = prompt + completion
 
     totalRequests += requestCount
