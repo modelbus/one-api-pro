@@ -1,8 +1,8 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1 class="page-title">我的订单</h1>
-      <p class="page-subtitle">查看和管理您的所有订单</p>
+      <h1 class="page-title">{{ $t('ordersPage.title') }}</h1>
+      <p class="page-subtitle">{{ $t('ordersPage.subtitle') }}</p>
     </div>
 
     <!-- Tabs (按状态过滤) -->
@@ -19,30 +19,30 @@
     </div>
 
     <!-- Table -->
-    <a-spin :loading="loading" dot tip="加载中..." class="orders-spin">
+    <a-spin :loading="loading" dot :tip="$t('ordersPage.loading')" class="orders-spin">
     <div class="table-wrap">
       <table class="data-table">
         <thead>
           <tr>
-            <th>订单号</th>
-            <th>订单类型</th>
-            <th>套餐</th>
-            <th>金额</th>
-            <th>创建时间</th>
-            <th>状态</th>
-            <th>操作</th>
+            <th>{{ $t('ordersPage.colOrderNo') }}</th>
+            <th>{{ $t('ordersPage.colType') }}</th>
+            <th>{{ $t('ordersPage.colPlan') }}</th>
+            <th>{{ $t('ordersPage.colAmount') }}</th>
+            <th>{{ $t('ordersPage.colCreatedAt') }}</th>
+            <th>{{ $t('ordersPage.colStatus') }}</th>
+            <th>{{ $t('ordersPage.colAction') }}</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in filteredOrders" :key="order.id">
             <td><span class="order-no">{{ order.orderNo }}</span></td>
-            <td><span class="order-type" :class="order.type === 2 ? 'type-topup' : 'type-plan'">{{ order.type === 2 ? '充值' : '套餐' }}</span></td>
+            <td><span class="order-type" :class="order.type === 2 ? 'type-topup' : 'type-plan'">{{ order.type === 2 ? $t('ordersPage.typeTopup') : $t('ordersPage.typePlan') }}</span></td>
             <td>{{ order.planName }}</td>
             <td><span class="amount">¥{{ order.amount }}</span></td>
             <td>{{ order.createdAt }}</td>
             <td>
               <span class="badge" :class="statusClass(order.status)">
-                {{ order.statusText }}
+                {{ statusText(order.status) }}
               </span>
             </td>
             <td>
@@ -52,8 +52,8 @@
                   type="primary"
                   size="small"
                   @click="payOrder(order)"
-                >支付</a-button>
-                <a-button size="small" @click="viewOrder(order)">查看</a-button>
+                >{{ $t('ordersPage.pay') }}</a-button>
+                <a-button size="small" @click="viewOrder(order)">{{ $t('ordersPage.view') }}</a-button>
               </a-space>
             </td>
           </tr>
@@ -72,8 +72,8 @@
             <line x1="58" y1="46" x2="58" y2="58" stroke="#D1D1D6" stroke-width="2"/>
           </svg>
         </div>
-        <p class="empty-text">暂无订单记录</p>
-        <a-button type="primary" @click="$router.push('/plans')">立即订阅</a-button>
+        <p class="empty-text">{{ $t('ordersPage.empty') }}</p>
+        <a-button type="primary" @click="$router.push('/plans')">{{ $t('ordersPage.subscribeNow') }}</a-button>
       </div>
     </div>
     </a-spin>
@@ -82,50 +82,50 @@
     <div v-if="detailVisible" class="modal-overlay" @click.self="detailVisible = false">
       <div class="modal">
         <div class="modal-header">
-          <span class="modal-title">订单详情</span>
+          <span class="modal-title">{{ $t('ordersPage.detailTitle') }}</span>
           <button class="modal-close" @click="detailVisible = false">×</button>
         </div>
         <div class="modal-body" v-if="currentOrder">
           <div class="detail-row">
-            <span class="detail-label">订单号</span>
+            <span class="detail-label">{{ $t('ordersPage.colOrderNo') }}</span>
             <span class="detail-value">{{ currentOrder.orderNo }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">订单类型</span>
-            <span class="detail-value">{{ currentOrder.type === 1 ? '套餐订单' : currentOrder.type === 2 ? '充值订单' : '其他' }}</span>
+            <span class="detail-label">{{ $t('ordersPage.colType') }}</span>
+            <span class="detail-value">{{ currentOrder.type === 1 ? $t('ordersPage.typePlanOrder') : currentOrder.type === 2 ? $t('ordersPage.typeTopupOrder') : $t('ordersPage.other') }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">订单来源</span>
-            <span class="detail-value">{{ currentOrder.source === 1 ? '用户自助' : currentOrder.source === 2 ? '管理员' : '其他' }}</span>
+            <span class="detail-label">{{ $t('ordersPage.orderSource') }}</span>
+            <span class="detail-value">{{ currentOrder.source === 1 ? $t('ordersPage.sourceUser') : currentOrder.source === 2 ? $t('ordersPage.sourceAdmin') : $t('ordersPage.other') }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">套餐</span>
+            <span class="detail-label">{{ $t('ordersPage.colPlan') }}</span>
             <span class="detail-value">{{ currentOrder.planName }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">金额</span>
+            <span class="detail-label">{{ $t('ordersPage.colAmount') }}</span>
             <span class="amount">¥{{ currentOrder.amount }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">支付方式</span>
-            <span class="detail-value">{{ currentOrder.payMethodLabel }}</span>
+            <span class="detail-label">{{ $t('ordersPage.payMethod') }}</span>
+            <span class="detail-value">{{ payMethodText(currentOrder.payMethod) }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">创建时间</span>
+            <span class="detail-label">{{ $t('ordersPage.colCreatedAt') }}</span>
             <span class="detail-value">{{ currentOrder.createdAt }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">支付时间</span>
+            <span class="detail-label">{{ $t('ordersPage.paidAt') }}</span>
             <span class="detail-value">{{ currentOrder.paidAt }}</span>
           </div>
           <div class="detail-row">
-            <span class="detail-label">状态</span>
+            <span class="detail-label">{{ $t('ordersPage.colStatus') }}</span>
             <span class="badge" :class="statusClass(currentOrder.status)">
-              {{ currentOrder.statusText }}
+              {{ statusText(currentOrder.status) }}
             </span>
           </div>
           <div v-if="currentOrder.pay_trade_no" class="detail-row">
-            <span class="detail-label">流水号</span>
+            <span class="detail-label">{{ $t('ordersPage.tradeNo') }}</span>
             <span class="detail-value">{{ currentOrder.pay_trade_no }}</span>
           </div>
         </div>
@@ -137,16 +137,16 @@
       v-model:visible="payModalVisible"
       :footer="false"
       :mask-closable="true"
-      title="选择支付方式"
+      :title="$t('ordersPage.selectPayMethodTitle')"
       width="420px"
     >
       <div class="pay-method-body">
         <div class="pay-method-row">
-          <span class="pay-method-label">套餐</span>
+          <span class="pay-method-label">{{ $t('ordersPage.planLabel') }}</span>
           <span class="pay-method-value">{{ payTarget?.planName }}</span>
         </div>
         <div class="pay-method-row">
-          <span class="pay-method-label">金额</span>
+          <span class="pay-method-label">{{ $t('ordersPage.amountLabel') }}</span>
           <span class="pay-method-amount">¥{{ payTarget?.amount }}</span>
         </div>
         <div class="pay-method-list">
@@ -162,13 +162,13 @@
             <span v-if="selectedPayMethod === m.name" class="pay-method-check">✓</span>
           </button>
           <div v-if="payMethods.length === 0" class="pay-method-empty">
-            暂无可用的支付方式
+            {{ $t('ordersPage.noPayMethods') }}
           </div>
         </div>
         <div class="pay-method-footer">
-          <a-button @click="payModalVisible = false">取消</a-button>
+          <a-button @click="payModalVisible = false">{{ $t('ordersPage.cancel') }}</a-button>
           <a-button type="primary" :loading="paySubmitting" :disabled="!selectedPayMethod" @click="confirmPayMethod">
-            确认支付
+            {{ $t('ordersPage.confirmPay') }}
           </a-button>
         </div>
       </div>
@@ -185,23 +185,23 @@
     >
       <div class="payment-modal-body">
         <div class="qrcode-wrap">
-          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" alt="支付二维码" class="qrcode-img" />
-          <div v-else class="qrcode-loading">正在生成支付二维码...</div>
+          <img v-if="qrcodeDataUrl" :src="qrcodeDataUrl" :alt="$t('ordersPage.payQrAlt')" class="qrcode-img" />
+          <div v-else class="qrcode-loading">{{ $t('ordersPage.generatingQr') }}</div>
         </div>
         <div class="payment-tip">{{ qrModalTip }}</div>
         <div v-if="qrModalNote" class="payment-tip-sub">{{ qrModalNote }}</div>
         <div class="payment-order-info">
           <div class="payment-info-row">
-            <span>套餐</span>
+            <span>{{ $t('ordersPage.planLabel') }}</span>
             <span class="payment-info-value">{{ qrPackageName }}</span>
           </div>
           <div class="payment-info-row">
-            <span>金额</span>
+            <span>{{ $t('ordersPage.amountLabel') }}</span>
             <span class="payment-info-price">¥{{ qrAmount }}</span>
           </div>
         </div>
         <div class="payment-actions">
-          <a-button long @click="qrModalVisible = false">关闭</a-button>
+          <a-button long @click="qrModalVisible = false">{{ $t('ordersPage.close') }}</a-button>
         </div>
       </div>
     </a-modal>
@@ -210,11 +210,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconWechatpay, IconAlipayCircle, IconSafe } from '@arco-design/web-vue/es/icon'
 import QRCode from 'qrcode'
 import orderApi from '@/api/order'
 import paymentApi from '@/api/payment'
+
+const { t } = useI18n()
 
 const activeTab = ref('all')
 const detailVisible = ref(false)
@@ -222,25 +225,31 @@ const currentOrder = ref(null)
 const loading = ref(false)
 const orders = ref([])
 
-const tabs = [
-  { label: '全部', value: 'all' },
-  { label: '待支付', value: 'pending' },
-  { label: '已支付', value: 'paid' },
-  { label: '已取消', value: 'cancelled' },
-]
+const tabs = computed(() => [
+  { label: t('ordersPage.tabAll'), value: 'all' },
+  { label: t('ordersPage.tabPending'), value: 'pending' },
+  { label: t('ordersPage.tabPaid'), value: 'paid' },
+  { label: t('ordersPage.tabCancelled'), value: 'cancelled' },
+])
 
 const STATUS_STR = { 0: 'pending', 1: 'paid', 2: 'cancelled', 3: 'refunded' }
 
-const NO_PAYMENT_MSG = '系统尚未开通任何支付通道，请设置后开启支付'
+const NO_PAYMENT_MSG = computed(() => t('ordersPage.noPaymentMsg'))
 
 const filteredOrders = computed(() => {
   if (activeTab.value === 'all') return orders.value
   return orders.value.filter(o => STATUS_STR[o.status] === activeTab.value)
 })
 
+const STATUS_TEXT = computed(() => ({
+  0: t('ordersPage.statusPending'),
+  1: t('ordersPage.statusPaid'),
+  2: t('ordersPage.statusCancelled'),
+  3: t('ordersPage.statusRefunded'),
+}))
+
 function statusText(status) {
-  const map = { 0: '待支付', 1: '已支付', 2: '已取消', 3: '已退款' }
-  return map[status] || String(status)
+  return STATUS_TEXT.value[status] || String(status)
 }
 
 function statusClass(status) {
@@ -250,11 +259,11 @@ function statusClass(status) {
 
 function payMethodText(m) {
   switch (m) {
-    case 'wechat': return '微信'
-    case 'alipay': return '支付宝'
-    case 'bank': return '银行'
-    case 'offline': return '线下'
-    case 'free': return '免费'
+    case 'wechat': return t('ordersPage.wechat')
+    case 'alipay': return t('ordersPage.alipay')
+    case 'bank': return t('ordersPage.bank')
+    case 'offline': return t('ordersPage.offline')
+    case 'free': return t('ordersPage.free')
     default: return m || '-'
   }
 }
@@ -291,20 +300,18 @@ async function loadOrders() {
         planName: item.plan_info ? safeParseName(item.plan_info) : '',
         amount: item.amount,
         status: item.status,
-        statusText: statusText(item.status),
         type: item.type,
         source: item.source,
         payMethod: item.pay_method,
-        payMethodLabel: payMethodText(item.pay_method),
         payTradeNo: item.pay_trade_no,
         createdAt: formatTime(item.create_time),
         paidAt: formatTime(item.pay_time),
       }))
     } else {
-      Message.error(body.message || '加载失败')
+      Message.error(body.message || t('ordersPage.loadFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || '网络错误')
+    Message.error(e.response?.data?.message || t('ordersPage.networkError'))
   } finally {
     loading.value = false
   }
@@ -331,8 +338,8 @@ const selectedPayMethod = ref('')
 const paySubmitting = ref(false)
 
 const qrModalVisible = ref(false)
-const qrModalTitle = ref('扫码支付')
-const qrModalTip = ref('请扫码完成支付')
+const qrModalTitle = ref(t('ordersPage.scanPay'))
+const qrModalTip = ref(t('ordersPage.scanPayTip'))
 const qrModalNote = ref('')
 const qrcodeDataUrl = ref('')
 const qrAmount = ref(0)
@@ -356,7 +363,7 @@ async function payOrder(record) {
   // plans page.
   const anyEnabled = await loadPaymentStatus()
   if (!anyEnabled) {
-    Message.error(NO_PAYMENT_MSG)
+    Message.error(NO_PAYMENT_MSG.value)
     return
   }
   payTarget.value = {
@@ -373,8 +380,8 @@ async function payOrder(record) {
 
 // Build the QR / redirect modal for an online payment channel.
 async function openQrModal(url, payMethod) {
-  qrModalTitle.value = payMethod === 'alipay' ? '支付宝扫码支付' : '微信扫码支付'
-  qrModalTip.value = payMethod === 'alipay' ? '请使用支付宝扫码支付' : '请使用微信扫码支付'
+  qrModalTitle.value = payMethod === 'alipay' ? t('ordersPage.alipayScanTitle') : t('ordersPage.wechatScanTitle')
+  qrModalTip.value = payMethod === 'alipay' ? t('ordersPage.alipayScanTip') : t('ordersPage.wechatScanTip')
   qrModalNote.value = ''
   qrcodeDataUrl.value = ''
   try {
@@ -391,7 +398,7 @@ async function openQrModal(url, payMethod) {
 
 // Build the "transfer info" modal for bank / offline payments.
 function openBankNoteModal(note) {
-  qrModalTitle.value = '转账信息'
+  qrModalTitle.value = t('ordersPage.transferInfo')
   qrModalTip.value = note
   qrModalNote.value = ''
   qrcodeDataUrl.value = ''
@@ -418,7 +425,7 @@ function handlePayMyOrderResult(data) {
     return
   }
   if (status === 'warning') {
-    Message.error(pay.warning || '发起支付失败，请稍后重试')
+    Message.error(pay.warning || t('ordersPage.payFailed'))
     return
   }
   // Backwards-compat fallback when pay.status is absent (older backends).
@@ -427,7 +434,7 @@ function handlePayMyOrderResult(data) {
   } else if (pay.note) {
     openBankNoteModal(pay.note)
   } else {
-    Message.error(pay.warning || '发起支付失败，请稍后重试')
+    Message.error(pay.warning || t('ordersPage.payFailed'))
   }
 }
 
@@ -440,7 +447,7 @@ async function confirmPayMethod() {
     })
     const data = res?.data
     if (!data?.success) {
-      Message.error(data?.message || '发起支付失败')
+      Message.error(data?.message || t('ordersPage.payFailedShort'))
       return
     }
     payModalVisible.value = false
@@ -451,7 +458,7 @@ async function confirmPayMethod() {
       loadOrders()
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || '发起支付失败')
+    Message.error(e.response?.data?.message || t('ordersPage.payFailedShort'))
   } finally {
     paySubmitting.value = false
   }
