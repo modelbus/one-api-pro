@@ -3,11 +3,11 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">订阅</h1>
-        <p class="welcome-desc">管理用户的订阅套餐、用量配额与计费周期</p>
+        <h1 class="welcome-title">{{ $t('subPage.title') }}</h1>
+        <p class="welcome-desc">{{ $t('subPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">共 {{ subscriptions.length }} 条</span>
+        <span class="meta-chip">{{ $t('subPage.total', { n: subscriptions.length }) }}</span>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <div class="search-left">
         <a-input-search
           v-model="searchKeyword"
-          placeholder="搜索用户、套餐或备注..."
+          :placeholder="$t('subPage.searchPlaceholder')"
           allow-clear
           @search="searchSubscriptions"
           @clear="handleClearSearch"
@@ -26,11 +26,11 @@
       <div class="search-right">
         <a-button @click="refresh" :loading="loading">
           <template #icon><icon-refresh :size="14" /></template>
-          刷新
+          {{ $t('subPage.refresh') }}
         </a-button>
         <a-button v-if="authStore.isAdmin" type="primary" size="large" @click="openAddModal">
           <template #icon><icon-plus :size="14" /></template>
-          新建订阅
+          {{ $t('subPage.addSubscription') }}
         </a-button>
       </div>
     </div>
@@ -41,25 +41,25 @@
         <div class="empty-icon">
           <icon-calendar :size="32" />
         </div>
-        <p class="empty-title">还没有任何订阅</p>
-        <p v-if="authStore.isAdmin" class="empty-desc">为用户创建第一个订阅即可开始</p>
-        <p v-else class="empty-desc">尚无订阅记录</p>
+        <p class="empty-title">{{ $t('subPage.emptyTitle') }}</p>
+        <p v-if="authStore.isAdmin" class="empty-desc">{{ $t('subPage.emptyDescAdmin') }}</p>
+        <p v-else class="empty-desc">{{ $t('subPage.emptyDescUser') }}</p>
         <a-button v-if="authStore.isAdmin" type="primary" @click="openAddModal">
           <template #icon><icon-plus :size="14" /></template>
-          立即创建
+          {{ $t('subPage.createNow') }}
         </a-button>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head" :style="{ gridTemplateColumns: headGrid }">
           <div class="col">ID</div>
-          <div v-if="authStore.isAdmin" class="col">用户</div>
-          <div class="col">套餐</div>
-          <div class="col">计费</div>
-          <div class="col">开始时间</div>
-          <div class="col">结束时间</div>
-          <div class="col">状态</div>
-          <div class="col col-action">操作</div>
+          <div v-if="authStore.isAdmin" class="col">{{ $t('subPage.colUser') }}</div>
+          <div class="col">{{ $t('subPage.colPlan') }}</div>
+          <div class="col">{{ $t('subPage.colBilling') }}</div>
+          <div class="col">{{ $t('subPage.colStart') }}</div>
+          <div class="col">{{ $t('subPage.colEnd') }}</div>
+          <div class="col">{{ $t('subPage.colStatus') }}</div>
+          <div class="col col-action">{{ $t('subPage.colAction') }}</div>
         </div>
 
         <a-spin :loading="loading" style="width: 100%">
@@ -99,7 +99,7 @@
             </div>
 
             <div class="col col-action">
-              <a-button type="text" size="small" @click="viewUsage(s)">用量</a-button>
+              <a-button type="text" size="small" @click="viewUsage(s)">{{ $t('subPage.usage') }}</a-button>
               <template v-if="authStore.isAdmin">
                 <a-button
                   v-if="isActive(s.status)"
@@ -107,20 +107,20 @@
                   size="small"
                   @click="openRenewModal(s)"
                 >
-                  续费
+                  {{ $t('subPage.renew') }}
                 </a-button>
                 <a-popconfirm
                   v-if="isActive(s.status)"
-                  content="确定将该订阅置为过期？"
+                  :content="$t('subPage.confirmExpire')"
                   @ok="expireSubscription(s.id)"
                 >
-                  <a-button type="text" size="small">过期</a-button>
+                  <a-button type="text" size="small">{{ $t('subPage.expire') }}</a-button>
                 </a-popconfirm>
                 <a-popconfirm
-                  content="确定要删除该订阅？删除后无法恢复"
+                  :content="$t('subPage.confirmDelete')"
                   @ok="deleteSubscription(s.id)"
                 >
-                  <a-button type="text" size="small" class="danger-btn">删除</a-button>
+                  <a-button type="text" size="small" class="danger-btn">{{ $t('subPage.delete') }}</a-button>
                 </a-popconfirm>
               </template>
             </div>
@@ -146,19 +146,19 @@
     <!-- 新建订阅 -->
     <a-modal
       v-model:visible="showAddModal"
-      title="新建订阅"
+      :title="$t('subPage.addTitle')"
       :width="520"
       :ok-loading="addSubmitting"
       @ok="addSubscription"
       @cancel="showAddModal = false"
-      ok-text="确定创建"
-      cancel-text="取消"
+      :ok-text="$t('subPage.confirmCreate')"
+      :cancel-text="$t('subPage.cancel')"
     >
       <a-form :model="addForm" layout="vertical" class="sub-form">
-        <a-form-item label="用户">
+        <a-form-item :label="$t('subPage.userLabel')">
           <a-select
             v-model="addForm.user_id"
-            placeholder="选择用户"
+            :placeholder="$t('subPage.selectUser')"
             allow-search
             :loading="userListLoading"
           >
@@ -172,10 +172,10 @@
             </a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="套餐">
+        <a-form-item :label="$t('subPage.planLabel')">
           <a-select
             v-model="addForm.plan_id"
-            placeholder="选择套餐"
+            :placeholder="$t('subPage.selectPlan')"
             allow-search
             :loading="planListLoading"
           >
@@ -189,25 +189,25 @@
             </a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="计费类型">
-          <a-select v-model="addForm.billing_type" placeholder="选择计费类型">
-            <a-option value="token">按 Token</a-option>
-            <a-option value="request">按次数</a-option>
+        <a-form-item :label="$t('subPage.billingTypeLabel')">
+          <a-select v-model="addForm.billing_type" :placeholder="$t('subPage.selectBillingType')">
+            <a-option value="token">{{ $t('subPage.billingToken') }}</a-option>
+            <a-option value="request">{{ $t('subPage.billingRequest') }}</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item label="时长（天）">
+        <a-form-item :label="$t('subPage.durationLabel')">
           <a-input-number
             v-model="addForm.duration_days"
             :min="1"
             :max="3650"
-            placeholder="例如 30"
+            :placeholder="$t('subPage.durationPlaceholder')"
             style="width: 100%"
           />
         </a-form-item>
-        <a-form-item label="备注">
+        <a-form-item :label="$t('subPage.notesLabel')">
           <a-textarea
             v-model="addForm.notes"
-            placeholder="可选备注..."
+            :placeholder="$t('subPage.notesPlaceholder')"
             :auto-size="{ minRows: 2, maxRows: 4 }"
           />
         </a-form-item>
@@ -217,16 +217,16 @@
     <!-- 续费 -->
     <a-modal
       v-model:visible="showRenewModal"
-      title="续费订阅"
+      :title="$t('subPage.renewTitle')"
       :width="460"
       :ok-loading="renewSubmitting"
       @ok="renewSubscription"
       @cancel="showRenewModal = false"
-      ok-text="确定续费"
-      cancel-text="取消"
+      :ok-text="$t('subPage.confirmRenew')"
+      :cancel-text="$t('subPage.cancel')"
     >
       <a-form :model="renewForm" layout="vertical" class="sub-form">
-        <a-form-item label="新的结束时间">
+        <a-form-item :label="$t('subPage.newEndTimeLabel')">
           <a-date-picker
             v-model="renewForm.end_time"
             show-time
@@ -234,10 +234,10 @@
             style="width: 100%"
           />
         </a-form-item>
-        <a-form-item label="备注">
+        <a-form-item :label="$t('subPage.notesLabel')">
           <a-textarea
             v-model="renewForm.notes"
-            placeholder="续费备注..."
+            :placeholder="$t('subPage.renewNotesPlaceholder')"
             :auto-size="{ minRows: 2, maxRows: 4 }"
           />
         </a-form-item>
@@ -247,7 +247,7 @@
     <!-- 用量弹窗 -->
     <a-modal
       v-model:visible="showUsageModal"
-      title="订阅用量"
+      :title="$t('subPage.usageTitle')"
       @cancel="showUsageModal = false"
       :footer="false"
       :width="780"
@@ -258,26 +258,26 @@
           <!-- 基础信息 -->
           <div class="usage-info">
             <div class="ud-item">
-              <span class="ud-label">套餐</span>
+              <span class="ud-label">{{ $t('subPage.planLabel') }}</span>
               <span class="ud-value">{{ usageData.subscription?.plan?.name || usageData.plan_name || '-' }}</span>
             </div>
             <div class="ud-item">
-              <span class="ud-label">计费类型</span>
+              <span class="ud-label">{{ $t('subPage.billingTypeLabel') }}</span>
               <span class="ud-value">{{ renderBillingType(usageData.billing_type || usageData.subscription?.billing_type) }}</span>
             </div>
             <div class="ud-item">
-              <span class="ud-label">开始时间</span>
+              <span class="ud-label">{{ $t('subPage.colStart') }}</span>
               <span class="ud-value ud-mono">{{ formatTime(usageData.subscription?.start_time) }}</span>
             </div>
             <div class="ud-item">
-              <span class="ud-label">结束时间</span>
+              <span class="ud-label">{{ $t('subPage.colEnd') }}</span>
               <span class="ud-value ud-mono">{{ formatTime(usageData.subscription?.end_time) }}</span>
             </div>
           </div>
 
           <!-- 窗口用量进度 -->
           <div class="usage-section" v-if="usageData.weighted">
-            <h4 class="section-title">用量窗口</h4>
+            <h4 class="section-title">{{ $t('subPage.usageWindow') }}</h4>
 
             <div
               v-for="wt in windowTypes"
@@ -297,7 +297,7 @@
                   v-if="usageData.next_reset && usageData.next_reset[wt]"
                   class="window-reset"
                 >
-                  下次重置：{{ formatTime(usageData.next_reset[wt]) }}
+                  {{ $t('subPage.nextReset', { time: formatTime(usageData.next_reset[wt]) }) }}
                 </span>
               </div>
 
@@ -331,20 +331,20 @@
                   </span>
                 </div>
               </div>
-              <div v-else class="window-empty">暂无模型用量</div>
+              <div v-else class="window-empty">{{ $t('subPage.noModelUsage') }}</div>
 
               <!-- 展开模型明细 -->
               <div v-if="expandedWindows[wt]" class="window-detail">
                 <table class="detail-table" v-if="getModelDetails(wt).length > 0">
                   <thead>
                     <tr>
-                      <th>模型</th>
-                      <th>请求数</th>
-                      <th>占比</th>
-                      <th>Prompt Tokens</th>
-                      <th>Completion Tokens</th>
-                      <th>Cached Tokens</th>
-                      <th>Token 占比</th>
+                      <th>{{ $t('subPage.model') }}</th>
+                      <th>{{ $t('subPage.requests') }}</th>
+                      <th>{{ $t('subPage.requestShare') }}</th>
+                      <th>{{ $t('subPage.promptTokens') }}</th>
+                      <th>{{ $t('subPage.completionTokens') }}</th>
+                      <th>{{ $t('subPage.cachedTokens') }}</th>
+                      <th>{{ $t('subPage.tokenShare') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -364,12 +364,12 @@
                     </tr>
                   </tbody>
                 </table>
-                <div v-else class="window-empty">暂无模型明细</div>
+                <div v-else class="window-empty">{{ $t('subPage.noModelDetail') }}</div>
               </div>
             </div>
           </div>
 
-          <div v-else class="usage-empty">暂无用量数据</div>
+          <div v-else class="usage-empty">{{ $t('subPage.noUsageData') }}</div>
         </template>
       </a-spin>
     </a-modal>
@@ -378,6 +378,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import {
   IconPlus, IconCalendar, IconRefresh,
@@ -387,6 +388,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const ITEMS_PER_PAGE = 10
 const pageSize = ref(ITEMS_PER_PAGE)
@@ -441,6 +443,12 @@ const headGrid = computed(() => {
 
 const windowTypes = WINDOW_TYPES
 
+const windowTypeLabels = computed(() => ({
+  period: t('subPage.windowPeriod'),
+  week: t('subPage.windowWeek'),
+  month: t('subPage.windowMonth'),
+}))
+
 // ============ API 调用 ============
 async function loadSubscriptions(reset = true) {
   loading.value = true
@@ -457,10 +465,10 @@ async function loadSubscriptions(reset = true) {
       subscriptions.value = items
       activePage.value = 1
     } else {
-      Message.error(data.message || '加载订阅失败')
+      Message.error(data.message || t('subPage.loadSubFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '加载订阅失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.loadSubFailed'))
   } finally {
     loading.value = false
   }
@@ -501,10 +509,10 @@ async function searchSubscriptions() {
       subscriptions.value = Array.isArray(data.data) ? data.data : []
       activePage.value = 1
     } else {
-      Message.error(data.message || '搜索失败')
+      Message.error(data.message || t('subPage.searchFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '搜索失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.searchFailed'))
   } finally {
     searching.value = false
   }
@@ -537,13 +545,13 @@ function getUserName(userId) {
 
 // ============ 渲染函数（参考 web-back） ============
 function renderStatus(status) {
-  if (typeof status === 'number') return status === 1 ? '生效中' : '已过期'
+  if (typeof status === 'number') return status === 1 ? t('subPage.statusActive') : t('subPage.statusExpired')
   switch (status) {
-    case 'active': return '生效中'
-    case 'expired': return '已过期'
-    case 'pending': return '待生效'
-    case 'cancelled': return '已取消'
-    default: return status || '未知'
+    case 'active': return t('subPage.statusActive')
+    case 'expired': return t('subPage.statusExpired')
+    case 'pending': return t('subPage.statusPending')
+    case 'cancelled': return t('subPage.statusCancelled')
+    default: return status || t('subPage.statusUnknown')
   }
 }
 
@@ -558,14 +566,13 @@ function statusClass(status) {
 }
 
 function renderBillingType(type) {
-  if (type === 'token') return '按 Token'
-  if (type === 'request') return '按次数'
+  if (type === 'token') return t('subPage.billingToken')
+  if (type === 'request') return t('subPage.billingRequest')
   return type || '-'
 }
 
 function renderWindowType(wt) {
-  const map = { period: '周期', week: '周', month: '月' }
-  return map[wt] || wt
+  return windowTypeLabels.value[wt] || wt
 }
 
 function isActive(status) {
@@ -678,7 +685,7 @@ async function openAddModal() {
 
 async function addSubscription() {
   if (!addForm.user_id || !addForm.plan_id) {
-    Message.warning('请选择用户和套餐')
+    Message.warning(t('subPage.selectUserPlanRequired'))
     return
   }
   addSubmitting.value = true
@@ -691,14 +698,14 @@ async function addSubscription() {
       notes: addForm.notes,
     })
     if (data.success) {
-      Message.success('订阅已创建')
+      Message.success(t('subPage.createSuccess'))
       showAddModal.value = false
       loadSubscriptions()
     } else {
-      Message.error(data.message || '创建失败')
+      Message.error(data.message || t('subPage.createFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '创建失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.createFailed'))
   } finally {
     addSubmitting.value = false
   }
@@ -715,7 +722,7 @@ function openRenewModal(s) {
 
 async function renewSubscription() {
   if (!renewForm.end_time) {
-    Message.warning('请选择新的结束时间')
+    Message.warning(t('subPage.selectEndTimeRequired'))
     return
   }
   renewSubmitting.value = true
@@ -728,14 +735,14 @@ async function renewSubscription() {
       notes: renewForm.notes,
     })
     if (data.success) {
-      Message.success('续费成功')
+      Message.success(t('subPage.renewSuccess'))
       showRenewModal.value = false
       loadSubscriptions()
     } else {
-      Message.error(data.message || '续费失败')
+      Message.error(data.message || t('subPage.renewFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '续费失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.renewFailed'))
   } finally {
     renewSubmitting.value = false
   }
@@ -745,13 +752,13 @@ async function expireSubscription(id) {
   try {
     const { data } = await api.post(`/api/subscription/${id}/expire`)
     if (data.success) {
-      Message.success('已置为过期')
+      Message.success(t('subPage.expireSuccess'))
       loadSubscriptions()
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('subPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.opFailed'))
   }
 }
 
@@ -759,17 +766,17 @@ async function deleteSubscription(id) {
   try {
     const { data } = await api.delete(`/api/subscription/${id}/`)
     if (data.success) {
-      Message.success('订阅已删除')
+      Message.success(t('subPage.deleteSuccess'))
       // 当前页删除空时回退到上一页
       if (pageItems.value.length === 1 && activePage.value > 1) {
         activePage.value -= 1
       }
       loadSubscriptions()
     } else {
-      Message.error(data.message || '删除失败')
+      Message.error(data.message || t('subPage.deleteFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '删除失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.deleteFailed'))
   }
 }
 
@@ -783,10 +790,10 @@ async function viewUsage(record) {
     if (data.success) {
       usageData.value = data.data
     } else {
-      Message.error(data.message || '加载用量失败')
+      Message.error(data.message || t('subPage.loadUsageFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '加载用量失败')
+    Message.error(e.response?.data?.message || e.message || t('subPage.loadUsageFailed'))
   } finally {
     usageLoading.value = false
   }
