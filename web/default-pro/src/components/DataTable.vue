@@ -6,7 +6,7 @@
           <a-input-search
             v-if="searchable"
             v-model="keyword"
-            :placeholder="searchPlaceholder"
+            :placeholder="placeholderText"
             allow-clear
             @search="handleSearch"
             @clear="handleClear"
@@ -48,13 +48,14 @@
     </a-spin>
 
     <div v-if="!loading && !showData.length" class="empty-state">
-      <a-empty :description="emptyText" />
+      <a-empty :description="emptyTextResolved" />
     </div>
   </a-card>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PageHeader from './PageHeader.vue'
 
 const props = defineProps({
@@ -64,9 +65,14 @@ const props = defineProps({
   data: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   searchable: { type: Boolean, default: true },
-  searchPlaceholder: { type: String, default: '搜索...' },
-  emptyText: { type: String, default: '暂无数据' },
+  searchPlaceholder: { type: String, default: '' },
+  emptyText: { type: String, default: '' },
 })
+
+const { t } = useI18n()
+
+const placeholderText = computed(() => props.searchPlaceholder || t('dataTable.searchPlaceholder'))
+const emptyTextResolved = computed(() => props.emptyText || t('dataTable.noData'))
 
 const keyword = ref('')
 const currentPage = ref(1)
