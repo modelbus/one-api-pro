@@ -7,8 +7,8 @@
   Layout references Dashboard.vue: welcome-bar header + left 16 / right 8 split
   + multi stat-grid + trend-cell + dash-table.
 
-  版本: v0.0.17
-  日期: 2026-09-11
+  版本: v0.0.21
+  日期: 2026-09-17
   作者: opencode
 -->
 <template>
@@ -387,20 +387,22 @@ const charts = ref([]) // 原始 []LogStatistic（day × model）
 const lastRefreshAt = ref(0)
 
 // ---------- 公告 / 更新日志 / 资源（管理员仪表盘固定列表） ----------
-const announcements = [
+// 用 computed 包裹，确保切换语言时列表文案实时更新。
+// Wrap in computed so list text reacts to locale changes.
+const announcements = computed(() => [
   { title: t('admin.announcement1Title'), time: t('admin.announcement1Time') },
   { title: t('admin.announcement2Title'), time: t('admin.announcement2Time') },
   { title: t('admin.announcement3Title'), time: t('admin.announcement3Time') },
-]
-const changelog = [
+])
+const changelog = computed(() => [
   { version: 'v0.0.16', date: '2026-09-11', desc: t('admin.changelogCurrentDesc') },
   { version: 'v0.0.10', date: '2026-09-06', desc: t('admin.changelogTopupDesc') },
   { version: 'v0.0.0', date: '2026-06-01', desc: t('admin.changelogInitialDesc') },
-]
-const contactLinks = [
+])
+const contactLinks = computed(() => [
   { label: t('admin.contactDocsLabel'), value: 'one-api.pro', href: 'http://one-api.pro' },
   { label: t('admin.contactGithubLabel'), value: 'modelbus/one-api-pro', href: 'https://github.com/modelbus/one-api-pro' },
-]
+])
 
 // ---------- 工具 ----------
 // numFmt: 安全 toLocaleString，null/undefined 视为 0。
