@@ -5,13 +5,13 @@
         <router-link to="/" class="legal-brand">
           <img :src="logoPng" alt="ONE-API-PRO" />
         </router-link>
-        <router-link to="/" class="legal-back">返回首页</router-link>
+        <router-link to="/" class="legal-back">{{ $t('legal.backHome') }}</router-link>
       </div>
     </header>
     <main class="legal-main">
       <article class="legal-document">
         <header class="legal-document-header">
-          <span class="legal-document-label">法律文件</span>
+          <span class="legal-document-label">{{ $t('legal.documentLabel') }}</span>
           <h1>{{ title }}</h1>
           <p>{{ description }}</p>
           <span v-if="updatedAt" class="legal-updated">{{ updatedAt }}</span>
