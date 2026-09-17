@@ -11,6 +11,8 @@
 
 <p align="center">
   👉 <strong>تجربة النسخة التجريبية مباشرة</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  &nbsp;·&nbsp;
+  👉 <strong>حساب العرض التوضيحي</strong>: <code>root</code> / <code>123456</code>
 </p>
 
 <p align="center">
