@@ -2,69 +2,69 @@
   <div class="payment-setting-page">
     <a-spin :loading="loading">
       <div class="section">
-        <h3>支付</h3>
-        <p class="section-hint">开启支付方式后，下方会显示对应表单。关闭后表单自动隐藏。</p>
+        <h3>{{ $t('settingPage.payment.section') }}</h3>
+        <p class="section-hint">{{ $t('settingPage.payment.hint') }}</p>
 
         <!-- 微信支付 -->
         <a-form layout="vertical" class="setting-form">
-          <a-form-item label="微信支付">
+          <a-form-item :label="$t('settingPage.payment.wechat')">
             <a-switch v-model="paymentSettings.wechat.enabled" @change="autoSavePayment('wechat', paymentSettings.wechat.enabled)" />
           </a-form-item>
           <template v-if="paymentSettings.wechat.enabled">
             <a-row :gutter="[16, 8]">
-              <a-col :span="12"><a-form-item label="AppID"><a-input v-model="paymentSettings.wechat.config.app_id" placeholder="微信开放平台 AppID" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="商户号 (MchID)"><a-input v-model="paymentSettings.wechat.config.mch_id" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="API Key"><a-input-password v-model="paymentSettings.wechat.config.api_key" placeholder="V2 签名密钥" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="回调 URL (notify_url)"><a-input v-model="paymentSettings.wechat.config.notify_url" placeholder="https://your-host/api/payment/wechat/notify" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.appId')"><a-input v-model="paymentSettings.wechat.config.app_id" :placeholder="$t('settingPage.payment.wechatAppIdPlaceholder')" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.mchId')"><a-input v-model="paymentSettings.wechat.config.mch_id" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.apiKey')"><a-input-password v-model="paymentSettings.wechat.config.api_key" :placeholder="$t('settingPage.payment.apiKeyPlaceholder')" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.notifyUrl')"><a-input v-model="paymentSettings.wechat.config.notify_url" :placeholder="$t('settingPage.payment.wechatNotifyPlaceholder')" /></a-form-item></a-col>
             </a-row>
             <a-form-item>
               <a-upload :custom-request="(opt) => uploadPaymentFile('wechat', opt, 'cert_file')" :show-upload-list="false" accept=".pem">
-                <a-button>上传证书 (apiclient_cert.pem)</a-button>
+                <a-button>{{ $t('settingPage.payment.uploadCert') }}</a-button>
               </a-upload>
               <a-upload :custom-request="(opt) => uploadPaymentFile('wechat', opt, 'key_file')" :show-upload-list="false" accept=".pem" style="margin-left:12px">
-                <a-button>上传私钥 (apiclient_key.pem)</a-button>
+                <a-button>{{ $t('settingPage.payment.uploadKey') }}</a-button>
               </a-upload>
             </a-form-item>
-            <a-form-item><a-button type="primary" @click="savePaymentMethod('wechat')">保存微信支付</a-button></a-form-item>
+            <a-form-item><a-button type="primary" @click="savePaymentMethod('wechat')">{{ $t('settingPage.payment.saveWechat') }}</a-button></a-form-item>
           </template>
         </a-form>
 
         <!-- 支付宝 -->
         <a-form layout="vertical" class="setting-form" style="margin-top:24px">
-          <a-form-item label="支付宝">
+          <a-form-item :label="$t('settingPage.payment.alipay')">
             <a-switch v-model="paymentSettings.alipay.enabled" @change="autoSavePayment('alipay', paymentSettings.alipay.enabled)" />
           </a-form-item>
           <template v-if="paymentSettings.alipay.enabled">
             <a-row :gutter="[16, 8]">
-              <a-col :span="12"><a-form-item label="AppID"><a-input v-model="paymentSettings.alipay.config.app_id" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="网关 (gateway)"><a-input v-model="paymentSettings.alipay.config.gateway" placeholder="https://openapi.alipay.com/gateway.do" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="回调 URL (notify_url)"><a-input v-model="paymentSettings.alipay.config.notify_url" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.appId')"><a-input v-model="paymentSettings.alipay.config.app_id" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.gateway')"><a-input v-model="paymentSettings.alipay.config.gateway" :placeholder="$t('settingPage.payment.gatewayPlaceholder')" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.notifyUrl')"><a-input v-model="paymentSettings.alipay.config.notify_url" /></a-form-item></a-col>
             </a-row>
             <a-form-item>
               <a-upload :custom-request="(opt) => uploadPaymentFile('alipay', opt, 'private_key_file')" :show-upload-list="false" accept=".pem,.txt">
-                <a-button>上传应用私钥</a-button>
+                <a-button>{{ $t('settingPage.payment.uploadAppPrivateKey') }}</a-button>
               </a-upload>
               <a-upload :custom-request="(opt) => uploadPaymentFile('alipay', opt, 'public_key_file')" :show-upload-list="false" accept=".pem,.txt" style="margin-left:12px">
-                <a-button>上传支付宝公钥</a-button>
+                <a-button>{{ $t('settingPage.payment.uploadAlipayPublicKey') }}</a-button>
               </a-upload>
             </a-form-item>
-            <a-form-item><a-button type="primary" @click="savePaymentMethod('alipay')">保存支付宝</a-button></a-form-item>
+            <a-form-item><a-button type="primary" @click="savePaymentMethod('alipay')">{{ $t('settingPage.payment.saveAlipay') }}</a-button></a-form-item>
           </template>
         </a-form>
 
         <!-- 银行转账 -->
         <a-form layout="vertical" class="setting-form" style="margin-top:24px">
-          <a-form-item label="银行转账">
+          <a-form-item :label="$t('settingPage.payment.bank')">
             <a-switch v-model="paymentSettings.bank.enabled" @change="autoSavePayment('bank', paymentSettings.bank.enabled)" />
           </a-form-item>
           <template v-if="paymentSettings.bank.enabled">
             <a-row :gutter="[16, 8]">
-              <a-col :span="12"><a-form-item label="收款人"><a-input v-model="paymentSettings.bank.config.account_name" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="账号"><a-input v-model="paymentSettings.bank.config.account_no" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="开户行"><a-input v-model="paymentSettings.bank.config.bank_name" /></a-form-item></a-col>
-              <a-col :span="12"><a-form-item label="备注"><a-input v-model="paymentSettings.bank.config.notes" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.accountName')"><a-input v-model="paymentSettings.bank.config.account_name" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.accountNo')"><a-input v-model="paymentSettings.bank.config.account_no" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.bankName')"><a-input v-model="paymentSettings.bank.config.bank_name" /></a-form-item></a-col>
+              <a-col :span="12"><a-form-item :label="$t('settingPage.payment.notes')"><a-input v-model="paymentSettings.bank.config.notes" /></a-form-item></a-col>
             </a-row>
-            <a-form-item><a-button type="primary" @click="savePaymentMethod('bank')">保存银行信息</a-button></a-form-item>
+            <a-form-item><a-button type="primary" @click="savePaymentMethod('bank')">{{ $t('settingPage.payment.saveBank') }}</a-button></a-form-item>
           </template>
         </a-form>
       </div>
@@ -74,8 +74,11 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import settingApi from '@/api/setting'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 
@@ -110,9 +113,9 @@ async function savePaymentMethod(method) {
   try {
     const fd = buildPaymentFormData(method)
     const res = await settingApi.putPaymentMethod(method, fd)
-    if (res?.data?.success) Message.success('已保存')
-    else Message.error(res?.data?.message || '保存失败')
-  } catch (e) { Message.error(e.response?.data?.message || '保存失败') }
+    if (res?.data?.success) Message.success(t('settingPage.payment.saved'))
+    else Message.error(res?.data?.message || t('settingPage.payment.saveFailed'))
+  } catch (e) { Message.error(e.response?.data?.message || t('settingPage.payment.saveFailed')) }
 }
 
 async function autoSavePayment(method, enabled) {
@@ -128,19 +131,19 @@ async function autoSavePayment(method, enabled) {
 
 async function uploadPaymentFile(method, opt, field) {
   const file = opt.fileItem?.file || opt.file
-  if (!file) { Message.error('未选择文件'); return }
+  if (!file) { Message.error(t('settingPage.payment.noFile')); return }
   const fd = new FormData()
   fd.append('config', JSON.stringify({ enabled: paymentSettings[method].enabled, config: paymentSettings[method].config }))
   fd.append(field || (method === 'wechat' ? 'cert_file' : 'private_key_file'), file)
   try {
     const { data } = await settingApi.putPaymentMethod(method, fd)
     if (data.success) {
-      Message.success('上传成功')
+      Message.success(t('settingPage.payment.uploadSuccess'))
       loadPaymentSettings()
     } else {
-      Message.error(data.message || '上传失败')
+      Message.error(data.message || t('settingPage.payment.uploadFailed'))
     }
-  } catch (e) { Message.error('上传失败') }
+  } catch (e) { Message.error(t('settingPage.payment.uploadFailed')) }
 }
 
 onMounted(() => { loadPaymentSettings() })
