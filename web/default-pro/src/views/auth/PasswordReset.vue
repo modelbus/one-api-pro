@@ -1,22 +1,22 @@
 <template>
   <AuthLayout>
     <div class="auth-heading">
-      <h1 id="auth-title">忘记密码</h1>
-      <p>重置您的密码</p>
+      <h1 id="auth-title">{{ $t('auth.resetHeading') }}</h1>
+      <p>{{ $t('auth.resetSubtitle') }}</p>
     </div>
     <a-form class="auth-form" :model="form" layout="vertical" size="large" @submit="handleSubmit" aria-labelledby="auth-title">
       <a-form-item field="email" hide-label>
-        <a-input v-model="form.email" placeholder="请输入注册邮箱" allow-clear aria-label="注册邮箱">
+        <a-input v-model="form.email" :placeholder="$t('auth.emailPlaceholder')" allow-clear :aria-label="$t('auth.emailAriaLabel')">
           <template #prefix><icon-email /></template>
         </a-input>
       </a-form-item>
       <a-form-item>
         <a-button type="primary" html-type="submit" long :loading="loading" size="large">
-          发送重置邮件
+          {{ $t('auth.sendResetEmail') }}
         </a-button>
       </a-form-item>
       <div class="form-extra">
-        <a-link @click="$router.push('/login')">返回登录</a-link>
+        <a-link @click="$router.push('/login')">{{ $t('auth.backToLogin') }}</a-link>
       </div>
       <div v-if="message" class="form-alert">
         <a-alert :type="success ? 'success' : 'error'" :show-icon="false">{{ message }}</a-alert>
@@ -27,26 +27,28 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import { IconEmail } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 
+const { t } = useI18n()
 const form = ref({ email: '' })
 const loading = ref(false)
 const message = ref('')
 const success = ref(false)
 
 async function handleSubmit() {
-  if (!form.value.email) { message.value = '请输入邮箱'; return }
+  if (!form.value.email) { message.value = t('auth.enterEmail'); return }
   loading.value = true
   message.value = ''
   try {
     await api.post('/api/user/reset', { email: form.value.email })
     success.value = true
-    message.value = '密码重置邮件已发送，请查收'
+    message.value = t('auth.resetEmailSent')
   } catch (e) {
     success.value = false
-    message.value = e.response?.data?.message || '发送失败'
+    message.value = e.response?.data?.message || t('auth.sendFailed')
   } finally {
     loading.value = false
   }
