@@ -25,19 +25,27 @@ export function formatAmount(n) {
 
 // validateTopupPresets 前端预校验快捷金额，返回错误信息或 null。
 // 规则：金额必须大于 0；不允许重复金额。
+// 可选传入 vue-i18n 的 t 函数以输出本地化文案（默认中文，便于单测）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.21
+// 日期: 2026-09-17
 // 作者: opencode
-export function validateTopupPresets(presets) {
+export function validateTopupPresets(presets, t) {
+  const tr = typeof t === 'function'
+    ? t
+    : (key, params) => {
+        if (key === 'amountPositive') return `第 ${params.n} 行金额必须大于 0`
+        if (key === 'duplicate') return `快捷金额重复：${params.amt} 元已存在`
+        return key
+      }
   const seen = new Set()
   for (let i = 0; i < presets.length; i++) {
     const amt = Number(presets[i].amount)
     if (!Number.isFinite(amt) || amt <= 0) {
-      return `第 ${i + 1} 行金额必须大于 0`
+      return tr('amountPositive', { n: i + 1 })
     }
     if (seen.has(amt)) {
-      return `快捷金额重复：${amt} 元已存在`
+      return tr('duplicate', { amt })
     }
     seen.add(amt)
   }
