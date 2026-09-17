@@ -6,25 +6,26 @@
           <img :src="logoSrc" class="nav-logo" @error="onLogoError" />
         </div>
         <div class="nav-menu">
-          <a href="#features">优势</a>
-          <a href="#scenarios">场景</a>
-          <a href="#compare">对比</a>
-          <a href="#models">模型</a>
-          <a href="#download">下载</a>
-          <a href="#faq">问题</a>
-          <a href="http://one-api.pro" target="_blank">文档</a>
+          <a href="#features">{{ $t('landing.navFeatures') }}</a>
+          <a href="#scenarios">{{ $t('landing.navScenarios') }}</a>
+          <a href="#compare">{{ $t('landing.navCompare') }}</a>
+          <a href="#models">{{ $t('landing.navModels') }}</a>
+          <a href="#download">{{ $t('landing.navDownload') }}</a>
+          <a href="#faq">{{ $t('landing.navFaq') }}</a>
+          <a href="http://one-api.pro" target="_blank">{{ $t('landing.navDocs') }}</a>
         </div>
         <div class="nav-actions">
+          <LangSwitcher size="small" width="110px" />
           <a-button type="text" size="small" href="https://github.com/modelbus/one-api-pro" target="_blank" class="nav-github-btn">
             <template #icon><icon-github /></template>
             GitHub
           </a-button>
           <template v-if="authStore.isLoggedIn">
-            <a-button type="primary" @click="$router.push('/dashboard')">控制台</a-button>
+            <a-button type="primary" @click="$router.push('/dashboard')">{{ $t('landing.console') }}</a-button>
           </template>
           <template v-else>
-            <a-button type="outline" @click="$router.push('/login')">登录</a-button>
-            <a-button type="primary" @click="$router.push('/register')">免费注册</a-button>
+            <a-button type="outline" @click="$router.push('/login')">{{ $t('landing.login') }}</a-button>
+            <a-button type="primary" @click="$router.push('/register')">{{ $t('landing.register') }}</a-button>
           </template>
         </div>
       </div>
@@ -45,32 +46,32 @@
               <icon-github style="vertical-align:-2px" /> GitHub
             </a>
           </div>
-          <h1>企业级 <span class="text-gradient">AI API 网关</span></h1>
-          <p>统一管理所有大模型 API，一键接入 30+ 平台<br/>智能路由、集群部署、开箱即用</p>
+          <h1>{{ $t('landing.heroTitlePrefix') }} <span class="text-gradient">{{ $t('landing.heroTitleGradient') }}</span></h1>
+          <p>{{ $t('landing.heroLine1') }}<br/>{{ $t('landing.heroLine2') }}</p>
           <div class="hero-buttons">
             <a-button v-if="authStore.isLoggedIn" type="primary" size="large" shape="round" @click="$router.push('/dashboard')">
-              进入控制台 <icon-right />
+              {{ $t('landing.enterConsole') }} <icon-right />
             </a-button>
             <template v-else>
               <a-button type="primary" size="large" shape="round" @click="$router.push('/register')">
-                免费开始 <icon-right />
+                {{ $t('landing.getStartedFree') }} <icon-right />
               </a-button>
-              <a-button size="large" shape="round" @click="scrollTo('features')">查看优势</a-button>
+              <a-button size="large" shape="round" @click="scrollTo('features')">{{ $t('landing.viewFeatures') }}</a-button>
             </template>
             <a-button size="large" shape="round" href="https://github.com/modelbus/one-api-pro" target="_blank" class="btn-gh-dark">
               <template #icon><icon-github /></template>
               GitHub
             </a-button>
             <a-button size="large" shape="round" href="https://github.com/modelbus/one-api-pro/releases" target="_blank">
-              立即下载 <icon-down />
+              {{ $t('landing.downloadNow') }} <icon-down />
             </a-button>
           </div>
           <div class="hero-counts">
-            <div class="count-item"><strong>30+</strong><span>模型平台</span></div>
+            <div class="count-item"><strong>30+</strong><span>{{ $t('landing.countPlatforms') }}</span></div>
             <div class="count-divider"></div>
-            <div class="count-item"><strong>100%</strong><span>兼容 OpenAI</span></div>
+            <div class="count-item"><strong>100%</strong><span>{{ $t('landing.countOpenAI') }}</span></div>
             <div class="count-divider"></div>
-            <div class="count-item"><strong>MIT</strong><span>开源协议</span></div>
+            <div class="count-item"><strong>MIT</strong><span>{{ $t('landing.countLicense') }}</span></div>
           </div>
         </div>
         <div class="hero-visual">
@@ -94,9 +95,9 @@
 
     <section id="features" class="section">
       <div class="section-header">
-        <span class="section-label">平台优势</span>
-        <h2>为什么选择 One Api Pro</h2>
-        <p>不只是模型接入 — 更是企业 AI 基础设施的安全底座</p>
+        <span class="section-label">{{ $t('landing.featuresLabel') }}</span>
+        <h2>{{ $t('landing.featuresTitle') }}</h2>
+        <p>{{ $t('landing.featuresSubtitle') }}</p>
       </div>
       <div class="feature-grid">
         <div class="feature-item" v-for="f in features" :key="f.title">
@@ -111,45 +112,45 @@
 
     <section id="scenarios" class="section section-alt">
       <div class="section-header">
-        <span class="section-label">应用场景</span>
-        <h2>覆盖企业 AI 全流程</h2>
-        <p>从研发测试到生产环境，一套系统满足所有场景</p>
+        <span class="section-label">{{ $t('landing.scenariosLabel') }}</span>
+        <h2>{{ $t('landing.scenariosTitle') }}</h2>
+        <p>{{ $t('landing.scenariosSubtitle') }}</p>
       </div>
       <div class="scenario-grid">
         <div class="scenario-card">
           <icon-code class="sc-icon" />
-          <h3>研发团队</h3>
-          <p>统一接入多模型 API，开发者无需关心各平台差异，单 API Key 切换所有模型，大幅提升开发效率</p>
+          <h3>{{ $t('landing.scenarioRnd') }}</h3>
+          <p>{{ $t('landing.scenarioRndDesc') }}</p>
         </div>
         <div class="scenario-card">
           <icon-apps class="sc-icon" />
-          <h3>SaaS 平台</h3>
-          <p>为下游客户提供完整的 AI 能力分发，按用户/按模型计费，支持套餐订阅，快速实现商业化闭环</p>
+          <h3>{{ $t('landing.scenarioSaas') }}</h3>
+          <p>{{ $t('landing.scenarioSaasDesc') }}</p>
         </div>
         <div class="scenario-card">
           <icon-cloud class="sc-icon" />
-          <h3>企业内部</h3>
-          <p>统一管控所有 AI 调用出口，配额分配、成本归集、安全审计，杜绝 API Key 泄露和费用超支</p>
+          <h3>{{ $t('landing.scenarioEnterprise') }}</h3>
+          <p>{{ $t('landing.scenarioEnterpriseDesc') }}</p>
         </div>
         <div class="scenario-card">
           <icon-thunderbolt class="sc-icon" />
-          <h3>高并发业务</h3>
-          <p>多渠道负载均衡 + 自动故障切换 + 去中心化集群，支撑百万级日调用，服务永不宕机</p>
+          <h3>{{ $t('landing.scenarioHighConcurrency') }}</h3>
+          <p>{{ $t('landing.scenarioHighConcurrencyDesc') }}</p>
         </div>
       </div>
     </section>
 
     <section id="compare" class="section">
       <div class="section-header">
-        <span class="section-label">全面升级</span>
+        <span class="section-label">{{ $t('landing.compareLabel') }}</span>
         <h2><span class="cmp-old">one-api</span> <span class="cmp-vs">vs</span> <span class="cmp-new">one-api-pro</span></h2>
-        <p>在保留原版全部功能的基础上，进行了架构级重构</p>
+        <p>{{ $t('landing.compareSubtitle') }}</p>
       </div>
       <div class="compare-container">
         <div class="compare-header-row">
           <div class="compare-col-label"></div>
           <div class="compare-col old-col">
-            <span class="col-badge old">原版 one-api</span>
+            <span class="col-badge old">{{ $t('landing.compareOldBadge') }}</span>
           </div>
           <div class="compare-col new-col">
             <span class="col-badge new">one-api-pro</span>
@@ -169,53 +170,53 @@
 
     <section id="models" class="section section-alt">
       <div class="section-header">
-        <span class="section-label">生态兼容</span>
-        <h2>支持 30+ 模型平台</h2>
-        <p>覆盖全球主流 AI 服务商，持续增加中</p>
+        <span class="section-label">{{ $t('landing.modelsLabel') }}</span>
+        <h2>{{ $t('landing.modelsTitle') }}</h2>
+        <p>{{ $t('landing.modelsSubtitle') }}</p>
       </div>
       <div class="model-grid">
         <div class="model-card" v-for="m in models" :key="m.slug">
           <img v-if="m.slug" :src="modelIconSrc(m.slug)" class="mc-icon" :alt="m.name" loading="lazy" @error="onIconError" />
           <span v-else class="mc-icon mc-icon-fallback" :style="{ background: m.color + '15', color: m.color }">{{ m.name.charAt(0) }}</span>
           <span class="mc-name">{{ m.name }}</span>
-          <span v-if="m.tag === '国产'" class="mc-tag mc-tag-cn">国产</span>
-          <span v-else class="mc-tag mc-tag-intl">海外</span>
+          <span v-if="m.tag === '国产'" class="mc-tag mc-tag-cn">{{ $t('landing.modelDomestic') }}</span>
+          <span v-else class="mc-tag mc-tag-intl">{{ $t('landing.modelOverseas') }}</span>
         </div>
       </div>
     </section>
 
     <section id="download" class="section">
       <div class="section-header">
-        <span class="section-label">快速开始</span>
-        <h2>立即下载</h2>
-        <p>开源免费，支持 Linux / macOS / Windows 多平台</p>
+        <span class="section-label">{{ $t('landing.downloadLabel') }}</span>
+        <h2>{{ $t('landing.downloadTitle') }}</h2>
+        <p>{{ $t('landing.downloadSubtitle') }}</p>
       </div>
       <div class="download-grid">
         <a href="https://github.com/modelbus/one-api-pro" target="_blank" class="download-card">
           <icon-github style="font-size:36px;color:#1d2129" />
           <h3>GitHub Releases</h3>
-          <p>获取最新版本</p>
-          <span class="dl-link">前往下载 →</span>
+          <p>{{ $t('landing.downloadGithubDesc') }}</p>
+          <span class="dl-link">{{ $t('landing.downloadGo') }}</span>
         </a>
         <a href="https://github.com/modelbus/one-api-pro" target="_blank" class="download-card">
           <icon-code style="font-size:36px;color:#1d2129" />
-          <h3>源码编译</h3>
-          <p>go build -o one-api-pro</p>
-          <span class="dl-link">查看文档 →</span>
+          <h3>{{ $t('landing.downloadSourceTitle') }}</h3>
+          <p>{{ $t('landing.downloadSourceDesc') }}</p>
+          <span class="dl-link">{{ $t('landing.downloadDocs') }}</span>
         </a>
         <a href="https://github.com/modelbus/one-api-pro#部署" target="_blank" class="download-card">
           <icon-cloud style="font-size:36px;color:#1d2129" />
-          <h3>Docker 部署</h3>
-          <p>docker-compose up -d</p>
-          <span class="dl-link">部署指南 →</span>
+          <h3>{{ $t('landing.downloadDockerTitle') }}</h3>
+          <p>{{ $t('landing.downloadDockerDesc') }}</p>
+          <span class="dl-link">{{ $t('landing.downloadDeploy') }}</span>
         </a>
       </div>
     </section>
 
     <section id="faq" class="section section-alt">
       <div class="section-header">
-        <span class="section-label">常见问题</span>
-        <h2>你可能想了解</h2>
+        <span class="section-label">{{ $t('landing.faqLabel') }}</span>
+        <h2>{{ $t('landing.faqTitle') }}</h2>
       </div>
       <div class="faq-list">
         <div class="faq-item" v-for="faq in faqs" :key="faq.q">
@@ -229,18 +230,18 @@
       <div class="footer-inner">
         <div class="footer-col">
           <h4>{{ systemName }}</h4>
-          <p>企业级 AI API 网关</p>
+          <p>{{ $t('landing.footerDesc') }}</p>
         </div>
         <div class="footer-col">
-          <h4>资源</h4>
+          <h4>{{ $t('landing.footerResources') }}</h4>
           <a href="https://github.com/modelbus/one-api-pro" target="_blank">GitHub</a>
           <a href="https://github.com/modelbus/one-api-pro/releases" target="_blank">Releases</a>
         </div>
         <div class="footer-col">
-          <h4>文档</h4>
-          <a href="#features">平台优势</a>
-          <a href="#compare">版本对比</a>
-          <a href="http://one-api.pro" target="_blank">在线文档</a>
+          <h4>{{ $t('landing.footerDocs') }}</h4>
+          <a href="#features">{{ $t('landing.footerAdvantages') }}</a>
+          <a href="#compare">{{ $t('landing.footerCompare') }}</a>
+          <a href="http://one-api.pro" target="_blank">{{ $t('landing.footerOnlineDocs') }}</a>
         </div>
       </div>
       <div class="footer-bottom">
@@ -253,15 +254,18 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
 import { IconDashboard, IconApps, IconLock, IconCloud, IconThunderbolt, IconTool, IconCode, IconGithub, IconRight, IconDown, IconCheckCircleFill } from '@arco-design/web-vue/es/icon'
 import { PROVIDERS } from '@/constants/providers'
+import LangSwitcher from '@/components/LangSwitcher.vue'
 import logoPng from '@/assets/logo.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const statusStore = useStatusStore()
+const { t } = useI18n()
 const systemName = computed(() => statusStore.status?.system_name || 'One Api Pro')
 
 const logoFallback = computed(() => statusStore.status?.logo || '')
@@ -274,32 +278,32 @@ function onLogoError(e) {
   }
 }
 
-const features = [
-  { icon: IconLock, title: '精细治理', desc: '多级权限管理、令牌按模型限制、分组倍率控制、IP 白名单，支持按渠道/用户/模型三级配额体系', color: '#165DFF' },
-  { icon: IconTool, title: '精确成本核算', desc: '按 token 或按次计费，Prompt/Completion/Cached 独立定价，分组折扣叠加、周期用量追踪，分毫不差', color: '#00B42A' },
-  { icon: IconApps, title: '企业级安全', desc: '全链路 HTTPS 传输、Token 鉴权、子网 IP 限制、审计日志实时追踪、防泄漏设计', color: '#FF7D00' },
-  { icon: IconThunderbolt, title: '弹性伸缩与高可用', desc: '多渠道负载均衡、失败自动重试、冷却/禁用策略、去中心化多活集群，服务永不宕机', color: '#722ED1' },
-  { icon: IconCloud, title: '统一 API 入口', desc: '30+ 模型平台统一 OpenAPI 格式接入，零适配切换，开发者只需一次对接，即可访问所有大模型', color: '#0FC6C2' },
-  { icon: IconDashboard, title: '开箱即用运维', desc: '单文件部署、Docker 一键启动、可视化后台管理、系统公告推送，零学习成本快速上手', color: '#F53F3F' },
-]
+const features = computed(() => [
+  { icon: IconLock, title: t('landing.featureGovernance'), desc: t('landing.featureGovernanceDesc'), color: '#165DFF' },
+  { icon: IconTool, title: t('landing.featureCost'), desc: t('landing.featureCostDesc'), color: '#00B42A' },
+  { icon: IconApps, title: t('landing.featureSecurity'), desc: t('landing.featureSecurityDesc'), color: '#FF7D00' },
+  { icon: IconThunderbolt, title: t('landing.featureHA'), desc: t('landing.featureHADesc'), color: '#722ED1' },
+  { icon: IconCloud, title: t('landing.featureApi'), desc: t('landing.featureApiDesc'), color: '#0FC6C2' },
+  { icon: IconDashboard, title: t('landing.featureOps'), desc: t('landing.featureOpsDesc'), color: '#F53F3F' },
+])
 
-const compareItems = [
-  { label: 'Adaptor 扩展', old: '需修改 4 个框架文件', new: '自注册机制，仅需新增包' },
-  { label: '订阅模式', old: '无订阅/套餐体系', new: '完整套餐订阅 + 周期限频' },
-  { label: '目录结构', old: 'adaptor/ 平铺 40 个目录', new: 'base/基础协议 + provider/供应商' },
-  { label: 'Channel 类型', old: '56 行 iota 整数常量', new: '字符串 ID，语义清晰' },
-  { label: '集群支持', old: '无独立集群', new: '去中心化多活集群' },
-  { label: '管理后台', old: 'Semantic UI React', new: 'Vue 3 + Arco Design 全新重构' },
-  { label: '持续更新', old: '2024 年停止更新', new: '持续维护，企业级优化' },
-]
+const compareItems = computed(() => [
+  { label: t('landing.compareAdaptorLabel'), old: t('landing.compareAdaptorOld'), new: t('landing.compareAdaptorNew') },
+  { label: t('landing.compareSubLabel'), old: t('landing.compareSubOld'), new: t('landing.compareSubNew') },
+  { label: t('landing.compareDirLabel'), old: t('landing.compareDirOld'), new: t('landing.compareDirNew') },
+  { label: t('landing.compareChannelLabel'), old: t('landing.compareChannelOld'), new: t('landing.compareChannelNew') },
+  { label: t('landing.compareClusterLabel'), old: t('landing.compareClusterOld'), new: t('landing.compareClusterNew') },
+  { label: t('landing.compareAdminLabel'), old: t('landing.compareAdminOld'), new: t('landing.compareAdminNew') },
+  { label: t('landing.compareUpdateLabel'), old: t('landing.compareUpdateOld'), new: t('landing.compareUpdateNew') },
+])
 
-const faqs = [
-  { q: 'One Api Pro 与原版 one-api 的关系是什么？', a: 'One Api Pro 基于 one-api（by JustSong）深度重构，在保留全部原有功能的基础上，对 Adaptor 架构、目录结构、管理后台进行了全面升级，新增了订阅模式、去中心化集群等企业级特性。' },
-  { q: '如何从原版 one-api 迁移到 One Api Pro？', a: '数据库结构完全兼容，直接替换二进制即可运行。如有自定义 Adaptor，需按新注册机制（register.go）进行适配，改动量极小。' },
-  { q: '支持哪些数据库？', a: '默认使用 SQLite（零配置），也支持 MySQL 5.7+ 和 PostgreSQL，生产环境推荐 MySQL。Redis 为可选项，启用后可获得更好的缓存性能。' },
-  { q: '是否支持私有化部署？', a: '完全支持。One Api Pro 本身就是为私有化部署设计的，所有数据存储在你的服务器上，不外泄任何信息。' },
-  { q: '多个 API Key 如何负载均衡？', a: '支持按权重随机分配、自动故障切换、渠道冷却/禁用策略，还可按用户组和模型维度精细化配置优先级。' },
-]
+const faqs = computed(() => [
+  { q: t('landing.faq1Q'), a: t('landing.faq1A') },
+  { q: t('landing.faq2Q'), a: t('landing.faq2A') },
+  { q: t('landing.faq3Q'), a: t('landing.faq3A') },
+  { q: t('landing.faq4Q'), a: t('landing.faq4A') },
+  { q: t('landing.faq5Q'), a: t('landing.faq5A') },
+])
 
 const models = PROVIDERS
 
