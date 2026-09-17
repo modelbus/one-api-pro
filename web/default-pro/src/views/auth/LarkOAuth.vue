@@ -1,6 +1,6 @@
 <template>
   <div class="oauth-page">
-    <a-spin :loading="true" tip="飞书登录中..." :style="{ width: '100%' }">
+    <a-spin :loading="true" :tip="$t('auth.larkLoggingIn')" :style="{ width: '100%' }">
       <div style="padding: 60px 0"></div>
     </a-spin>
   </div>
