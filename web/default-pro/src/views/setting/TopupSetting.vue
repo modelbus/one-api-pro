@@ -14,24 +14,24 @@
   <div class="topup-setting-page">
     <a-spin :loading="loading" style="width: 100%">
       <div class="section">
-        <h3>在线充值</h3>
-        <p class="section-hint">开启后，用户可在控制台通过微信/支付宝在线支付充值余额。</p>
+        <h3>{{ $t('settingPage.topup.section') }}</h3>
+        <p class="section-hint">{{ $t('settingPage.topup.hint') }}</p>
 
         <!-- 基础开关（竖排） -->
         <a-form layout="vertical" class="setting-form">
-          <a-form-item label="启用在线充值">
+          <a-form-item :label="$t('settingPage.topup.enabled')">
             <a-switch v-model="form.enabled" />
           </a-form-item>
-          <a-form-item label="允许用户自定义金额">
+          <a-form-item :label="$t('settingPage.topup.allowCustom')">
             <a-switch v-model="form.allow_custom" />
           </a-form-item>
-          <a-form-item label="自定义金额 1 元 = (quota)">
+          <a-form-item :label="$t('settingPage.topup.exchangeRate')">
             <a-input-number
               v-model="form.exchange_rate"
               :min="1"
               :step="1"
               :precision="0"
-              placeholder="默认 1（即 1:1 换算）"
+              :placeholder="$t('settingPage.topup.exchangeRatePlaceholder')"
               style="width: 320px"
             />
           </a-form-item>
@@ -41,10 +41,10 @@
 
         <!-- 快捷金额列表 -->
         <div class="section-head">
-          <h4 class="section-sub-title">快捷金额</h4>
+          <h4 class="section-sub-title">{{ $t('settingPage.topup.presets') }}</h4>
           <a-button type="primary" size="small" @click="addPreset">
             <template #icon><icon-plus :size="14" /></template>
-            添加
+            {{ $t('settingPage.topup.add') }}
           </a-button>
         </div>
 
@@ -81,16 +81,16 @@
           </template>
           <template #action="{ rowIndex }">
             <a-button type="text" size="mini" status="danger" @click="removePreset(rowIndex)">
-              删除
+              {{ $t('settingPage.topup.delete') }}
             </a-button>
           </template>
           <template #empty>
-            <div class="table-empty">暂无快捷金额，点击右上角"添加"新增</div>
+            <div class="table-empty">{{ $t('settingPage.topup.empty') }}</div>
           </template>
         </a-table>
 
         <div class="form-actions">
-          <a-button type="primary" :loading="saving" @click="save">保存设置</a-button>
+          <a-button type="primary" :loading="saving" @click="save">{{ $t('settingPage.topup.save') }}</a-button>
         </div>
       </div>
     </a-spin>
@@ -101,11 +101,14 @@
 // 版本: v0.0.10
 // 日期: 2026-09-06
 // 作者: opencode
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import settingApi from '@/api/setting'
 import { validateTopupPresets } from '@/utils/topup'
+
+const { t } = useI18n()
 
 const loading = ref(false)
 const saving = ref(false)
@@ -117,11 +120,11 @@ const form = reactive({
   presets: [],
 })
 
-const columns = [
-  { title: '支付金额 (元)', slotName: 'amount', width: 200 },
-  { title: '获得额度 (quota)', slotName: 'bonus_quota', width: 220 },
-  { title: '操作', slotName: 'action', width: 100, align: 'center' },
-]
+const columns = computed(() => [
+  { title: t('settingPage.topup.colAmount'), slotName: 'amount', width: 200 },
+  { title: t('settingPage.topup.colBonusQuota'), slotName: 'bonus_quota', width: 220 },
+  { title: t('settingPage.topup.colAction'), slotName: 'action', width: 100, align: 'center' },
+])
 
 function addPreset() {
   form.presets.push({ amount: 10, bonus_quota: 10 })
@@ -150,7 +153,7 @@ async function loadSettings() {
       })) : []
     }
   } catch (e) {
-    Message.error('加载设置失败')
+    Message.error(t('settingPage.topup.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -158,7 +161,7 @@ async function loadSettings() {
 
 async function save() {
   // 前端预校验：快捷金额金额不允许重复（v0.0.10 2026-09-06 新增）
-  const err = validateTopupPresets(form.presets)
+  const err = validateTopupPresets(form.presets, t)
   if (err) {
     Message.error(err)
     return
@@ -176,12 +179,12 @@ async function save() {
     }
     const { data } = await settingApi.putTopup(payload)
     if (data.success) {
-      Message.success('已保存')
+      Message.success(t('settingPage.topup.saved'))
     } else {
-      Message.error(data.message || '保存失败')
+      Message.error(data.message || t('settingPage.topup.saveFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || '保存失败')
+    Message.error(e.response?.data?.message || t('settingPage.topup.saveFailed'))
   } finally {
     saving.value = false
   }
