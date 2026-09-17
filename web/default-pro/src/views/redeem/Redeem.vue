@@ -1,8 +1,8 @@
 <template>
   <div class="page-container">
     <div class="page-header">
-      <h1 class="page-title">{{ $t('redeem.title') }}</h1>
-      <p class="page-subtitle">{{ $t('redeem.subtitle') }}</p>
+      <h1 class="page-title">{{ $t('redeemPage.title') }}</h1>
+      <p class="page-subtitle">{{ $t('redeemPage.subtitle') }}</p>
     </div>
 
     <!-- 兑换表单（参考 tbus-web Redeem.vue 风格） -->
@@ -11,7 +11,7 @@
       <div class="redeem-form">
         <a-input
           v-model="code"
-          :placeholder="$t('redeem.placeholder')"
+          :placeholder="$t('redeemPage.placeholder')"
           size="large"
           class="redeem-input"
           :status="error ? 'error' : (success ? 'success' : '')"
@@ -28,21 +28,21 @@
           :loading="loading"
           @click="handleRedeem"
         >
-          {{ $t('redeem.submit') }}
+          {{ $t('redeemPage.submit') }}
         </a-button>
       </div>
-      <div class="redeem-hint">{{ $t('redeem.hint') }}</div>
+      <div class="redeem-hint">{{ $t('redeemPage.hint') }}</div>
     </div>
 
     <!-- 额度信息（弱化展示，让兑换区域成为视觉重点） -->
     <div class="quota-info">
       <a-spin :loading="quotaLoading" style="width: 100%;">
         <div class="quota-info-row">
-          <div class="quota-info-label">{{ $t('redeem.currentQuota') }}</div>
+          <div class="quota-info-label">{{ $t('redeemPage.currentQuota') }}</div>
           <div :class="['quota-info-value', 'quota-info-value-current', { flash: quotaFlash }]" :key="quotaFlashKey">{{ formatNumber(quota) }}</div>
         </div>
         <div class="quota-info-row" v-if="quotaUsed > 0 || quotaTotal > 0">
-          <div class="quota-info-label">{{ $t('redeem.usage') }}</div>
+          <div class="quota-info-label">{{ $t('redeemPage.usage') }}</div>
           <div class="quota-info-value">
             {{ formatNumber(quotaUsed) }} <span class="quota-divider">/</span> {{ formatNumber(quotaTotal) }}
           </div>
@@ -54,7 +54,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import api from '@/api'
+
+const { t } = useI18n()
 
 const code = ref('')
 const loading = ref(false)
@@ -77,8 +80,8 @@ function formatNumber(n) {
 
 function validateCode(c) {
   const v = (c || '').trim()
-  if (!v) return '请输入兑换码'
-  if (v.length < 8) return '兑换码格式不正确'
+  if (!v) return t('redeemPage.enterCode')
+  if (v.length < 8) return t('redeemPage.invalidCode')
   return ''
 }
 
@@ -118,17 +121,17 @@ async function handleRedeem() {
     const { data } = await api.post('/api/user/topup', { key: code.value.trim() })
     if (data?.success) {
       const amount = data.data ?? 0
-      success.value = `兑换成功，已到账 ${formatNumber(amount)} 额度`
+      success.value = t('redeemPage.successInline', { amount: formatNumber(amount) })
       code.value = ''
       // Re-fetch quota so the "当前额度/已使用" panel reflects the
       // new balance immediately and the number visibly increases.
       await fetchQuota()
       flashQuota()
     } else {
-      error.value = data?.message || '兑换失败'
+      error.value = data?.message || t('redeemPage.failed')
     }
   } catch (e) {
-    error.value = e.response?.data?.message || e.message || '兑换失败'
+    error.value = e.response?.data?.message || e.message || t('redeemPage.failed')
   } finally {
     loading.value = false
   }
