@@ -1,40 +1,39 @@
 <!--
-  README.md One Api Pro 英文首页
-  One Api Pro English landing README (Quick Start / Deployment / vs oneapi)
+  README.md OneApi Pro 英文首页
+  OneApi Pro English landing README (Quick Start / Deployment / vs oneapi)
 
   版本: v0.0.21
   日期: 2026-09-18
-  作者: opencode
+  作者: modelbus
 -->
 
 <!-- SEO keywords: oneapi, one-api, newapi, sub2api, AI API Gateway, LLM gateway, OpenAI compatible, oneapi pro -->
-<!-- keywords: oneapi one-api newapi sub2api one-api-pro AI API Gateway LLM gateway OpenAI compatible Claude Gemini DeepSeek relay -->
+<!-- keywords: oneapi,one-api-pro,one-api,newapi,sub2api AI API Gateway LLM gateway OpenAI compatible Claude Gemini DeepSeek relay -->
 
 <p align="center">
-  <a href="https://github.com/modelbus/one-api-pro"><img src="docs/logo.png" width="150" height="150" alt="one-api-pro logo"></a>
+  <a href="https://github.com/modelbus/one-api-pro"><img src="docs/logo.png" width="150" height="150" alt="oneapi"></a>
 </p>
 
 <h1 align="center">OneAPI Pro · Enterprise AI API Gateway</h1>
 
 <p align="center">
   The self-hosted, OpenAI-compatible AI API Gateway for <strong>OpenAI</strong>, <strong>Claude</strong>, <strong>Gemini</strong>, <strong>DeepSeek</strong>, <strong>Qwen</strong>, and 30+ providers.<br>
-  A next-generation successor to <a href="https://github.com/songquanpeng/one-api">one-api</a>, built with Go + Vue 3 + Arco Design.
+  A next-generation successor to <a href="https://github.com/songquanpeng/one-api" alt="oneapi">oneapi</a>, built with Go + Vue 3 + Arco Design.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"></a>
-  <a href="https://github.com/modelbus/one-api-pro/releases/latest"><img src="https://img.shields.io/github/v/release/modelbus/one-api-pro?color=00ADD8&label=release" alt="release"></a>
+  <a href="https://github.com/modelbus/one-api-pro/releases/latest"><img src="https://img.shields.io/github/v/release/modelbus/one-api-pro?color=00ADD8&label=release" alt="oneapi pro release"></a>
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/language-Go-00ADD8.svg?logo=go&logoColor=white" alt="language"></a>
   <a href="https://gin-gonic.com/"><img src="https://img.shields.io/badge/framework-Gin-008080.svg?logo=go&logoColor=white" alt="framework"></a>
   <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/frontend-Vue%203-42B883.svg?logo=vue.js&logoColor=white" alt="frontend"></a>
   <a href="https://arco.design/vue"><img src="https://img.shields.io/badge/ui-Arco%20Design-165DFF.svg" alt="ui"></a>
   <a href="https://vitejs.dev/"><img src="https://img.shields.io/badge/build-Vite-646CFF.svg?logo=vite&logoColor=white" alt="build"></a>
   <a href="https://gorm.io/"><img src="https://img.shields.io/badge/database-MySQL%20%7C%20PostgreSQL%20%7C%20SQLite-4479A1.svg?logo=mysql&logoColor=white" alt="database"></a>
-  <a href="https://github.com/modelbus/one-api-pro"><img src="https://img.shields.io/badge/cluster-decentralized-FF6B6B.svg" alt="cluster"></a>
 </p>
 
 <p align="center">
-  👉 <strong>Live Demo</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
+  👉 <strong>Live Demo</strong>: <a href="http://demo.one-api.pro" alt="oneapi pro demo">http://demo.one-api.pro</a>
   &nbsp;·&nbsp;
   👉 <strong>Demo Account</strong>: <code>root</code> / <code>123456</code>
   &nbsp;·&nbsp;
