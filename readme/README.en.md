@@ -835,16 +835,17 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/m
 - [x] **Top-up settings center** — new **Settings → Top-up** tab replaces the previous `plan.allow_topup` placeholder; configures the master switch, preset amounts, allow-custom flag, and the exchange rate (default 1:1); reuses existing payment settings and the `system_settings` table.
 - [x] **Unified order management (admin view)** — the admin order center supports list / search / detail / update / delete, with multi-dimensional filters by status, type, source, user and plan; admins can manually mark an order as **paid** (offline / bank activates immediately) or **refunded** (status flag only).
 - [x] **Channel diagnostics & intelligent routing (baseline)** — automatic cooldown (`CooldownFilter`), fallback degradation (`FallbackFilter`) and low-success-rate auto-disable (`monitor`) are live.
+- [x] **Internationalization (i18n)** — full zh/en coverage for the admin console, landing page and legal pages; menus, page copy and Arco Design components switch in real time; the language choice is persisted and synced to `<html lang>`. Message packs are split per page module and auto deep-merged.
 
 ### 🔄 In Progress
 
 - [ ] **Channel diagnostics & intelligent routing (enhancement)** — on top of the live cooldown / fallback / low-success-rate auto-disable, complete the standalone diagnostics dashboard, per-node ping and manual-review workflow.
 - [ ] Richer usage analytics reports and exports.
-- [ ] Improved i18n coverage.
 - [ ] **Refund loop** — orders with `status=3` currently only flip the status without reversing quota; to be completed once the refund feature ships.
 
 ### 🔭 Planned
 
+- [ ] **More languages** — extend beyond Chinese / English to Traditional Chinese, Japanese, Korean, Russian, German, Arabic, etc. (aligned with the README translations)
 - [ ] **More payment channels** — Apple Pay, UnionPay, Stripe, etc.
 - [ ] **Order refund capability** — async refund API + automated refund ledger; roll back subscription / quota on plan or top-up refunds, with a visual refund ledger.
 - [ ] **Finance-system integration** — sync top-ups, consumption and refunds with mainstream finance / reconciliation platforms.
