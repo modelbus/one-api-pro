@@ -3,11 +3,11 @@
     <!-- 顶部欢迎条 -->
     <div class="welcome-bar">
       <div class="welcome-text">
-        <h1 class="welcome-title">用户</h1>
-        <p class="welcome-desc">管理系统用户、角色、额度与订阅套餐</p>
+        <h1 class="welcome-title">{{ $t('userPage.title') }}</h1>
+        <p class="welcome-desc">{{ $t('userPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">共 {{ pageTotal || users.length }} 人</span>
+        <span class="meta-chip">{{ $t('userPage.totalPeople', { n: pageTotal || users.length }) }}</span>
       </div>
     </div>
 
@@ -16,7 +16,7 @@
       <div class="search-left">
         <a-input-search
           v-model="keyword"
-          placeholder="搜索用户名或显示名称..."
+          :placeholder="$t('userPage.searchPlaceholder')"
           allow-clear
           @search="handleSearch"
           @clear="handleClearSearch"
@@ -28,19 +28,19 @@
           :style="{ width: '160px' }"
           @change="handleOrderByChange"
         >
-          <a-option value="">默认排序</a-option>
-          <a-option value="quota">按剩余额度</a-option>
-          <a-option value="used_quota">按已使用额度</a-option>
+          <a-option value="">{{ $t('userPage.sortDefault') }}</a-option>
+          <a-option value="quota">{{ $t('userPage.sortQuota') }}</a-option>
+          <a-option value="used_quota">{{ $t('userPage.sortUsedQuota') }}</a-option>
         </a-select>
       </div>
       <div class="search-right">
         <a-button @click="openSelfEditModal">
           <template #icon><icon-edit :size="14" /></template>
-          编辑个人资料
+          {{ $t('userPage.editProfile') }}
         </a-button>
         <a-button type="primary" size="large" @click="openAddModal">
           <template #icon><icon-plus :size="14" /></template>
-          添加用户
+          {{ $t('userPage.addUser') }}
         </a-button>
       </div>
     </div>
@@ -51,26 +51,26 @@
         <div class="empty-icon">
           <icon-user-group :size="32" />
         </div>
-        <p class="empty-title">还没有任何用户</p>
-        <p class="empty-desc">添加第一个用户即可开始</p>
+        <p class="empty-title">{{ $t('userPage.emptyTitle') }}</p>
+        <p class="empty-desc">{{ $t('userPage.emptyDesc') }}</p>
         <a-button type="primary" @click="openAddModal">
           <template #icon><icon-plus :size="14" /></template>
-          立即添加
+          {{ $t('userPage.addNow') }}
         </a-button>
       </div>
 
       <div v-else class="list-body">
         <div class="list-head">
-          <div class="col">ID</div>
-          <div class="col">用户名</div>
-          <div class="col">显示名称</div>
-          <div class="col">分组</div>
-          <div class="col">套餐</div>
-          <div class="col">额度</div>
-          <div class="col">角色</div>
-          <div class="col">状态</div>
-          <div class="col">注册时间</div>
-          <div class="col col-action">操作</div>
+          <div class="col">{{ $t('userPage.colId') }}</div>
+          <div class="col">{{ $t('userPage.colUsername') }}</div>
+          <div class="col">{{ $t('userPage.colDisplayName') }}</div>
+          <div class="col">{{ $t('userPage.colGroup') }}</div>
+          <div class="col">{{ $t('userPage.colPlan') }}</div>
+          <div class="col">{{ $t('userPage.colQuota') }}</div>
+          <div class="col">{{ $t('userPage.colRole') }}</div>
+          <div class="col">{{ $t('userPage.colStatus') }}</div>
+          <div class="col">{{ $t('userPage.colRegisteredAt') }}</div>
+          <div class="col col-action">{{ $t('userPage.colAction') }}</div>
         </div>
 
         <a-spin :loading="loading" style="width: 100%">
@@ -80,7 +80,7 @@
             </div>
 
             <div class="col">
-              <a-tooltip :content="u.email || '未绑定邮箱'">
+              <a-tooltip :content="u.email || $t('userPage.noEmail')">
                 <span class="cell-strong username-link">{{ u.username }}</span>
               </a-tooltip>
             </div>
@@ -105,7 +105,7 @@
                   <span class="plan-sep">·</span>
                   <span class="plan-billing">{{ renderBilling(p.billing_type) }}</span>
                   <span class="plan-sep">·</span>
-                  <span class="plan-expire">{{ p.end_time ? formatTime(p.end_time) : '无期限' }}</span>
+                  <span class="plan-expire">{{ p.end_time ? formatTime(p.end_time) : $t('userPage.noExpiry') }}</span>
                 </span>
                 <span v-if="getUserPlans(u.id).length === 0" class="cell-muted">-</span>
               </div>
@@ -114,17 +114,17 @@
             <!-- 额度列（优化样式：分两行展示剩余/已用/请求） -->
             <div class="col">
               <div class="quota-cell">
-                <a-tooltip content="剩余额度">
+                <a-tooltip :content="$t('userPage.remainingQuota')">
                   <span :class="u.unlimited_quota ? 'quota-unlimited' : 'quota-value'">
-                    {{ u.unlimited_quota ? '无限制' : formatNumber(u.quota) }}
+                    {{ u.unlimited_quota ? $t('userPage.unlimited') : formatNumber(u.quota) }}
                   </span>
                 </a-tooltip>
                 <div class="quota-meta">
-                  <a-tooltip content="已使用">
-                    <span class="quota-used">已用 {{ formatNumber(u.used_quota) }}</span>
+                  <a-tooltip :content="$t('userPage.usedQuota')">
+                    <span class="quota-used">{{ $t('userPage.used', { value: formatNumber(u.used_quota) }) }}</span>
                   </a-tooltip>
-                  <a-tooltip v-if="u.request_count !== undefined" content="请求次数">
-                    <span class="quota-used">· {{ formatNumber(u.request_count) }} 次</span>
+                  <a-tooltip v-if="u.request_count !== undefined" :content="$t('userPage.requestCount')">
+                    <span class="quota-used">{{ $t('userPage.requestTimes', { n: formatNumber(u.request_count) }) }}</span>
                   </a-tooltip>
                 </div>
               </div>
@@ -140,7 +140,7 @@
             <div class="col">
               <span class="status-chip" :class="u.status === 1 ? 'status-on' : 'status-off'">
                 <span class="status-dot"></span>
-                {{ u.status === 1 ? '启用' : '禁用' }}
+                {{ u.status === 1 ? $t('userPage.enabled') : $t('userPage.disabled') }}
               </span>
             </div>
 
@@ -151,25 +151,25 @@
             </div>
 
             <div class="col col-action">
-              <a-button type="text" size="small" :disabled="u.role >= 100" @click="openEditModal(u)">编辑</a-button>
+              <a-button type="text" size="small" :disabled="u.role >= 100" @click="openEditModal(u)">{{ $t('userPage.edit') }}</a-button>
               <a-popconfirm
-                :content="u.status === 1 ? '确定要禁用该用户吗？' : '确定要启用该用户吗？'"
+                :content="u.status === 1 ? $t('userPage.confirmDisable') : $t('userPage.confirmEnable')"
                 @ok="toggleStatus(u)"
               >
                 <a-button type="text" size="small" :disabled="u.role >= 100">
-                  {{ u.status === 1 ? '禁用' : '启用' }}
+                  {{ u.status === 1 ? $t('userPage.disable') : $t('userPage.enable') }}
                 </a-button>
               </a-popconfirm>
               <a-popconfirm
-                :content="u.role >= 10 ? '确定要降级该用户为普通用户吗？' : '确定要提升该用户为管理员吗？'"
+                :content="u.role >= 10 ? $t('userPage.confirmDemote') : $t('userPage.confirmPromote')"
                 @ok="togglePromote(u)"
               >
                 <a-button type="text" size="small" :disabled="u.role >= 100">
-                  {{ u.role >= 10 ? '降级' : '提升' }}
+                  {{ u.role >= 10 ? $t('userPage.demote') : $t('userPage.promote') }}
                 </a-button>
               </a-popconfirm>
-              <a-popconfirm content="确定要删除该用户吗？此操作不可撤销。" @ok="deleteUser(u)">
-                <a-button type="text" size="small" class="danger-btn" :disabled="u.role >= 100">删除</a-button>
+              <a-popconfirm :content="$t('userPage.confirmDelete')" @ok="deleteUser(u)">
+                <a-button type="text" size="small" class="danger-btn" :disabled="u.role >= 100">{{ $t('userPage.delete') }}</a-button>
               </a-popconfirm>
             </div>
           </div>
@@ -177,13 +177,13 @@
 
         <div v-if="loadingMore" class="load-more-row">
           <a-spin :loading="true" :size="14" />
-          <span class="load-more-text">正在加载更多…</span>
+          <span class="load-more-text">{{ $t('userPage.loadingMore') }}</span>
         </div>
         <div
           v-else-if="isReachedEnd && users.length > pageSize && !loading"
           class="load-end-row"
         >
-          已显示全部 {{ users.length }} 条数据
+          {{ $t('userPage.allLoaded', { n: users.length }) }}
         </div>
       </div>
 
@@ -205,23 +205,23 @@
     <!-- 添加用户 -->
     <a-modal
       v-model:visible="addVisible"
-      title="添加用户"
+      :title="$t('userPage.addUser')"
       :width="460"
       @ok="handleAddUser"
       @cancel="resetAddForm"
       :ok-loading="submitting"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="$t('userPage.save')"
+      :cancel-text="$t('userPage.cancel')"
     >
       <a-form ref="addFormRef" :model="addForm" :rules="addRules" layout="vertical" class="user-form">
-        <a-form-item field="username" label="用户名">
-          <a-input v-model="addForm.username" placeholder="请输入用户名" :max-length="32" allow-clear />
+        <a-form-item field="username" :label="$t('userPage.username')">
+          <a-input v-model="addForm.username" :placeholder="$t('userPage.usernamePlaceholder')" :max-length="32" allow-clear />
         </a-form-item>
-        <a-form-item field="display_name" label="显示名称">
-          <a-input v-model="addForm.display_name" placeholder="请输入显示名称" :max-length="64" allow-clear />
+        <a-form-item field="display_name" :label="$t('userPage.displayName')">
+          <a-input v-model="addForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="64" allow-clear />
         </a-form-item>
-        <a-form-item field="password" label="密码">
-          <a-input-password v-model="addForm.password" placeholder="请输入密码" :max-length="64" />
+        <a-form-item field="password" :label="$t('userPage.password')">
+          <a-input-password v-model="addForm.password" :placeholder="$t('userPage.passwordPlaceholder')" :max-length="64" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -229,35 +229,35 @@
     <!-- 编辑用户 -->
     <a-modal
       v-model:visible="editVisible"
-      title="编辑用户"
+      :title="$t('userPage.editUser')"
       :width="460"
       @ok="handleEditUser"
       @cancel="resetEditForm"
       :ok-loading="submitting"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="$t('userPage.save')"
+      :cancel-text="$t('userPage.cancel')"
     >
       <a-form ref="editFormRef" :model="editForm" layout="vertical" class="user-form">
-        <a-form-item field="username" label="用户名">
+        <a-form-item field="username" :label="$t('userPage.username')">
           <a-input v-model="editForm.username" disabled />
         </a-form-item>
-        <a-form-item field="display_name" label="显示名称">
-          <a-input v-model="editForm.display_name" placeholder="请输入显示名称" :max-length="64" allow-clear />
+        <a-form-item field="display_name" :label="$t('userPage.displayName')">
+          <a-input v-model="editForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="64" allow-clear />
         </a-form-item>
-        <a-form-item field="password" label="密码">
-          <a-input-password v-model="editForm.password" placeholder="留空则不修改密码" :max-length="64" />
+        <a-form-item field="password" :label="$t('userPage.password')">
+          <a-input-password v-model="editForm.password" :placeholder="$t('userPage.passwordKeepPlaceholder')" :max-length="64" />
         </a-form-item>
-        <a-form-item field="group" label="分组">
-          <a-select v-model="editForm.group" placeholder="请选择分组" allow-clear>
+        <a-form-item field="group" :label="$t('userPage.group')">
+          <a-select v-model="editForm.group" :placeholder="$t('userPage.groupPlaceholder')" allow-clear>
             <a-option v-for="g in groups" :key="g" :value="g">{{ g }}</a-option>
           </a-select>
         </a-form-item>
-        <a-form-item field="quota" label="额度">
+        <a-form-item field="quota" :label="$t('userPage.quota')">
           <a-input-number
             v-model="editForm.quota"
             :min="0"
             :max="99999999999"
-            placeholder="请输入额度"
+            :placeholder="$t('userPage.quotaPlaceholder')"
             style="width: 100%"
           />
         </a-form-item>
@@ -267,23 +267,23 @@
     <!-- 编辑个人资料 -->
     <a-modal
       v-model:visible="selfEditVisible"
-      title="编辑个人资料"
+      :title="$t('userPage.editProfile')"
       :width="460"
       @ok="handleSelfEdit"
       @cancel="resetSelfEditForm"
       :ok-loading="submitting"
-      ok-text="保存"
-      cancel-text="取消"
+      :ok-text="$t('userPage.save')"
+      :cancel-text="$t('userPage.cancel')"
     >
       <a-form ref="selfEditFormRef" :model="selfEditForm" layout="vertical" class="user-form">
-        <a-form-item field="username" label="用户名">
+        <a-form-item field="username" :label="$t('userPage.username')">
           <a-input v-model="selfEditForm.username" disabled />
         </a-form-item>
-        <a-form-item field="display_name" label="显示名称">
-          <a-input v-model="selfEditForm.display_name" placeholder="请输入显示名称" :max-length="64" allow-clear />
+        <a-form-item field="display_name" :label="$t('userPage.displayName')">
+          <a-input v-model="selfEditForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="64" allow-clear />
         </a-form-item>
-        <a-form-item field="password" label="密码">
-          <a-input-password v-model="selfEditForm.password" placeholder="留空则不修改密码" :max-length="64" />
+        <a-form-item field="password" :label="$t('userPage.password')">
+          <a-input-password v-model="selfEditForm.password" :placeholder="$t('userPage.passwordKeepPlaceholder')" :max-length="64" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -292,12 +292,14 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { IconPlus, IconEdit, IconUserGroup } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
 
 const authStore = useAuthStore()
+const { t } = useI18n()
 
 const ITEMS_PER_PAGE = 10
 
@@ -332,16 +334,16 @@ const addForm = reactive({
   password: '',
 })
 
-const addRules = {
+const addRules = computed(() => ({
   username: [
-    { required: true, message: '请输入用户名' },
-    { minLength: 3, message: '用户名至少3个字符' },
+    { required: true, message: t('userPage.usernameRequired') },
+    { minLength: 3, message: t('userPage.usernameMin') },
   ],
   password: [
-    { required: true, message: '请输入密码' },
-    { minLength: 6, message: '密码至少6个字符' },
+    { required: true, message: t('userPage.passwordRequired') },
+    { minLength: 6, message: t('userPage.passwordMin') },
   ],
-}
+}))
 
 const editVisible = ref(false)
 const editFormRef = ref(null)
@@ -389,10 +391,10 @@ async function fetchUsers({ append = false, pageIdx = 0 } = {}) {
         isReachedEnd.value = list.length < pageSize.value
       }
     } else {
-      Message.error(data.message || '获取用户列表失败')
+      Message.error(data.message || t('userPage.fetchUsersFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '获取用户列表失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.fetchUsersFailed'))
   } finally {
     loading.value = false
     loadingMore.value = false
@@ -450,10 +452,10 @@ async function handleSearch(val) {
       const items = Array.isArray(data.data) ? data.data : (data.data?.items || [])
       users.value = items
     } else {
-      Message.error(data.message || '搜索失败')
+      Message.error(data.message || t('userPage.searchFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '搜索失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.searchFailed'))
   } finally {
     loading.value = false
   }
@@ -506,16 +508,16 @@ async function handleAddUser() {
       password: addForm.password,
     })
     if (data.success) {
-      Message.success('用户添加成功')
+      Message.success(t('userPage.addSuccess'))
       addVisible.value = false
       resetAddForm()
       activePage.value = 1
       await Promise.all([fetchUsers(), fetchSubscriptions()])
     } else {
-      Message.error(data.message || '添加用户失败')
+      Message.error(data.message || t('userPage.addFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '添加用户失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.addFailed'))
   } finally {
     submitting.value = false
   }
@@ -553,15 +555,15 @@ async function handleEditUser() {
     }
     const { data } = await api.put('/api/user/', payload)
     if (data.success) {
-      Message.success('用户编辑成功')
+      Message.success(t('userPage.editSuccess'))
       editVisible.value = false
       resetEditForm()
       await fetchUsers()
     } else {
-      Message.error(data.message || '编辑用户失败')
+      Message.error(data.message || t('userPage.editFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '编辑用户失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.editFailed'))
   } finally {
     submitting.value = false
   }
@@ -580,7 +582,7 @@ function resetEditForm() {
 function openSelfEditModal() {
   const user = authStore.user
   if (!user) {
-    Message.warning('用户信息未加载')
+    Message.warning(t('userPage.userNotLoaded'))
     return
   }
   selfEditForm.username = user.username || ''
@@ -601,7 +603,7 @@ async function handleSelfEdit() {
     }
     const { data } = await api.put('/api/user/self', payload)
     if (data.success) {
-      Message.success('个人资料更新成功')
+      Message.success(t('userPage.selfEditSuccess'))
       selfEditVisible.value = false
       resetSelfEditForm()
       if (data.data) {
@@ -610,10 +612,10 @@ async function handleSelfEdit() {
       }
       await fetchUsers()
     } else {
-      Message.error(data.message || '更新失败')
+      Message.error(data.message || t('userPage.updateFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '更新失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.updateFailed'))
   } finally {
     submitting.value = false
   }
@@ -634,13 +636,13 @@ async function toggleStatus(record) {
       action,
     })
     if (data.success) {
-      Message.success(action === 'disable' ? '用户已禁用' : '用户已启用')
+      Message.success(action === 'disable' ? t('userPage.userDisabled') : t('userPage.userEnabled'))
       record.status = record.status === 1 ? 0 : 1
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('userPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.opFailed'))
   }
 }
 
@@ -652,13 +654,13 @@ async function togglePromote(record) {
       action,
     })
     if (data.success) {
-      Message.success(action === 'promote' ? '用户已提升为管理员' : '用户已降级为普通用户')
+      Message.success(action === 'promote' ? t('userPage.promoted') : t('userPage.demoted'))
       record.role = action === 'promote' ? 10 : 0
     } else {
-      Message.error(data.message || '操作失败')
+      Message.error(data.message || t('userPage.opFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '操作失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.opFailed'))
   }
 }
 
@@ -669,23 +671,23 @@ async function deleteUser(record) {
       action: 'delete',
     })
     if (data.success) {
-      Message.success('用户已删除')
+      Message.success(t('userPage.deleteSuccess'))
       if (pageItems.value.length === 1 && activePage.value > 1) {
         activePage.value -= 1
       }
       await Promise.all([fetchUsers(), fetchSubscriptions()])
     } else {
-      Message.error(data.message || '删除失败')
+      Message.error(data.message || t('userPage.deleteFailed'))
     }
   } catch (e) {
-    Message.error(e.response?.data?.message || e.message || '删除失败')
+    Message.error(e.response?.data?.message || e.message || t('userPage.deleteFailed'))
   }
 }
 
 function getRoleLabel(role) {
-  if (role >= 100) return '超级管理员'
-  if (role >= 10) return '管理员'
-  return '普通用户'
+  if (role >= 100) return t('userPage.roleRoot')
+  if (role >= 10) return t('userPage.roleAdmin')
+  return t('userPage.roleUser')
 }
 
 function roleClass(role) {
@@ -725,8 +727,8 @@ function formatDateTime(ts) {
 }
 
 function renderBilling(type) {
-  if (type === 'token') return '按 Token'
-  if (type === 'request') return '按请求'
+  if (type === 'token') return t('userPage.billingToken')
+  if (type === 'request') return t('userPage.billingRequest')
   return type || '-'
 }
 </script>
