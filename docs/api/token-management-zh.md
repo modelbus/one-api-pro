@@ -1,7 +1,7 @@
 ---
 title: 令牌（Token）管理
 description: "用户级 API 令牌 CRUD、剩余额度、状态与子网白名单。"
-category: admin
+category: api
 order: 10
 ---
 
