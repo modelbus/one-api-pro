@@ -9,7 +9,7 @@ order: 3
 
 > 路由层把"可用渠道"按 Filter 链收缩成候选集，再由 Selector 选出一条最终渠道。实现见 `channelrouter/`。
 
-## 路由链 / Pipeline
+## 路由链
 
 `channelrouter.ChannelRouter`（`channelrouter/router.go`）持有四类状态对象和一组 `ChannelFilter`，按以下顺序对候选集逐步收缩：
 
@@ -26,7 +26,7 @@ candidates
 
 通过全部 Filter 后，`PriorityRandomSelector`（`channelrouter/selector.go`）在剩下的桶内随机挑一条。
 
-## 字段含义 / Field semantics
+## 字段含义
 
 | 字段 | Filter | 行为 |
 |---|---|---|
@@ -39,7 +39,7 @@ candidates
 | `rpm` | `RPMFilter` | `<=0` 不限制；按 60 秒滑窗计数（`channelrouter/rpm.go`） |
 | `cooldown_seconds` | 触发冷却后的秒数 | 上游错误拦截器 `relay/interceptor/channel_action.go` 写入 `CooldownManager`，冷却时长被 `ChannelMaxCooldownSeconds`（默认 600）截断 |
 
-## 冷却 / Cooldown
+## 冷却
 
 `channelrouter/cooldown.go::CooldownManager` 是 `sync.Map` 形态的冷却字典：
 
@@ -49,7 +49,7 @@ candidates
 
 `CooldownFilter` 不会剔除回包时还没到期的渠道，因此对 429 / 5xx / 鉴权失败有自然的退避效果。
 
-## 自动禁用 / Auto-disable
+## 自动禁用
 
 `monitor.DisableChannel` 把状态置为 `ChannelStatusAutoDisabled=3`，并向 root 邮箱 / 消息推送发送通知。触发源：
 
@@ -60,17 +60,17 @@ candidates
 
 被自动禁用的渠道只有管理员手动启用，或下一次批量测试通过后才会回到 `Enabled`。
 
-## Fallback 路径 / Fallback path
+## Fallback 路径
 
 主路径在所有正常渠道都返回失败后才进入 fallback：仅 `is_fallback=true` 的渠道参与，按 `fallback_priority` 升序、`priority` 次序依次重试。`FallbackFilter` 保证正常请求不会把 fallback 渠道选走。
 
-## Sticky Session / 会话粘性
+## Sticky Session
 
 `channelrouter/sticky.go` 以 `MakeSessionKey(userId, model)` 作为键，缓存"用户 → 上次渠道"。请求时 `StickySessionFilter` 把候选集收缩成该渠道一条（若仍可用），否则回退到随机选择。请求完成后由路由上层调用 `SetStickySession(sessionKey, channelId)` 写入。
 
 启用开关：`ChannelStickySessionEnabled`（默认 `false`）。启动时若开启，会从 `logs` 表加载近 24 小时 type=2 的会话记录重建映射（`LoadFromLogDB`）。
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -83,3 +83,4 @@ candidates
 | 上游错误拦截 | `relay/interceptor/channel_action.go` |
 | 自动禁用通知 | `monitor/channel.go` |
 | 成功率指标 | `monitor/metric.go` |
+
