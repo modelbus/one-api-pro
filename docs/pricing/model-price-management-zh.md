@@ -1,7 +1,7 @@
 ---
 title: 模型定价
 description: "模型价格 CRUD，供计费系统实时查询；为渠道编辑弹窗提供下拉数据源。"
-category: admin
+category: pricing
 order: 3
 ---
 
