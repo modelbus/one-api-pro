@@ -90,11 +90,6 @@ features:
     <h3>Decentralization</h3>
     <p>Cluster nodes, config sync and health checks.</p>
   </a>
-  <a class="category-card" href="/en/admin/admin-dashboard">
-    <span class="category-icon">📊</span>
-    <h3>Admin</h3>
-    <p>Dashboard, users, orders, logs and system settings.</p>
-  </a>
   <a class="category-card" href="/en/api/README">
     <span class="category-icon">🔗</span>
     <h3>API Reference</h3>
@@ -110,9 +105,9 @@ features:
     <h3>Contribute</h3>
     <p>Dev setup, code style, commit and release workflow.</p>
   </a>
-  <a class="category-card" href="/en/faq/faq">
+  <a class="category-card" href="/en/misc/faq">
     <span class="category-icon">❓</span>
     <h3>Misc</h3>
-    <p>FAQ, troubleshooting and glossary.</p>
+    <p>Operations dashboard, logs, system settings, FAQ and glossary.</p>
   </a>
 </div>
