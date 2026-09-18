@@ -18,25 +18,6 @@ order: 11
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": [
-    {
-      "id": 1,
-      "model_name": "gpt-4o",
-      "input_price": 2.5,
-      "output_price": 10.0,
-      "cached_price": 1.25,
-      "per_request_price": 0,
-      "billing_type": "token",
-      "enabled": true,
-      "created_at": 1718000000,
-      "updated_at": 1718000000
-    }
-  ]
-}
 ```
 
 **返回字段说明：**
@@ -54,7 +35,6 @@ order: 11
 | created_at | int64 | 创建时间（Unix 时间戳） |
 | updated_at | int64 | 更新时间（Unix 时间戳） |
 
-
 ### 1.2 添加模型定价
 
 **接口：** `POST /api/model_price/`
@@ -63,16 +43,6 @@ order: 11
 
 **请求体：**
 
-```json
-{
-  "model_name": "gpt-4o",
-  "input_price": 2.5,
-  "output_price": 10.0,
-  "cached_price": 1.25,
-  "per_request_price": 0,
-  "billing_type": "token",
-  "enabled": true
-}
 ```
 
 **请求字段说明：**
@@ -89,17 +59,11 @@ order: 11
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
 
 **错误情况：**
 - `model_name` 为空：`{"success": false, "message": "模型名称不能为空"}`
 - `model_name` 已存在：数据库唯一约束报错
-
 
 ### 1.3 更新模型定价
 
@@ -109,17 +73,6 @@ order: 11
 
 **请求体：**
 
-```json
-{
-  "id": 1,
-  "model_name": "gpt-4o",
-  "input_price": 3.0,
-  "output_price": 12.0,
-  "cached_price": 1.5,
-  "per_request_price": 0,
-  "billing_type": "token",
-  "enabled": true
-}
 ```
 
 **请求字段说明：**
@@ -137,16 +90,10 @@ order: 11
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
 
 **错误情况：**
 - `id` 为 0：`{"success": false, "message": "ID不能为空"}`
-
 
 ### 1.4 删除模型定价
 
@@ -162,11 +109,6 @@ order: 11
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
 
 **错误情况：**
