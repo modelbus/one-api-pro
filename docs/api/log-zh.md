@@ -1,6 +1,6 @@
 ---
 title: 日志 API
-description: 日志 API：日志 (Log)
+description: "日志 API：日志 (Log)"
 category: api
 order: 16
 ---
@@ -50,7 +50,6 @@ order: 16
 | plan_id | int | 套餐ID |
 | session_key | string | 会话Key |
 
----
 
 ### 8.2 获取用户自身日志
 
@@ -58,7 +57,6 @@ order: 16
 
 **权限：** User
 
----
 
 ### 8.3 搜索日志
 
@@ -77,7 +75,6 @@ order: 16
 | keyword | string | 搜索关键词 |
 | type | int | 日志类型（可选） |
 
----
 
 ### 8.4 日志统计
 
@@ -89,7 +86,6 @@ order: 16
 
 **权限：** User
 
----
 
 ### 8.5 删除历史日志
 
@@ -115,4 +111,3 @@ order: 16
 
 > `data` 为删除的日志条数。
 
----
