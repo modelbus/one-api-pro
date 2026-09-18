@@ -1,7 +1,7 @@
 ---
 title: 支付通道设置
 description: "微信 / 支付宝 / 银行转账三个通道的证书上传、回调地址与启用开关。"
-category: admin
+category: pricing
 order: 12
 ---
 
