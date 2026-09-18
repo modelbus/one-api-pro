@@ -9,7 +9,7 @@ order: 4
 
 > 套餐的窗口配额与请求时扣减。实现：`model/plan.go::CalcWindowIndex`、`model/plan_quota.go::WeightedUsage`、中间件 `middleware/plan_quota.go::PlanQuotaCheck`。
 
-## 三种窗口 / Three windows
+## 三种窗口
 
 | windowType | 长度 | 起点 |
 |---|---|---|
@@ -19,22 +19,14 @@ order: 4
 
 每个窗口索引由 `model.CalcWindowIndex(now, startTime, windowType, periodH)` 计算：
 
-```go
-elapsed := now - startTime
-period   = elapsed / (period_h * 3600)
-week     = elapsed / (7 * 86400)
-month    = elapsed / (30 * 86400)
 ```
 
 下次重置时间 `CalcNextResetTime = start_time + (windowIndex+1) * windowDuration`，因此 period 窗口的"每天 5 小时滚动"按 `start_time` 自然推进，而不是按自然日对齐。
 
-## 加权使用率 / Weighted usage
+## 加权使用率
 
 每个 plan 内多个模型有自己的限额。`WeightedUsage` 把所有已用 `(consumed, limit)` 对折算到一个 0..100 的统一使用率：
 
-```text
-weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
-        = Σ consumed_i × 100 / limit_i
 ```
 
 任一窗口的 `weighted >= 100` 即视为该窗口耗尽。
@@ -49,7 +41,7 @@ weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
 3. `consumed × 100 / limit` 累加；`limit <= 0` 的模型不参与
 4. 只累加当前窗口（`windowIndex` 一致）的 usage 行
 
-## 模型解析 / Finding the limit
+## 模型解析
 
 `FindLimit(limits, model, defaultModel)` 优先级：
 
@@ -59,7 +51,7 @@ weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
 
 `CheckPlanQuota` 还会把命中的 default_model 透出给 middleware，由 `PlanQuotaCheck` 把请求的 `RequestModel` 改写到 `default_model`，从而把未知模型路由到套餐默认模型。
 
-## 扣减顺序 / Deduction order
+## 扣减顺序
 
 请求进入 relay 中间件链：
 
@@ -73,13 +65,13 @@ weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
    - `PlanId > 0`：`IncrementPlanUsage(plan_id, model, window_type, window_index, 1, prompt_tokens, completion_tokens, cached_tokens)` 三个窗口都写一次；并把预扣的 quota 退回 token
    - `PlanId == 0`：按 `priceResult.BillingType` 计算 `quota`：`PerRequest` 用 `per_request_price`，`Token` 用 `(input_price × prompt + output_price × completion + cached_price × cached) × group_discount`；`PostConsumeTokenQuota` 结算 `users.quota` 与 `tokens.quota`
 
-## 缓存 / Cache
+## 缓存
 
 - `user_plans:<id>`：Redis 缓存当前用户的活跃订阅（`UserPlanCacheSeconds=300`），`AddSubscription` / `UpdateSubscription` / `DeleteSubscription` 写后调 `CacheDeleteUserActivePlans` 失效
 - `model_price:<name>` / `group_price:<group>:<model>`：模型与分组的折扣（`ModelPriceCacheSeconds=300`）
 - `model_price` 与 `group_price` 表由 `SyncModelPriceCache` / `SyncGroupPriceCache` 周期同步
 
-## batchUpdate 路径 / batchUpdate path
+## batchUpdate 路径
 
 当 `BATCH_UPDATE_ENABLED=true` 时：
 
@@ -88,7 +80,7 @@ weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
 
 启用后会减少 DB 写放大，但需要在 `main.go` 显式 `model.InitBatchUpdater()` 并保证进程内单点。
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -99,3 +91,4 @@ weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
 | 写 plan_usage | `model/plan.go::IncrementPlanUsage` |
 | 计费结算 | `relay/handler/helper.go::postConsumeQuota` |
 | 缓存 | `model/plan.go::CacheGetUserActivePlans` / `CacheDeleteUserActivePlans` |
+
