@@ -1,7 +1,7 @@
 ---
 title: Subscriptions Admin
 description: "Grant, query, edit and revoke user subscriptions (user_plans)."
-category: admin
+category: subscription
 order: 6
 ---
 
