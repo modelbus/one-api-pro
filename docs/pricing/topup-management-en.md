@@ -1,7 +1,7 @@
 ---
 title: Top-up Admin
 description: "Manual top-up for users and admin-side queries of top-up orders."
-category: admin
+category: pricing
 order: 8
 ---
 
