@@ -9,7 +9,7 @@ order: 15
 
 > 全站运营策略：注册 / 邀请 / 新用户额度、监控阈值、渠道路由策略、错误处理策略。前端组件：`web/default-pro/src/views/setting/OperationSetting.vue`。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -20,7 +20,7 @@ order: 15
 
 > 与 `system_settings` 表是平行的两套机制：`options` 是 key=value 字符串表，启动时加载到 `OptionMap`，对每个 `*Enabled` 开关同步影响 `config.*` 运行时变量；`system_settings` 是新版结构化设置（按 category 分组），由 `model.UpsertSystemSetting` 维护。本页只覆盖 `options` 表。
 
-## 分区 / Sections
+## 分区
 
 页面按业务语义划分为若干 section，每个 section 内一组开关 + 数字字段 + 一个独立的「保存」按钮（部分开关在 change 事件里立即保存）：
 
@@ -34,7 +34,7 @@ order: 15
 | 错误处理策略 | `ErrorNext` JSON：`{ passthrough, retry, disable, cooldown }` |
 | 套餐 (Plan) | `plan.upgrade_mode`（详见 [plan-setting](plan-setting)） |
 
-## 字段语义 / Field Semantics
+## 字段语义
 
 | 字段 | 默认 | 用途 |
 |---|---|---|
@@ -51,7 +51,7 @@ order: 15
 
 `TopUpLink` / `ChatLink` 用于「客户端主页」按钮的跳转链接。
 
-## ErrorNext / 错误策略
+## ErrorNext
 
 存储为 JSON 对象 `{"passthrough": bool, "retry": bool, "disable": bool, "cooldown": bool}`：
 - `passthrough`：透传错误到客户端（不会重试 / 切渠道）；
@@ -61,7 +61,7 @@ order: 15
 
 实际执行顺序由 relay 引擎读取；前端只负责把布尔集合保存为 JSON。
 
-## 联动开关的额外校验 / Toggle Validations
+## 联动开关的额外校验
 
 `PUT /api/option/` 在以下键启用前会要求前置配置已存在（`controller/option.go`）：
 
@@ -75,7 +75,7 @@ order: 15
 
 不满足前置条件时返回明确文案，便于运营人员排错。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部欢迎条 + 加载 spinner；进入页面即 `GET /api/option/`；
 - 数字字段通过 `<a-input-number size="large">` 编辑；每个分区的「保存」按钮独立 PUT 该分区的全部字段；
@@ -83,7 +83,7 @@ order: 15
 - 「日志清理」选择器调用 `DELETE /api/log/?target_timestamp=<unix-seconds>`；target=0 时直接被后端拒绝；
 - 「错误处理策略」分区整体保存为 JSON 字符串。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
