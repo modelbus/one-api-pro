@@ -19,7 +19,6 @@ order: 10
 | `/api/setting/payment` | GET | Root | 读取支付配置 |
 | `/api/setting/payment/:method` | PUT | Root | 更新支付配置（`wechat` / `alipay` / `bank`） |
 
-
 ## 公共约定：异步回调流程
 
 所有异步回调（`wechat` / `alipay`）走同一处理流程（见 `controller/payment.go::processNotify`）：
@@ -36,7 +35,6 @@ order: 10
    - 支付宝：明文 `success`
 
 > 订单激活是幂等的：已支付的订单重复通知不会重复发额度/激活套餐。
-
 
 ## 1. 微信支付回调
 
@@ -55,7 +53,6 @@ order: 10
 
 > 按微信规范，业务失败时返回 `FAIL`，让微信侧触发重试。
 
-
 ## 2. 支付宝回调
 
 **接口：** `POST /api/payment/alipay/notify`
@@ -71,7 +68,6 @@ order: 10
 | 校验通过 | 明文 `success` |
 | 校验/业务失败 | 明文 `fail` |
 
-
 ## 3. Mock 支付回调（管理员）
 
 **接口：** `POST /api/payment/mock/notify`
@@ -82,11 +78,6 @@ order: 10
 
 **请求体：**
 
-```json
-{
-  "order_no": "TB20250912153000123456",
-  "status": 1
-}
 ```
 
 | 字段 | 类型 | 必填 | 说明 |
@@ -120,7 +111,6 @@ order: 10
 | 订单不存在 | `订单不存在` |
 | `status` 不是 1 或 3 | `不支持的状态值（仅支持 1 或 3）` |
 | 激活失败 | `激活失败: <err>` |
-
 
 ## 4. 支付通道状态
 
@@ -156,7 +146,6 @@ order: 10
 | methods[].label | string | 人类可读名称 |
 | methods[].enabled | bool | 该通道当前是否已启用 |
 
-
 ## 5. 读取支付配置
 
 **接口：** `GET /api/setting/payment`
@@ -182,7 +171,6 @@ order: 10
 
 > 每个键对应 `system_settings` 表的一行（`payment.<method>.<enabled>` / `payment.<method>.config`）。
 
-
 ## 6. 更新支付配置
 
 **接口：** `PUT /api/setting/payment/:method`
@@ -199,15 +187,6 @@ order: 10
 
 JSON 形式：
 
-```json
-{
-  "enabled": true,
-  "config": {
-    "app_id": "wx1234567890",
-    "mch_id": "1900000000",
-    "sign_type": "HMAC-SHA256"
-  }
-}
 ```
 
 multipart 形式（字段说明）：
