@@ -8,13 +8,10 @@ order: 2
 # 展示案例
 
 > 社区使用 One API Pro 构建的典型场景与示例。
-> Typical scenarios and examples built with One API Pro.
 
 下面是社区里较常见的落地方式。截图与镜像请见 `/docs` 仓库 `assets/` 目录。
 
-Below are common deployment scenarios from the community. See the `assets/` folder of the `/docs` repo for screenshots and demo images.
-
-## 1. 个人 OpenAI 网关 / Solo OpenAI Gateway
+## 1. 个人 OpenAI 网关
 
 **场景 / Scenario**：家里 NAS 上跑一个实例，把 OpenAI、DeepSeek、Gemini 全部包成一个 `sk-` 出口，给 ChatGPT-Next-Web、Lobe-Chat、沉浸式翻译都用。
 
@@ -24,7 +21,7 @@ Below are common deployment scenarios from the community. See the `assets/` fold
 - Token 不限模型、不限子网；
 - 余额变动靠 `/api/log/self` 观察。
 
-## 2. 团队内部分账 / Internal Team Billing
+## 2. 团队内部分账
 
 **场景 / Scenario**：10 人小团队，每人一个 user，套餐（`plans` + `user_plans`）+ 按量兜底。
 
@@ -34,7 +31,7 @@ Below are common deployment scenarios from the community. See the `assets/` fold
 - `token.models` 限定模型组，`token.subnet` 限定公司出口 IP；
 - `/api/log/self` 出账单，发票从管理后台 `Logs` 导。
 
-## 3. SaaS 商业化分发 / SaaS Resale
+## 3. SaaS 商业化分发
 
 **场景 / Scenario**：把 One API Pro 当成对外的产品，开通微信 / 支付宝收款、做套餐 + 充值混合。
 
@@ -45,7 +42,7 @@ Below are common deployment scenarios from the community. See the `assets/` fold
 - 升级差价：`OrderUpgradeModePriceDiff` 自动算差价，下 `UP` 前缀订单；
 - 兑换码：地推拉新、`Redemption` 批量导出 CSV。
 
-## 4. 多机房多活 / Multi-region Multi-active
+## 4. 多机房多活
 
 **场景 / Scenario**：北京 / 上海 / 法兰克福三地机房，本地机房就近服务。
 
@@ -55,7 +52,7 @@ Below are common deployment scenarios from the community. See the `assets/` fold
 - 域名 NS 三地 GeoDNS，OpenAI 兼容接口按地区落到最近节点；
 - 同步范围见 [Cluster 概览](/zh/decentralization/overview#同步范围-sync-scope)。
 
-## 5. 自定义 Provider 接入 / Custom Provider Onboarding
+## 5. 自定义 Provider 接入
 
 **场景 / Scenario**：企业内私有部署的 LLM 网关，需要把内部 API 包装成 OpenAI 兼容协议。
 
@@ -65,9 +62,9 @@ Below are common deployment scenarios from the community. See the `assets/` fold
 - 在 `relay/adaptor/provider/<name>/` 下新建 4 个文件：`register.go` / `adaptor.go` / `main.go` / `constants.go`；
 - 注册进 `registry`，重启即出现在「新建渠道」的下拉里。
 
-## 截图与素材 / Screenshots
+## 截图与素材
 
-| 页面 / Page | 用途 / Use |
+| 页面| 用途|
 | --- | --- |
 | Demo-Index.png | 控制台首页（视觉指标 + 趋势图） |
 | Demo-Token.png | 令牌管理：剩余/已用、密钥列、可用模型 |
