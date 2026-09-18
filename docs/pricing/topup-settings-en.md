@@ -1,7 +1,7 @@
 ---
 title: Top-up Settings
 description: "Top-up enable switch, presets, allow_custom flag, exchange rate and currency."
-category: admin
+category: pricing
 order: 14
 ---
 
