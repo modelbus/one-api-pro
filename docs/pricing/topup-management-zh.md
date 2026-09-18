@@ -1,7 +1,7 @@
 ---
 title: 管理员手动充值
 description: "管理员直接给用户加额度；以及管理员视角的充值订单查询。"
-category: admin
+category: pricing
 order: 8
 ---
 
