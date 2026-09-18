@@ -9,7 +9,7 @@ order: 1
 
 > 渠道（Channel）是对一个上游 LLM Provider 接入实例的封装，保存鉴权、地址、模型与路由策略，并参与请求时的过滤与冷却决策。
 
-## 概念 / Concept
+## 概念
 
 渠道是 One API Pro 中"上游凭证 + 路由策略"的最小单位。一条渠道对应一个 Provider 的一种接入方式（如 DeepSeek 官方、Azure OpenAI 自部署、OpenAI 兼容的中转站）。每条渠道独立保存：
 
@@ -23,7 +23,7 @@ order: 1
 
 数据模型定义见 `model/channel.go::Channel`；插入/更新时会同步生成 `abilities` 表行（每条 (channel_id, model) 一行）供路由层快速过滤。
 
-## 状态机 / Status
+## 状态机
 
 | 值 | 常量 | 含义 |
 |---|---|---|
@@ -38,9 +38,10 @@ order: 1
 
 完整 Provider 列表见 [Provider 一览](./provider-list)。所有走 OpenAI 兼容协议的中转站都可以复用 `openai` 类型：填好 `base_url` 与 `models`，再通过 `model_mapping` 校正模型名即可。
 
-## 相关文档 / See also
+## 相关文档
 
 - [新增渠道](./add-channel) — 字段含义与新增流程
 - [渠道路由](./channel-routing) — 过滤、冷却、并发、RPM、Sticky、fallback
 - [渠道测试](./channel-test) — 单渠道与全渠道测试
 - [余额刷新](./balance-update) — 自动与手动拉取上游余额
+
