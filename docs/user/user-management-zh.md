@@ -1,7 +1,7 @@
 ---
 title: 用户管理
 description: "用户 CRUD、状态切换、额度调整与角色管理。"
-category: admin
+category: user
 order: 2
 ---
 
