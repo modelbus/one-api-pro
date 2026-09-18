@@ -1,6 +1,6 @@
 ---
 title: 其他公共 API
-description: 分组列表、系统选项与其他公共端点。
+description: "分组列表、系统选项与其他公共端点。"
 category: api
 order: 22
 ---
@@ -30,7 +30,6 @@ order: 22
 
 **说明：** 返回所有在 `group_prices` 表中定义的分组名称列表。
 
----
 
 
 ## 4. 系统选项 (Option)
@@ -60,7 +59,6 @@ order: 22
 
 **说明：** 敏感选项（如 Token、SMTP 密码等）的值会被过滤或脱敏。
 
----
 
 ### 4.2 更新系统选项
 
@@ -119,7 +117,6 @@ order: 22
 }
 ```
 
----
 
 
 ## 14. 其他公共接口
@@ -144,7 +141,6 @@ order: 22
 | `/api/user/aff` | GET | 获取推广码 |
 | `/api/user/subscription` | GET | 获取订阅信息 |
 
----
 
 ## 附录 B：权限等级说明
 
@@ -155,7 +151,6 @@ order: 22
 | Admin | 10 | 管理员 |
 | Root | 100 | 超级管理员 |
 
----
 
 ## 附录 C：计费类型说明
 
@@ -183,7 +178,6 @@ quota = ceil(perRequestPrice × sizeRatio × N × groupDiscount × QuotaPerUnit)
 
 **QuotaPerUnit 说明：** 默认 500,000，表示 500,000 内部额度 = 1 元人民币。
 
----
 
 ## 附录 D：渠道类型对照表
 
