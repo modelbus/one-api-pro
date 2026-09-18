@@ -1,7 +1,7 @@
 ---
 title: Payment Channels
 description: "WeChat / Alipay / Bank-transfer configuration: cert upload, notify URL and enable toggle."
-category: admin
+category: pricing
 order: 12
 ---
 
