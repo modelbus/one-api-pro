@@ -9,7 +9,7 @@ order: 2
 
 > 路径：`/redemption`（`web/default-pro/src/views/redemption/Redemption.vue`）。CRUD 实现在 `controller/redemption.go`。
 
-## 接口 / Endpoints
+## 接口
 
 | Endpoint | Method | Auth | 说明 |
 |---|---|---|---|
@@ -20,7 +20,7 @@ order: 2
 | `/api/redemption/` | `PUT` | Admin | 编辑；带 `?status_only=true` 时仅改状态 |
 | `/api/redemption/:id` | `DELETE` | Admin | 硬删除 |
 
-## 批量生成 / `POST /api/redemption/`
+## 批量生成
 
 请求体：
 
@@ -40,7 +40,7 @@ order: 2
 
 响应 `data` 是 `string[]`（即生成的 `key` 列表），前端用于"批量导出"对话框。
 
-## 编辑 / `PUT /api/redemption/`
+## 编辑
 
 ```json
 { "id": 88, "name": "新名字", "quota": 20000 }
@@ -48,7 +48,7 @@ order: 2
 
 服务端先 `GetRedemptionById`，再覆盖 `Name` 与 `Quota`。`gorm.Select("name", "status", "quota", "redeemed_time")` 保证只更新白名单字段。
 
-## 状态切换 / `PUT /api/redemption/?status_only=true`
+## 状态切换
 
 ```json
 { "id": 88, "status": 2 }   // 2 = Disabled
@@ -56,11 +56,11 @@ order: 2
 
 仅改 `status`；`status=3 (Used)` 不可手动设置——只能由 `Redeem` 事务在兑换成功后翻转。
 
-## 删除 / `DELETE /api/redemption/:id`
+## 删除
 
 硬删除 `redemptions` 行。已使用 (`status=3`) 的兑换码也可以删除；删除不影响 `users.quota`（已经发放的额度不会回退）。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 页面：`/redemption`。
 
@@ -73,7 +73,7 @@ order: 2
   - **删除**：二次确认
 - 「生成」按钮打开弹窗，填 `name` / `count` / `quota`；提交后弹出"批量导出"对话框展示 `data.key[]`
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -81,3 +81,4 @@ order: 2
 | 数据模型 | `model/redemption.go::Redemption` |
 | 状态常量 | `model/redemption.go` (`RedemptionCodeStatusEnabled/Disabled/Used`) |
 | 用户侧兑换 | `controller/user.go::TopUp` → `model.Redeem` |
+
