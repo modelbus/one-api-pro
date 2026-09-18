@@ -27,21 +27,21 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">简体中文</a>
+  <strong>English</strong>
   &nbsp;·&nbsp;
-  <a href="README.en.md">English</a>
+  <a href="readme/README.zh.md">简体中文</a>
   &nbsp;·&nbsp;
-  <a href="README.zh-TW.md">繁體中文</a>
+  <a href="readme/README.zh-TW.md">繁體中文</a>
   &nbsp;·&nbsp;
-  <a href="README.ja.md">日本語</a>
+  <a href="readme/README.ja.md">日本語</a>
   &nbsp;·&nbsp;
-  <a href="README.ru.md">Русский</a>
+  <a href="readme/README.ru.md">Русский</a>
   &nbsp;·&nbsp;
-  <a href="README.ko.md">한국어</a>
+  <a href="readme/README.ko.md">한국어</a>
   &nbsp;·&nbsp;
-  <a href="README.ar.md">العربية</a>
+  <a href="readme/README.ar.md">العربية</a>
   &nbsp;·&nbsp;
-  <a href="README.de.md">Deutsch</a>
+  <a href="readme/README.de.md">Deutsch</a>
 </p>
 
 ---
