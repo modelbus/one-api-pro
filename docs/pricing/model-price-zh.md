@@ -9,7 +9,7 @@ order: 1
 
 > 每个模型在 `model_price` 表里有一条独立定价记录，决定按 token / 按次计费的金额。实现：`model/model_price.go::ModelPrice`、`controller/model_price.go`。
 
-## 数据模型 / Data model
+## 数据模型
 
 `model.ModelPrice`（`model_price` 表）：
 
@@ -19,13 +19,13 @@ order: 1
 | `input_price` | `decimal(16,6)` | 输入单价（¥/百万 token） |
 | `output_price` | `decimal(16,6)` | 输出单价（¥/百万 token） |
 | `cached_price` | `decimal(16,6)` | 缓存命中部分单价（¥/百万 token），通常 = `input_price` 的 1/2 |
-| `per_request_price` | `decimal(16,6)` | 按次计费金额（DALL·E / TTS / 嵌入等非 token 模型） |
+| `per_request_price` | `decimal(16,6)` | 按次计费金额（DALL·E|
 | `billing_type` | `varchar(20)` | `token` / `per_request` |
 | `enabled` | `bool` | 是否启用；下拉只列出 `enabled=true` 的行 |
 
 价格单位是"元 / 百万 token"。`relay/billing/ratio` 计算时再乘上 group discount。
 
-## 接口 / Endpoints
+## 接口
 
 | Endpoint | Method | Auth | 说明 |
 |---|---|---|---|
@@ -37,7 +37,7 @@ order: 1
 
 `controller/model_price.go` 中 `GetAllModelPrices` 标记为 Deprecated（仅 Root），原因：它会泄露 `input_price` 等计费字段到非必要场景；新增前端场景请优先使用 `ListModelPriceOptions`。
 
-## 缓存 / Cache
+## 缓存
 
 `InitModelPriceCache` 启动时把 `enabled=true` 行写入进程内 `modelPriceMap`（`map[string]*ModelPrice`），由读写锁保护：
 
@@ -48,7 +48,7 @@ order: 1
 
 `CacheGetModelPrice(name)` / `CacheGetGroupPrice(group, model)` 是 Redis 二级缓存（`ModelPriceCacheSeconds=300`），先查 Redis，未命中走 DB 并回填。
 
-## 计费结算路径 / Billing flow
+## 计费结算路径
 
 `relay/billing/ratio/model.go::GetModelPrice(name, fallbackNames...)`：
 
@@ -69,11 +69,11 @@ if BillingType == PerRequest {
 }
 ```
 
-## 默认定价 / Default prices
+## 默认定价
 
 `model_price.go::defaultModelPrices` 列出系统初始化时种入的常用模型（`gpt-4o` / `claude-3.5-sonnet` / `deepseek-chat` / `qwen-max` / `gemini-1.5-pro` 等），仅在 `model_price` 表为空时由 `InitDefaultPrices` 写入。`OnConflict{DoNothing: true}` 保证重跑安全。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 页面：`/setting/pricing` → "模型定价" Tab（`web/default-pro/src/views/setting/PricingSetting.vue`）。
 
@@ -81,7 +81,7 @@ if BillingType == PerRequest {
 - 编辑弹窗：六个数值字段 + 计费类型下拉（`token` / `per_request`）+ enabled 开关
 - 「新增」按相同表单
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
