@@ -1,6 +1,6 @@
 ---
 title: 套餐 API
-description: 套餐 API：套餐管理 (Plan)
+description: "套餐 API：套餐管理 (Plan)"
 category: api
 order: 18
 ---
@@ -56,14 +56,13 @@ order: 18
 | model_limits | string | 模型限额配置JSON，key为模型名称，value为ModelLimitRule |
 | default_model | string | 默认模型名称，不在model_limits中的请求模型将转发至此模型计费；为空则不转发，未配置模型返回422 |
 | description | string | 描述 |
-| features | array\<string> | 功能特性列表，每项一行展示在用户端套餐卡 |
+| features | `array<string>` | 功能特性列表，每项一行展示在用户端套餐卡 |
 | sort | int | 排序权重 |
 | status | int | 状态：1=上架, 0=下架 |
 | duration_days | int | 有效天数 |
 | duration_text | string | 有效期显示文本 |
 | recommended | bool | 是否推荐 |
 
----
 
 ### 10.2 搜索套餐
 
@@ -77,7 +76,6 @@ order: 18
 |------|------|------|
 | keyword | string | 搜索关键词 |
 
----
 
 ### 10.3 获取套餐详情
 
@@ -85,7 +83,6 @@ order: 18
 
 **权限：** Admin
 
----
 
 ### 10.4 创建套餐
 
@@ -112,7 +109,6 @@ order: 18
 }
 ```
 
----
 
 ### 10.5 更新套餐
 
@@ -157,7 +153,6 @@ key 为模型名称，value 为 `ModelLimitRule` 对象：
 - 如果 `default_model` 为空且用户请求的模型不在 `model_limits` 中，将返回 422 错误
 - 转发后，实际请求将使用 `default_model` 发送到上游，日志中记录的模型名称也是 `default_model`
 
----
 
 ### 10.6 删除套餐
 
@@ -165,4 +160,3 @@ key 为模型名称，value 为 `ModelLimitRule` 对象：
 
 **权限：** Root
 
----
