@@ -1,7 +1,7 @@
 ---
 title: Plan Business Rules
 description: "Plan business rules: upgrade mode (stack vs price-difference), expiry policy."
-category: admin
+category: subscription
 order: 13
 ---
 
