@@ -30,7 +30,7 @@
 <p align="center">
   <strong>简体中文</strong>
   &nbsp;·&nbsp;
-  <a href="README.en.md">English</a>
+  <a href="../README.md">English</a>
   &nbsp;·&nbsp;
   <a href="README.zh-TW.md">繁體中文</a>
   &nbsp;·&nbsp;
