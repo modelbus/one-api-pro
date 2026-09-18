@@ -21,29 +21,6 @@ order: 14
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": [
-    {
-      "id": 1,
-      "user_id": 1,
-      "key": "sk-xxxxxxxx",
-      "status": 1,
-      "name": "my-token",
-      "created_time": 1718000000,
-      "accessed_time": 1718000000,
-      "expired_time": -1,
-      "remain_quota": 500000,
-      "unlimited_quota": false,
-      "used_quota": 100000,
-      "models": null,
-      "subnet": null,
-      "updated_at": 1718000000
-    }
-  ]
-}
 ```
 
 **返回字段说明：**
@@ -64,7 +41,6 @@ order: 14
 | models | string/null | 允许的模型（逗号分隔），null=全部 |
 | subnet | string/null | 允许的子网 |
 
-
 ### 6.2 搜索令牌
 
 **接口：** `GET /api/token/search`
@@ -77,13 +53,11 @@ order: 14
 |------|------|------|
 | keyword | string | 搜索关键词 |
 
-
 ### 6.3 获取单个令牌
 
 **接口：** `GET /api/token/:id`
 
 **权限：** User
-
 
 ### 6.4 创建令牌
 
@@ -93,17 +67,7 @@ order: 14
 
 **请求体：**
 
-```json
-{
-  "name": "my-token",
-  "remain_quota": 500000,
-  "expired_time": -1,
-  "unlimited_quota": false,
-  "models": null,
-  "subnet": null
-}
 ```
-
 
 ### 6.5 更新令牌
 
@@ -112,7 +76,6 @@ order: 14
 **权限：** User
 
 与创建格式相同，加上 `id` 字段。查询参数 `status_only=1` 时仅更新状态。
-
 
 ### 6.6 删除令牌
 
