@@ -1,7 +1,7 @@
 ---
 title: Orders Admin
 description: "Order center from the admin view: filter, mark paid / refunded and delete."
-category: admin
+category: pricing
 order: 7
 ---
 
