@@ -9,7 +9,7 @@ order: 5
 
 > 支付通道抽象为 `common/payment.Channel` 接口，按 `pay_method` 注册到全局 `registry`。每个通道从 `system_settings` 读自己的 `enabled` / `config` JSON，调用方通过 `payment.New(pay_method)` 拿到实例。
 
-## 注册的通道 / Registered channels
+## 注册的通道
 
 `common/payment/payment.go::AnyChannelEnabled` 列举 `wechat` / `alipay` / `bank` 三个候选（`offline` / `free` 始终视为可用）；启动时由各文件 `init()` 注册：
 
@@ -21,7 +21,7 @@ order: 5
 | 线下支付 | `OrderPayMethodOffline="offline"` | `common/payment/bank.go::offlineChannel` | 同上；`IsEnabled()` 始终返回 true |
 | 免费 / 管理员赠送 | `OrderPayMethodFree="free"` | `common/payment/bank.go::freeChannel` | 始终视为启用；`PrePay` 返回空对象 |
 
-## 系统设置 / Settings
+## 系统设置
 
 支付配置存 `system_settings` 表 `payment.*` 键（`model/system_setting.go`）：
 
@@ -33,7 +33,7 @@ order: 5
 
 `IsEnabled()` 调 `payment.SettingsBool(key)` 读 `{"enabled": true|false}` 解析。
 
-## 微信 Native / WeChat Native
+## 微信 Native
 
 `wechatChannel.PrePay`：
 
@@ -55,7 +55,7 @@ order: 5
 - 成功 → 返回 `<xml><return_code>SUCCESS</return_code>...</xml>`
 - 失败 → 返回 `<xml><return_code>FAIL</return_code><return_msg>...</return_msg></xml>`（让微信重试）
 
-## 支付宝 当面付 / Alipay Face-to-Face
+## 支付宝 当面付
 
 `alipayChannel.PrePay`：
 
@@ -67,13 +67,13 @@ order: 5
 
 `AlipayNotify` 端点（`POST /api/payment/alipay/notify`，免鉴权）成功返回字面量 `success`，失败返回 `fail`。
 
-## 银行 / 线下 / 免费 / Bank / Offline / Free
+## 银行
 
 - `bankChannel`：`PrePay` 返回错误 `bank 支付未实现：等待管理员在后台标记收款`；无回调；订单保持 `pending`，由管理员通过 `PUT /api/order/:id` 手动标记收款
 - `offlineChannel`：与 bank 类似，但 `IsEnabled()` 始终返回 true（默认开放）
 - `freeChannel`：`PrePay` 返回空对象；`VerifyNotify` 直接返回 `Paid: true`。仅用于管理员 grant（`controller/subscription.go::AddSubscription`）
 
-## 用户侧流程 / User flow
+## 用户侧流程
 
 `payment.AnyChannelEnabled()` 决定 `CreatePlanOrder` / `CreateTopupOrder` / `PayMyOrder` 是否允许下单；返回 false 时统一返回 `系统尚未开通任何支付通道，请设置后开启支付`，且不落订单。
 
@@ -93,7 +93,7 @@ order: 5
 
 `status=warning` 时表示通道未注册 / 未启用 / SDK 调用失败；订单仍然落库，管理员可手动处理。
 
-## 异步回调分发 / Async notify dispatch
+## 异步回调分发
 
 `controller/payment.go::processNotify`：
 
@@ -104,7 +104,7 @@ order: 5
    - `OrderTypeTopup=2` → `model.ActivateTopupByOrder` 加 quota
    - 其它（套餐订单） → `model.ActivatePackageByOrder(order, OrderUpgradeModeStack)` 激活订阅
 
-## 手动激活 / 测试通道 / Manual activation
+## 手动激活
 
 `POST /api/payment/mock/notify`（Root，请求体 `{order_no, status}`）：
 
@@ -113,7 +113,7 @@ order: 5
 
 用于测试或对账后手动激活。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 页面：`/setting/payment`（`web/default-pro/src/views/setting/PaymentSetting.vue`）。
 
@@ -124,15 +124,16 @@ order: 5
 - 切换开关即时调 `PUT /api/setting/payment/:method`；表单字段通过同一端点的 `config` 字段一并保存
 - 用户侧 `/pricing` 或 `/topup` 弹窗：`GET /api/payment/status` 决定渲染哪些支付按钮（已启用的）
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
 | 接口定义 | `common/payment/payment.go::Channel` |
 | 微信实现 | `common/payment/wechat.go` |
 | 支付宝实现 | `common/payment/alipay.go` |
-| Bank / Offline / Free | `common/payment/bank.go` |
-| 系统设置 key | `model/system_setting.go::SystemSettingKeyWechat* / Alipay* / Bank*` |
+| Bank| `common/payment/bank.go` |
+| 系统设置 key | `model/system_setting.go::SystemSettingKeyWechat*|
 | 设置接口 | `controller/setting_payment.go`（参考前端字段） |
 | 回调分发 | `controller/payment.go::processNotify` |
 | 手动激活 | `controller/payment.go::MockPay` |
+
