@@ -1,7 +1,7 @@
 ---
 title: Redemption Codes
 description: "Bulk-generate redemption codes, toggle status, copy keys and search."
-category: admin
+category: redemption
 order: 9
 ---
 
