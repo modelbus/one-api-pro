@@ -27,10 +27,11 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("failed to open in-memory sqlite: " + err.Error())
 	}
-	if err := db.AutoMigrate(&model.User{}, &model.Plan{}, &model.UserPlan{}, &model.ModelPrice{}, &model.GroupPrice{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Plan{}, &model.UserPlan{}, &model.ModelPrice{}, &model.GroupPrice{}, &model.Log{}); err != nil {
 		panic("failed to migrate schema: " + err.Error())
 	}
 	model.DB = db
+	model.LOG_DB = db
 	common.RedisEnabled = false
 	m.Run()
 }
@@ -177,4 +178,115 @@ func TestGetUserById_StillOmitsAccessToken(t *testing.T) {
 	if single.Data.AccessToken != "" {
 		t.Fatalf("GetUser wire response leaked access_token=%q", single.Data.AccessToken)
 	}
+
+	// runManage is a tiny harness for the POST /api/user/manage handler.
+	// It accepts a JSON body, injects `role` / `username` into the context
+	// (mimicking what middleware/auth.go would set after AdminAuth), and
+	// decodes the standard {success, message, data} envelope.
+	type batchResp struct {
+		Success bool                   `json:"success"`
+		Message string                 `json:"message"`
+		Data    map[string]interface{} `json:"data"`
+	}
+	runManage := func(t *testing.T, body string, role int, caller string) batchResp {
+		t.Helper()
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/api/user/manage", strings.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Set("role", role)
+		c.Set("username", caller)
+		ManageUser(c)
+		if w.Code != http.StatusOK {
+			t.Fatalf("ManageUser status=%d body=%s", w.Code, w.Body.String())
+		}
+		var r batchResp
+		if err := json.Unmarshal(w.Body.Bytes(), &r); err != nil {
+			t.Fatalf("decode ManageUser response: %v; body=%s", err, w.Body.String())
+		}
+		return r
+	}
+
+	t.Run("batch_disable_non_root_forbidden", func(t *testing.T) {
+		seedUser(t, "alice-rbac", model.RoleCommonUser, "alice-rbac-tk")
+		seedUser(t, "bob-rbac", model.RoleCommonUser, "bob-rbac-tk")
+		body := `{"action":"batch-disable","usernames":["alice-rbac","bob-rbac"]}`
+		// admin (non-root) must be rejected
+		r := runManage(t, body, model.RoleAdminUser, "admin-caller")
+		if r.Success {
+			t.Fatalf("non-root admin should be rejected; got success=true, data=%v", r.Data)
+		}
+		// both users must still be enabled
+		for _, name := range []string{"alice-rbac", "bob-rbac"} {
+			var u model.User
+			if err := model.DB.Where("username = ?", name).First(&u).Error; err != nil {
+				t.Fatalf("re-fetch %s: %v", name, err)
+			}
+			if u.Status != model.UserStatusEnabled {
+				t.Fatalf("%s should still be enabled, got status=%d", name, u.Status)
+			}
+		}
+	})
+
+	t.Run("batch_delete_root_success_partial", func(t *testing.T) {
+		// Seed fresh users for this subtest so state is independent.
+		carol := seedUser(t, "carol-batch", model.RoleCommonUser, "carol-batch-tk")
+		dave := seedUser(t, "dave-batch", model.RoleCommonUser, "dave-batch-tk")
+		// existing root from earlier subtest must be skipped, not deleted.
+		body := `{"action":"batch-delete","usernames":["carol-batch","dave-batch","root1"]}`
+		r := runManage(t, body, model.RoleRootUser, "root1")
+		if !r.Success {
+			t.Fatalf("partial-success batch should be success=true; got message=%q data=%v", r.Message, r.Data)
+		}
+		if r.Data["succeeded_count"].(float64) != 2 {
+			t.Fatalf("expected 2 succeeded, got %v", r.Data["succeeded_count"])
+		}
+		if r.Data["failed_count"].(float64) != 1 {
+			t.Fatalf("expected 1 failed (root), got %v", r.Data["failed_count"])
+		}
+		failed, _ := r.Data["failed"].(map[string]interface{})
+		if failed["root1"] == nil {
+			t.Fatalf("expected root1 to appear in failed map, got %v", failed)
+		}
+		// carol-batch/dave-batch should be soft-deleted (status = UserStatusDeleted).
+		// user.Delete() renames Username → deleted_<uuid>; query by Id instead.
+		for _, u0 := range []*model.User{carol, dave} {
+			var u model.User
+			if err := model.DB.First(&u, u0.Id).Error; err != nil {
+				t.Fatalf("re-fetch id=%d: %v", u0.Id, err)
+			}
+			if u.Status != model.UserStatusDeleted {
+				t.Fatalf("id=%d should be soft-deleted, got status=%d", u0.Id, u.Status)
+			}
+		}
+	})
+
+	t.Run("batch_all_failed_returns_success_false", func(t *testing.T) {
+		seedUser(t, "eve-batch", model.RoleCommonUser, "eve-batch-tk")
+		// caller is root1, list contains root1 only — root self-skip fails the whole batch.
+		bodySelf := `{"action":"batch-delete","usernames":["root1"]}`
+		r := runManage(t, bodySelf, model.RoleRootUser, "root1")
+		if r.Success {
+			t.Fatalf("all-failed batch must return success=false; got message=%q", r.Message)
+		}
+		if r.Data["failed_count"].(float64) != 1 {
+			t.Fatalf("expected 1 failed, got %v", r.Data["failed_count"])
+		}
+		// eve-batch untouched
+		var u model.User
+		if err := model.DB.Where("username = ?", "eve-batch").First(&u).Error; err != nil {
+			t.Fatalf("re-fetch eve-batch: %v", err)
+		}
+		if u.Status != model.UserStatusEnabled {
+			t.Fatalf("eve-batch should still be enabled, got status=%d", u.Status)
+		}
+	})
+
+	t.Run("batch_empty_usernames_rejected", func(t *testing.T) {
+		body := `{"action":"batch-disable","usernames":[]}`
+		r := runManage(t, body, model.RoleRootUser, "root1")
+		if r.Success {
+			t.Fatalf("empty usernames must return success=false; got message=%q", r.Message)
+		}
+	})
 }
