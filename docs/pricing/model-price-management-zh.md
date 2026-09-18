@@ -12,7 +12,7 @@ order: 3
 入口路由：管理员设置 → **Pricing**（`/setting/pricing`）。前端组件：`web/default-pro/src/views/setting/PricingSetting.vue`。
 该页签是 Root-only；普通管理员在「下拉候选」接口里也能拉取启用列表。
 
-## 数据模型 / Data Model
+## 数据模型
 
 `model.ModelPrice`（`model_price` 表）：
 
@@ -22,14 +22,14 @@ order: 3
 | `input_price` | `decimal(16,6)` | 输入 token 单价（USD / 1K token） |
 | `output_price` | `decimal(16,6)` | 输出 token 单价 |
 | `cached_price` | `decimal(16,6)` | 缓存 token 单价 |
-| `per_request_price` | `decimal(16,6)` | 单次请求固定价（如 dall-e / whisper） |
+| `per_request_price` | `decimal(16,6)` | 单次请求固定价（如 dall-e|
 | `billing_type` | `varchar(20)` | `token` 或 `per_request` |
 | `enabled` | `bool` | 是否启用；`false` 不参与计费、也不出现在下拉候选中 |
 | `created_at` / `updated_at` | `bigint` | unix 秒 |
 
 启动时会由 `InitDefaultPrices()` 写入一份主流模型默认表（gpt-4o、claude-3.5、deepseek、qwen-plus 等）；用户可自由增删覆盖。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -41,25 +41,25 @@ order: 3
 
 实现：`controller/model_price.go`；前端调用走 `@/api`（GET/POST/PUT/DELETE）。
 
-## 缓存行为 / Caching
+## 缓存行为
 
 每次 Add / Update / Delete 后都会同步调用 `model.InitModelPriceCache()`，把内存 cache `modelPriceMap` 整表重建。
 后台还有 `SyncModelPriceCache(frequency)` 定时协程，按配置频率（默认 300 秒）从 DB 拉取同步，保证多实例部署的最终一致性。
 计费热路径走 `model.CacheGetModelPrice(modelName)`（Redis 优先，无 Redis 时回 DB），键 `model_price:<name>`，TTL `ModelPriceCacheSeconds = 300`。
 
-## 下拉候选 / Channel Dropdown Source
+## 下拉候选
 
 `GET /api/model_price/options` 是路由 `/api/channel` 表单里"可用模型"下拉的真实来源（admin 即可访问，避免把计费细节泄漏给普通渠道编辑流程）。
 返回值是 `string[]`，按 `model_name asc` 排序；空字符串模型会被去重忽略。
 
-## 计费模式 / Billing Modes
+## 计费模式
 
 - `billing_type = "token"`（默认）：按 `(prompt_tokens + completion_tokens)` 计费；命中缓存的 token 按 `cached_price` 单价。
 - `billing_type = "per_request"`：按调用次数计费，忽略 token（适用 dall-e / whisper / tts 等）。
 
 `FindModelPriceByPattern` 提供子串兜底匹配：未命中精确键时按 `strings.Contains(modelName, pattern)` 兜底（适用于按系列统一价）。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 页签顶部切换「模型定价」/「分组定价」。
 - 列表列：模型名 / 输入价 / 输出价 / 缓存价 / 单次请求价 / 计费类型（token / per_request tag）/ 操作。
@@ -67,7 +67,7 @@ order: 3
 - 编辑时模型名允许修改但**主键重复**会被 GORM 唯一索引拦截；保存后立即刷新整张表（包含缓存重建）。
 - 删除走二次确认弹窗。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
