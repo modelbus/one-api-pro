@@ -27,15 +27,15 @@
 </p>
 
 <p align="center">
-  <a href="../README.md">简体中文</a>
+  <a href="README.zh.md">简体中文</a>
   &nbsp;·&nbsp;
-  <a href="README.en.md">English</a>
+  <a href="../README.md">English</a>
   &nbsp;·&nbsp;
   <a href="README.zh-TW.md">繁體中文</a>
   &nbsp;·&nbsp;
   <a href="README.ja.md">日本語</a>
   &nbsp;·&nbsp;
-  <a href="README.ru.md">Русский</a>
+  <strong>Русский</strong>
   &nbsp;·&nbsp;
   <a href="README.ko.md">한국어</a>
   &nbsp;·&nbsp;
