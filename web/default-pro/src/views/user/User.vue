@@ -214,19 +214,20 @@
               :loading="batchOperating"
             >
               {{ $t('userPage.batchOperate') }}
-              <template #icon><icon-down :size="12" /></template>
+              <icon-down :size="12" class="batch-trigger-arrow" />
             </a-button>
             <template #content>
               <a-doption
+                class="batch-opt-danger"
                 :disabled="selectedUsernames.length === 0 || batchOperating"
-                @click="runBatch('batch-delete')"
+                @click="openBatchConfirm('batch-delete')"
               >
                 <template #icon><icon-delete /></template>
                 {{ $t('userPage.batchDelete') }}
               </a-doption>
               <a-doption
                 :disabled="selectedUsernames.length === 0 || batchOperating"
-                @click="runBatch('batch-disable')"
+                @click="openBatchConfirm('batch-disable')"
               >
                 <template #icon><icon-stop /></template>
                 {{ $t('userPage.batchDisable') }}
@@ -309,13 +310,33 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 批量操作二次确认 Modal（arco Modal，per arco.design/vue/component/modal） -->
+    <!-- Batch-action confirm Modal (arco a-modal, per arco docs). -->
+    <a-modal
+      :visible="batchConfirmVisible"
+      :title="batchConfirmTitle"
+      :ok-text="batchConfirmOkText"
+      :cancel-text="$t('userPage.cancel')"
+      :ok-button-props="batchConfirmOkProps"
+      :ok-loading="batchOperating"
+      @ok="confirmBatchOk"
+      @cancel="cancelBatchConfirm"
+      @update:visible="(v) => { if (!v) cancelBatchConfirm() }"
+      :width="460"
+    >
+      <div class="batch-confirm-body">
+        <icon-exclamation-circle :size="22" class="batch-confirm-icon" />
+        <span>{{ batchConfirmContent }}</span>
+      </div>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IconPlus, IconUserGroup, IconDown, IconDelete, IconStop } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconUserGroup, IconDown, IconDelete, IconStop, IconExclamationCircle } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
@@ -347,6 +368,10 @@ const pageItems = computed(() => {
 // Batch selection: persisted across pagination.
 const selectedUsernames = ref([])
 const batchOperating = ref(false)
+// 批量操作二次确认 Modal：单一 Modal 复用，按 action 切换文案/样式
+// Batch-confirm modal: single modal reused, swap copy + style by action.
+const batchConfirmVisible = ref(false)
+const batchConfirmAction = ref('') // 'batch-delete' | 'batch-disable'
 
 // 复选框工具函数：基于 username 切分，避免 id 在批量接口里被误用
 // Checkbox helpers: use username as key (matches the batch API contract).
@@ -708,12 +733,45 @@ async function deleteUser(record) {
 
 // 批量操作：复用 /api/user/manage，action = batch-delete / batch-disable
 // Batch: reuses /api/user/manage with action = batch-delete / batch-disable.
-async function runBatch(action) {
-  const usernames = selectedUsernames.value.slice()
-  if (usernames.length === 0) {
+const batchConfirmTitle = computed(() => {
+  return batchConfirmAction.value === 'batch-delete'
+    ? t('userPage.batchConfirmDeleteTitle')
+    : t('userPage.batchConfirmDisableTitle')
+})
+const batchConfirmContent = computed(() => {
+  const n = selectedUsernames.value.length
+  return batchConfirmAction.value === 'batch-delete'
+    ? t('userPage.confirmBatchDelete', { n })
+    : t('userPage.confirmBatchDisable', { n })
+})
+const batchConfirmOkText = computed(() => {
+  return batchConfirmAction.value === 'batch-delete'
+    ? t('userPage.batchDelete')
+    : t('userPage.batchDisable')
+})
+const batchConfirmOkProps = computed(() => {
+  if (batchConfirmAction.value === 'batch-delete') {
+    return { status: 'danger' }
+  }
+  return {}
+})
+
+function openBatchConfirm(action) {
+  if (selectedUsernames.value.length === 0) {
     Message.warning(t('userPage.batchEmptySelection'))
     return
   }
+  batchConfirmAction.value = action
+  batchConfirmVisible.value = true
+}
+function cancelBatchConfirm() {
+  if (batchOperating.value) return
+  batchConfirmVisible.value = false
+  batchConfirmAction.value = ''
+}
+
+async function runBatch(action) {
+  const usernames = selectedUsernames.value.slice()
   batchOperating.value = true
   try {
     const { data } = await api.post('/api/user/manage', { action, usernames })
@@ -761,7 +819,14 @@ async function runBatch(action) {
     Message.error(e.response?.data?.message || e.message || t('userPage.userPageBatchFailed'))
   } finally {
     batchOperating.value = false
+    batchConfirmVisible.value = false
+    batchConfirmAction.value = ''
   }
+}
+
+async function confirmBatchOk() {
+  if (batchOperating.value) return
+  await runBatch(batchConfirmAction.value)
 }
 
 function getRoleLabel(role) {
@@ -1101,11 +1166,51 @@ function renderBilling(type) {
 }
 
 .danger-btn {
-  color: var(--color-text-2);
+  color: #f53f3f;
 }
 .danger-btn:hover {
   color: #f53f3f !important;
   background: rgba(245, 63, 63, 0.06) !important;
+}
+.danger-btn:disabled,
+.danger-btn.arco-btn-disabled {
+  color: var(--color-text-4) !important;
+  background: transparent !important;
+}
+
+/* 下拉箭头放在按钮文字右侧（按 arco 推荐用法） */
+/* Dropdown trigger arrow lives to the right of the button text. */
+.batch-trigger-arrow {
+  margin-left: 6px;
+  color: var(--color-text-3);
+}
+
+/* 下拉项「批量删除」红色高亮（与单条删除按钮颜色一致） */
+/* Batch-delete doption highlighted in red, matching single-row delete. */
+.batch-opt-danger {
+  color: #f53f3f !important;
+}
+.batch-opt-danger :deep(.arco-icon) {
+  color: #f53f3f !important;
+}
+.batch-opt-danger:hover {
+  background: rgba(245, 63, 63, 0.06) !important;
+}
+
+/* 批量确认 Modal 内容布局 */
+/* Batch-confirm modal body. */
+.batch-confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--color-text-2);
+  line-height: 1.6;
+}
+.batch-confirm-icon {
+  color: #f53f3f;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .list-footer {
