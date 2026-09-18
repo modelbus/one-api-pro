@@ -42,8 +42,16 @@ const only = process.argv[2] // 'zh' | 'en' | undefined
 const LANGS = only ? [only] : ['zh', 'en']
 
 // Language-specific categories under docs/. Skip non-content dirs:
-// "assets" (static files), "doc-site" (the site project) and "scripts".
-const NON_CATEGORY_DIRS = new Set(['assets', 'doc-site', 'scripts'])
+// "assets" (static files), "doc-site" (the site project), "scripts",
+// and the legacy "admin" / "faq" folders emptied during the
+// 12-category realignment.
+const NON_CATEGORY_DIRS = new Set([
+  'assets',
+  'doc-site',
+  'scripts',
+  'admin',
+  'faq',
+])
 const CATEGORIES = readdirSync(DOCS).filter((name) => {
   const full = join(DOCS, name)
   return statSync(full).isDirectory() && !NON_CATEGORY_DIRS.has(name)
@@ -130,6 +138,12 @@ function copyDir(src, dst) {
 
 for (const lang of LANGS) {
   cleanDest(lang)
+  // Remove category dirs that have been retired (legacy admin/faq) so
+  // stale synced output doesn't linger across runs.
+  for (const retired of ['admin', 'faq']) {
+    const target = join(langBase(lang), retired)
+    if (existsSync(target)) rmSync(target, { recursive: true, force: true })
+  }
   syncCategory(lang)
   syncRoot(lang)
 }
