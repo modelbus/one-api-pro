@@ -1,7 +1,7 @@
 ---
 title: Plan Admin
 description: "Plan CRUD, publish toggle, features and model-limits management."
-category: admin
+category: subscription
 order: 5
 ---
 
