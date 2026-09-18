@@ -3,7 +3,7 @@ import { defineConfig } from 'vitepress'
 // ---------------------------------------------------------------------------
 // Sidebar definitions
 // ---------------------------------------------------------------------------
-// Category meta: slug -> [zh label, en label]
+// Category meta: slug -> [zh label, en label] (12 categories per spec)
 const CATEGORY_LABELS = {
   start: ['快速开始', 'Getting Started'],
   install: ['安装与更新', 'Install & Upgrade'],
@@ -13,11 +13,10 @@ const CATEGORY_LABELS = {
   redemption: ['兑换码', 'Redemption'],
   pricing: ['定价', 'Pricing'],
   decentralization: ['去中心化', 'Decentralization'],
-  admin: ['后台管理', 'Admin'],
   api: ['API 参考', 'API Reference'],
   changelog: ['更新日志', 'Changelog'],
   contribute: ['贡献', 'Contribute'],
-  faq: ['其他', 'Misc'],
+  misc: ['其他', 'Misc'],
 }
 
 // Per-category page metadata: slug -> [zh title, en title]
@@ -45,6 +44,7 @@ const PAGES = {
     'access-token': ['Access Token', 'Access Token'],
     orders: ['我的订单', 'My Orders'],
     chat: ['Chat Playground', 'Chat Playground'],
+    'user-management': ['用户管理（管理员）', 'User Management (Admin)'],
   },
   channel: {
     overview: ['渠道概览', 'Channel Overview'],
@@ -60,12 +60,16 @@ const PAGES = {
     'admin-guide': ['管理员指南', 'Admin Guide'],
     'billing-rules': ['计费规则', 'Billing Rules'],
     'upgrade-downgrade': ['套餐升降级', 'Upgrade & Downgrade'],
+    'plan-management': ['套餐管理', 'Plan Management'],
+    'subscription-management': ['订阅管理', 'Subscription Management'],
+    'plan-settings': ['套餐业务配置', 'Plan Settings'],
   },
   redemption: {
     overview: ['兑换码概览', 'Redemption Overview'],
     'admin-guide': ['管理员指南', 'Admin Guide'],
     'user-guide': ['用户兑换流程', 'User Guide'],
     quotas: ['兑换额度计算', 'Quota Calculation'],
+    'redemption-management': ['兑换码管理', 'Redemption Management'],
   },
   pricing: {
     'model-price': ['模型定价', 'Model Price'],
@@ -73,6 +77,12 @@ const PAGES = {
     plan: ['套餐定价', 'Plan Pricing'],
     topup: ['充值', 'Topup'],
     payment: ['支付通道', 'Payment Channels'],
+    'model-price-management': ['模型定价管理', 'Model Price Management'],
+    'group-price-management': ['分组折扣管理', 'Group Price Management'],
+    'topup-management': ['充值管理', 'Topup Management'],
+    'order-management': ['订单管理', 'Order Management'],
+    'payment-settings': ['支付配置', 'Payment Settings'],
+    'topup-settings': ['充值业务配置', 'Topup Settings'],
   },
   decentralization: {
     overview: ['Cluster 概览', 'Cluster Overview'],
@@ -80,25 +90,7 @@ const PAGES = {
     'config-sync': ['配置同步', 'Config Sync'],
     'node-health': ['节点健康', 'Node Health'],
     deployment: ['多节点部署', 'Multi-node Deployment'],
-  },
-  admin: {
-    'admin-dashboard': ['运营仪表盘', 'Admin Dashboard'],
-    users: ['用户管理', 'Users'],
-    'model-price': ['模型定价管理', 'Model Price Admin'],
-    'group-price': ['分组折扣管理', 'Group Price Admin'],
-    plan: ['套餐管理', 'Plan Admin'],
-    subscription: ['订阅管理', 'Subscription Admin'],
-    orders: ['订单管理', 'Orders Admin'],
-    topup: ['充值管理', 'Topup Admin'],
-    redemption: ['兑换码管理', 'Redemption Admin'],
-    token: ['API Token 管理', 'API Token Admin'],
-    logs: ['日志查询', 'Logs'],
-    'payment-setting': ['支付配置', 'Payment Setting'],
-    'plan-setting': ['套餐业务配置', 'Plan Setting'],
-    'topup-setting': ['充值业务配置', 'Topup Setting'],
-    'operation-setting': ['运营设置', 'Operation Setting'],
-    'system-setting': ['系统设置', 'System Setting'],
-    'cluster-setting': ['集群设置', 'Cluster Setting'],
+    'cluster-settings': ['集群设置', 'Cluster Settings'],
   },
   api: {
     README: ['总览与鉴权', 'Overview & Auth'],
@@ -121,6 +113,7 @@ const PAGES = {
     'openai-compatible': ['OpenAI 兼容接口', 'OpenAI Compatible'],
     'anthropic-compatible': ['Anthropic 兼容接口', 'Anthropic Compatible'],
     'error-code': ['错误码表', 'Error Codes'],
+    'token-management': ['API Token 管理', 'API Token Management'],
   },
   changelog: {
     index: ['版本索引', 'All Releases'],
@@ -133,7 +126,11 @@ const PAGES = {
     'add-payment': ['新增支付通道', 'Add a Payment Channel'],
     'release-process': ['发版流程', 'Release Process'],
   },
-  faq: {
+  misc: {
+    'admin-dashboard': ['运营仪表盘', 'Admin Dashboard'],
+    logs: ['日志查询', 'Logs'],
+    'operation-settings': ['运营设置', 'Operation Settings'],
+    'system-settings': ['系统设置', 'System Settings'],
     faq: ['常见问题', 'FAQ'],
     troubleshooting: ['故障排查', 'Troubleshooting'],
     glossary: ['术语表', 'Glossary'],
