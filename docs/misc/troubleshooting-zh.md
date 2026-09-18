@@ -8,13 +8,10 @@ order: 2
 # 故障排查
 
 > 渠道 401、计费异常、订单不激活等问题的定位。
-> Diagnose channel 401s, billing anomalies, stuck orders.
 
 按现象归类，先看「诊断信息」，再走「排查路径」，最后给「修复方案」。
 
-Categorize by symptom, gather diagnostics first, then trace the cause, then apply a fix.
-
-## 1. 渠道相关 / Channel Issues
+## 1. 渠道相关
 
 ### 1.1 渠道测试 200 但 `/v1/*` 返回 401
 
@@ -28,7 +25,7 @@ curl -X POST http://localhost:3000/api/channel/test/<id> -b cookies.txt
 
 **排查 / Trace**：
 
-| 现象 / Symptom | 原因 / Cause | 修复 / Fix |
+| 现象| 原因| 修复|
 | --- | --- | --- |
 | 测试 OK，调用 401 | `base_url` 错（如写了 `/v1/` 重复路径） | 去掉 `base_url` 末尾 `/v1`；OpenAI Base URL 一般 `https://api.openai.com` |
 | 偶发 401 后正常 | 上游触发风控 | 切换账号 / 调整 `RATE_LIMIT` / 用 `cooldown` 隔开 |
@@ -44,31 +41,21 @@ curl -X POST http://localhost:3000/api/channel/test/<id> -b cookies.txt
 
 `BATCH_UPDATE_ENABLED=true` 时权重聚合写入有窗口（默认 5s）。要么关闭批处理，要么重启接口 `SLOW=` 相关 cache key。
 
-If `BATCH_UPDATE_ENABLED=true`, weights are written through a batched window (default 5s). Either disable batching, or restart the relevant cache key.
-
-## 2. 计费与缓存 / Billing & Cache
+## 2. 计费与缓存
 
 ### 2.1 反复 403 `insufficient_user_quota`
 
 **v0.0.21 之前的常见根因**：Redis `user_quota:<id>` 缓存与 DB 不一致。已修复：
 
-Common pre-v0.0.21 cause: Redis `user_quota:<id>` cache drifts from DB. Fixed by:
-
 - `IncreaseUserQuota` 直接写库后同步刷 Redis；
-  `IncreaseUserQuota` writes DB then refreshes Redis synchronously.
 - `preConsumeQuota` 的「余额充足免预扣」判定前移到 Redis 扣减之前；
-  The "trusted, skip pre-consume" guard moved before the Redis decrement.
 - `userQuotaLowWaterMark = 50_000`（曾为 500），避免高单价模型预扣落进「缓存漂移死区」。
 
 **遇到此问题请检查版本**：
 
-```bash
-./one-api-pro --version
 ```
 
 升级到 ≥ v0.0.21；若仍出现请清掉 `user_quota:<id>` 缓存重启：
-
-Upgrade to ≥ v0.0.21. If it persists, clear the `user_quota:<id>` cache and restart:
 
 ```bash
 redis-cli DEL user_quota:1 user_quota:2 ...
@@ -78,11 +65,7 @@ redis-cli DEL user_quota:1 user_quota:2 ...
 
 **修复历史**：v0.0.21 起 sentinel 从「仅 `-1` 表示永不过期」统一为「`<=0` 均视为永不过期」（`model/token.go` / `controller/token.go`）；前端 `buildTokenExpiredTime` 始终上报 `-1`。
 
-Historical fix: since v0.0.21 the sentinel is "`<=0` means never expire" (`model/token.go` / `controller/token.go`); the frontend `buildTokenExpiredTime` always submits `-1`.
-
 升级后历史脏数据 `expired_time=0` 不会再被误报为已过期。
-
-After upgrade, dirty data `expired_time=0` is no longer flagged as expired.
 
 ### 2.3 `tiktoken` 计数 panic
 
@@ -99,11 +82,11 @@ httpBpeLoader 三级查找：
 
 升级到 v0.0.21+ 即可解决；高级用户可设置 `TIKTOKEN_CACHE_DIR` 跳过内嵌。
 
-## 3. 订单与异步通知 / Orders & Async Notify
+## 3. 订单与异步通知
 
 ### 3.1 异步通知校验失败
 
-| 渠道 / Channel | 校验 / Verification | 字段来源 / Field source |
+| 渠道| 校验| 字段来源|
 | --- | --- | --- |
 | WeChat | MD5 签名 + `return_code=SUCCESS` | `payment.wechat.config.api_key` |
 | Alipay | RSA2 验签 | `payment.alipay.config.private_key/public_key` |
@@ -137,7 +120,7 @@ curl http://localhost:3000/api/order/<id> -b cookies.txt
   -- 找出异常后用控制器 /api/order/<id>/reapply 重新触发激活
   ```
 
-## 4. OAuth 与回调 / OAuth & Callbacks
+## 4. OAuth 与回调
 
 ### 4.1 GitHub 回调后白屏
 
@@ -149,13 +132,11 @@ curl http://localhost:3000/api/order/<id> -b cookies.txt
 
 回调域名要在「飞书开发者后台 → 安全设置 → 重定向 URL」里加白；URL 区分协议与大小写。
 
-Add the callback URL to "Security → Redirect URLs" in the Lark developer console; protocol and case must match.
-
-## 5. 集群 / Cluster
+## 5. 集群
 
 ### 5.1 节点一直显示「离线」
 
-| 字段 / Field | 含义 / Meaning | 排查 / Check |
+| 字段| 含义| 排查|
 | --- | --- | --- |
 | `status` | 1 在线 / 2 异常 | 异常节点先 `curl /api/cluster_node/<id>/ping` |
 | `disabled` | 是否被禁用 | 集群设置里手动恢复 |
@@ -165,8 +146,6 @@ Add the callback URL to "Security → Redirect URLs" in the Lark developer conso
 ### 5.2 新节点看不到历史变更
 
 设计取舍：Cluster 模式**不做主动拉取**，新节点只看加入之后的同步事件。详见 [Cluster 概览 · 设计取舍](/zh/decentralization/overview#设计取舍-design-trade-offs)。
-
-Design choice: Cluster mode does **not** do active pull; new nodes only see events from join-time onward. See [Cluster Overview · design trade-offs](/en/decentralization/overview#design-trade-offs-design-trade-offs).
 
 **修复**：从存活节点 `mysqldump` 拉一次 baseline；或临时关闭 `CLUSTER_ENABLED`，让新节点直接接 DB。
 
@@ -179,11 +158,9 @@ Design choice: Cluster mode does **not** do active pull; new nodes only see even
 - `CLUSTER_PUSH_INTERVAL (3s)` 太短被队列挤压，调高到 10。
   `CLUSTER_PUSH_INTERVAL (3s)` is too short for the queue; bump to 10.
 
-## 6. 收集诊断信息 / Collecting Diagnostics
+## 6. 收集诊断信息
 
 提交 issue 时附上：
-
-When filing an issue, attach:
 
 1. **版本 / Version**：`./one-api-pro --version`（≥ v0.0.21 已知问题已修复）；
 2. **部署方式 / Deployment**：单实例 / Cluster / Docker；
