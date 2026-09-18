@@ -1,7 +1,7 @@
 ---
 title: 系统设置
 description: "站点外观、登录 / 注册策略、OAuth / Turnstile / SMTP / 公告 / 主页内容。"
-category: admin
+category: misc
 order: 16
 ---
 
