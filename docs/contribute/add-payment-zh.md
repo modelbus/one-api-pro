@@ -8,13 +8,10 @@ order: 5
 # 新增支付通道
 
 > 如何接入一个新的支付通道。
-> How to onboard a new payment channel.
 
 支付通道统一实现 `common/payment.Channel` 接口，通过 `init() → RegisterChannel` 自注册。下单链路复用 `controller/buildPayInfo`，回调走 `processNotify`，零侵入。
 
-Payment channels implement `common/payment.Channel` and self-register via `init() → RegisterChannel`. The order flow reuses `controller/buildPayInfo`; the callback goes through `processNotify`.
-
-## 1. 文件位置 / File Location
+## 1. 文件位置
 
 ```text
 common/payment/
@@ -24,7 +21,7 @@ common/payment/
 └── <your_channel>.go    # 新增
 ```
 
-## 2. 接口 / The Channel Interface
+## 2. 接口
 
 `common/payment/payment.go::Channel`：
 
@@ -55,11 +52,9 @@ type NotifyResult struct {
 }
 ```
 
-## 3. 最小实现 / Minimal Example
+## 3. 最小实现
 
 参考 `common/payment/wechat.go`：
-
-Reference `common/payment/wechat.go`:
 
 ```go
 // common/payment/wechat.go
@@ -112,20 +107,16 @@ func (c *wechatChannel) VerifyNotify(payload []byte) (*NotifyResult, error) {
 }
 ```
 
-## 4. 系统设置约定 / System Settings Convention
+## 4. 系统设置约定
 
 每个通道建议两个 key：
 
-Each channel conventionally uses two keys:
-
-| Key | 用途 / Purpose | 格式 / Format |
+| Key | 用途| 格式|
 | --- | --- | --- |
 | `payment.<name>.enabled` | 启停开关 | `{"enabled": bool}` |
 | `payment.<name>.config` | 渠道参数 | 自定义 JSON |
 
 常量放在 `model/system_setting.go`：
-
-Place constants in `model/system_setting.go`:
 
 ```go
 const (
@@ -136,9 +127,7 @@ const (
 
 `payment.go` 已提供 `SettingsBool` / `SettingsJSON` 辅助函数，直接用。
 
-`payment.go` already provides `SettingsBool` / `SettingsJSON` helpers — use them directly.
-
-## 5. 注册常量 / Register the Pay Method Constant
+## 5. 注册常量
 
 `model/order.go`：
 
@@ -149,7 +138,7 @@ const OrderPayMethod<Name> = "<name>"
 > **`Name()` 必须返回这个常量字符串**；`payment.New(payMethod)` 按字符串查注册表，名字不匹配会报「未注册的支付方式」。
 > **`Name()` MUST return this constant string**; `payment.New(payMethod)` looks up the registry by name; mismatches produce "未注册的支付方式".
 
-## 6. 下单链路 / Order Flow
+## 6. 下单链路
 
 ```text
 controller/topup.go::CreateTopupOrder
@@ -164,8 +153,6 @@ controller/topup.go::CreateTopupOrder
 
 回调链路：
 
-Callback flow:
-
 ```text
 POST /api/payment/notify/<name>     ← 上游回调
     └─► controller/payment.go::<Name>Notify
@@ -178,18 +165,14 @@ POST /api/payment/notify/<name>     ← 上游回调
 
 模板见 `controller/payment.go::WechatNotify`。
 
-See `controller/payment.go::WechatNotify` for the template.
-
-## 7. 前端配置 / Frontend Configuration
+## 7. 前端配置
 
 「支付配置」页（`PaymentSetting.vue`）按 `payment.<name>.enabled` / `payment.<name>.config` 自动渲染表单字段；新增字段请同步：
-
-The "Payment Settings" page (`PaymentSetting.vue`) renders form fields based on `payment.<name>.enabled` / `payment.<name>.config` keys. When adding new fields, sync:
 
 - `web/default-pro/src/views/setting/PaymentSetting.vue` 的 i18n 字段
 - i18n keys under `web/default-pro/src/i18n/pages/setting.js` (namespace `settingPage.payment`)
 
-## 8. 测试 / Tests
+## 8. 测试
 
 - 单测：抽离「签名校验」为可纯函数，覆正常 / 错误签名 / 过期 3 类场景。
 - 集成：在「支付配置」填 sandbox 参数，「新建充值订单」测端到端。
@@ -201,11 +184,9 @@ Integration: fill sandbox params in "Payment Settings", create a top-up order en
 
 Async notify: expose a public URL via ngrok / localtunnel, and put it into the provider console's `notify_url`.
 
-## 9. 提交 / Commit
+## 9. 提交
 
 按 [提交规范 §3](/zh/contribute/commit-convention) 一文件一 commit，body 写明：
-
-Per [Commit Convention §3](/en/contribute/commit-convention), one commit per file, body includes:
 
 ```text
 feat(payment): 新增 <name> 支付通道
