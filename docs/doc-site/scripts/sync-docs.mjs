@@ -1,4 +1,4 @@
-// docs/scripts/sync-docs.mjs
+// docs/doc-site/scripts/sync-docs.mjs
 // Sync docs/<category>/<slug>-{zh|en}.md into the VitePress doc-site.
 //
 // Locale layout (VitePress `root` locale convention):
@@ -6,9 +6,9 @@
 //   en           -> docs/doc-site/docs/en/<category>/<slug>.md + .../docs/en/index.md
 //
 // Usage (run from the doc-site package via `npm run sync`, or directly):
-//   node docs/scripts/sync-docs.mjs          # sync both languages
-//   node docs/scripts/sync-docs.mjs zh       # sync only zh
-//   node docs/scripts/sync-docs.mjs en       # sync only en
+//   node docs/doc-site/scripts/sync-docs.mjs          # sync both languages
+//   node docs/doc-site/scripts/sync-docs.mjs zh       # sync only zh
+//   node docs/doc-site/scripts/sync-docs.mjs en       # sync only en
 //
 // Behavior:
 //   - Strips the `-<lang>` suffix from file names
@@ -30,9 +30,11 @@ import { join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-// This script lives at docs/scripts/, so docs/ is one level up.
-const DOCS = join(__dirname, '..')
-const SITE = join(DOCS, 'doc-site')
+// This script lives at docs/doc-site/scripts/, so:
+//   SITE     = scripts/..          (docs/doc-site)
+//   DOCS     = SITE/..             (docs/)
+const SITE = join(__dirname, '..')
+const DOCS = join(SITE, '..')
 const SITE_DOCS = join(SITE, 'docs')
 const SITE_PUBLIC = join(SITE_DOCS, 'public')
 
