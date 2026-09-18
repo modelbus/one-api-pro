@@ -1,7 +1,7 @@
 ---
 title: 集群节点管理
 description: "注册集群节点、密钥分发、心跳状态、节点启用 / 禁用 / Ping。"
-category: admin
+category: decentralization
 order: 17
 ---
 
