@@ -1,7 +1,7 @@
 ---
 title: Operation Settings
 description: "Quota policy, monitoring thresholds, error-strategy and invitation / registration bonuses."
-category: admin
+category: misc
 order: 15
 ---
 
