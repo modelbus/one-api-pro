@@ -11,7 +11,7 @@ order: 17
 
 > 集群模式由环境变量开启；如果 `CLUSTER_ENABLED != "true"`，所有 `/api/cluster_node/*` 接口都会返回 `集群模式未启用`。
 
-## 环境变量 / Cluster Env
+## 环境变量
 
 启动参数（来自 `cluster/config.go::LoadConfig`）：
 
@@ -30,7 +30,7 @@ order: 17
 | `CLUSTER_SYNC_LOGS` | 否 | `"false"` 关闭日志同步；默认开启 |
 | `CLUSTER_BATCH_SIZE` | 否 | 同步批次大小，默认 50 |
 
-## 数据模型 / Data Model
+## 数据模型
 
 `model.ClusterNode`（`cluster_nodes` 表）：
 
@@ -46,33 +46,24 @@ order: 17
 | `ping_failures` | `int` | 连续 ping 失败次数 |
 | `created_at` / `updated_at` | `bigint` | unix 秒 |
 
-`IsAlive()` = `status == 1 && !disabled`。
-
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
 | `/api/cluster_node/` | `GET` | Root | 全量节点列表（带 `is_self` 标识） |
 | `/api/cluster_node/:id` | `GET` | Root | 单节点详情 |
 | `/api/cluster_node/` | `POST` | Root | 注册新节点（`node_id` 1–49） |
-| `/api/cluster_node/` | `PUT` | Root | 修改节点名称 / 地址 / secret（传 secret 会重置 status + ping_failures） |
+| `/api/cluster_node/` | `PUT` | Root | 修改节点名称 / 地址|
 | `/api/cluster_node/:id` | `DELETE` | Root | **软禁用**（设 `disabled=true`，status=2）。物理删除需手动 SQL |
 | `/api/cluster_node/:id/enable` | `POST` | Root | 重新启用（`disabled=false` + status=1 + 清零失败次数） |
 | `/api/cluster_node/ping/:id` | `GET` | Root | 主动向目标节点发 ping，返回对方 ping 的结果对象 |
 
 实现：`controller/cluster_node.go`。
 
-## 注册新节点 / `POST /api/cluster_node/`
+## 注册新节点
 
 请求体：
 
-```json
-{
-  "node_id": 2,
-  "node_name": "node-shanghai",
-  "address": "https://sh.example.com",
-  "secret": "<32+ char shared secret>"
-}
 ```
 
 约束：
@@ -80,21 +71,21 @@ order: 17
 - `address` 不能为空；
 - `secret` 不能为空（这是其他节点访问本节点的认证密钥）；
 
-## 「本节点」徽章 / `is_self`
+## 「本节点」徽章
 
 列表接口 `GetAllClusterNodes` 给每行加一个 `is_self: bool` 字段，值为 `n.NodeId == cluster.NodeID`。前端用此徽章标识「这是当前节点」。
 
-## 删除 vs 禁用 / Disable vs Hard-Delete
+## 删除 vs 禁用
 
 - **删除** = 软禁用：`disabled=true`，`status=2`。UI 行的「禁用」按钮触发；提示文案「节点已禁用（物理删除需要手动 SQL: `DELETE FROM cluster_nodes WHERE node_id = ?`）」。
 - **启用** = `POST /api/cluster_node/:id/enable`；把 `disabled=false` + status=1 + 清零失败次数 + 刷新 `last_heartbeat`。
 - 当前节点不能被禁用（`controller` 内显式拦截：`nodeId == cluster.NodeID`）。
 
-## Ping / 主动探测
+## Ping
 
 `GET /api/cluster_node/ping/:id` 调用 `cluster.PingNode(cluster.GetDB(), &node)`，向目标节点发 ping；失败时返回 `success: false`，message 含失败原因（HTTP / 鉴权 / 超时）；成功时返回 `{ data: <对方响应> }`。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部表格列：节点 ID / 节点名 / address（截断 tooltip）/ 状态 chip（green / red）/ 上次心跳时间 / 操作。
 - 行内操作：
@@ -104,12 +95,12 @@ order: 17
   - **删除**：popconfirm → 软删除。
 - 「新增节点」按钮打开相同弹窗，校验同上。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
 | Handler | `controller/cluster_node.go` |
 | 节点模型 | `model/cluster_node.go` |
 | 配置加载 | `cluster/config.go::LoadConfig` |
-| 心跳 / Ping | `cluster/handler.go` / `cluster/cluster.go` |
+| 心跳| `cluster/handler.go` / `cluster/cluster.go` |
 | 路由 | `router/api.go` |
