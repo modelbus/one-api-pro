@@ -14,7 +14,6 @@ order: 16
 |------|------|------|------|
 | `/api/diag/subscriptions` | GET | Admin | 比对 `user_plans` 与 `orders`，定位脏数据 |
 
-
 ## 1. 订阅诊断
 
 **接口：** `GET /api/diag/subscriptions`
@@ -25,67 +24,6 @@ order: 16
 
 **返回示例：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": {
-    "total_user_plans": 100,
-    "missing_plan_id": 2,
-    "rows": [
-      {
-        "user_plan": {
-          "id": 42,
-          "user_id": 7,
-          "plan_id": 1,
-          "order_id": 88,
-          "start_time": 1718000000,
-          "end_time": 1720592000,
-          "status": 1,
-          "billing_type": "token",
-          "created_time": 1718000000,
-          "updated_time": 1718000000
-        },
-        "order_no": "TB20250912153000123456",
-        "order_plan_id": 1,
-        "order_type": 1,
-        "user": {
-          "id": 7,
-          "username": "alice",
-          "display_name": "Alice",
-          "email": "alice@example.com",
-          "role": 1,
-          "status": 1
-        }
-      },
-      {
-        "user_plan": {
-          "id": 43,
-          "user_id": 9,
-          "plan_id": 0,
-          "order_id": 0,
-          "start_time": 0,
-          "end_time": 0,
-          "status": 1,
-          "billing_type": "token",
-          "created_time": 1718000000,
-          "updated_time": 1718000000
-        },
-        "order_no": "",
-        "order_plan_id": 0,
-        "order_type": 0,
-        "user": {
-          "id": 9,
-          "username": "bob",
-          "display_name": "Bob",
-          "email": "bob@example.com",
-          "role": 1,
-          "status": 1
-        }
-      }
-    ]
-  }
-}
 ```
 
 **字段说明：**
@@ -104,7 +42,7 @@ order: 16
 | order_no | string | 来源订单号；若 `order_id <= 0` 则为空 |
 | order_plan_id | int | 订单上的 `plan_id` |
 | order_type | int | 订单 type（1=套餐订阅, 2=在线充值） |
-| user | object | `UserBrief`：精简的用户信息（id / username / display_name / email / role / status） |
+| user | object | `UserBrief`：精简的用户信息（id|
 
 > 仅当 `user_plan.order_id > 0` 时才会尝试加载对应的 `orders` 行；其余字段为 0 / 空字符串。
 
