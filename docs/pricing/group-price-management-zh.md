@@ -12,7 +12,7 @@ order: 4
 入口路由：管理员设置 → **Pricing**（`/setting/pricing`）的「分组定价」页签。前端组件：`web/default-pro/src/views/setting/PricingSetting.vue`。
 分组定价是 Root-only。
 
-## 数据模型 / Data Model
+## 数据模型
 
 `model.GroupPrice`（`group_price` 表）：
 
@@ -24,7 +24,7 @@ order: 4
 
 启动时由 `InitDefaultPrices()` 写入三条默认分组（`default` / `vip` / `svip`，折扣均为 `1.0`），首次部署即用。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -35,7 +35,7 @@ order: 4
 
 实现：`controller/model_price.go`（与模型定价共用一个文件，handler 共享鉴权风格）。
 
-## 查询逻辑 / Lookup
+## 查询逻辑
 
 `model.GetGroupDiscount(groupName, modelName)` 的兜底顺序：
 
@@ -45,17 +45,17 @@ order: 4
 
 `GetGroupNames()` 返回当前缓存中所有出现过的 `group_name`，供用户管理/编辑下拉使用。
 
-## 缓存行为 / Caching
+## 缓存行为
 
 `model.GroupPriceCacheSeconds` 默认 300s；每次 CRUD 都会调 `model.InitGroupPriceCache()` 全量重建内存 `groupPriceMap`。
 计费热路径走 `model.CacheGetGroupPrice(groupName, modelName)`（Redis 优先，键 `group_price:<group>:<model>`，回 DB 兜底）。
 
-## 实际计费 / How It Combines
+## 实际计费
 
 最终单价 = `model_price.input_price` × `group_price.discount`（按模型名 × 分组名查）。
 对 `per_request` 计费的模型，`discount` 同样作用于 `per_request_price`。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 「分组定价」页签：表列 = 分组名 / 模型名 / 折扣 / 操作。
 - 「新增」弹窗（520px）：
@@ -65,7 +65,7 @@ order: 4
 - 行内操作：编辑、删除（二次确认）。
 - 注意：修改一个组的折扣，会即时影响所有用该 group 调用对应模型的用户实付额；后台有 `SyncGroupPriceCache` 定时兜底。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---| 
