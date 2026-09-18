@@ -8,13 +8,10 @@ order: 3
 # docker-compose 部署
 
 > 通过 docker-compose 编排单实例或带依赖的部署。
-> Orchestrate a single instance or a stack with dependencies via docker-compose.
 
-## 仅 One API Pro / One API Pro only
+## 仅 One API Pro
 
 最简编排，只使用容器内嵌的 SQLite。
-
-The minimal stack — relies on the embedded SQLite inside the container.
 
 ```yaml
 # compose.yaml
@@ -41,19 +38,13 @@ services:
 
 启动 / Start:
 
-```bash
-docker compose up -d
 ```
 
 健康检查复用镜像内 `HEALTHCHECK` 指令；`wget` 已在镜像中预装。
 
-The `wget`-based healthcheck matches the image's built-in `HEALTHCHECK`.
-
-## MySQL + Redis 全栈 / Full stack with MySQL & Redis
+## MySQL + Redis 全栈
 
 生产推荐组合：MySQL 持久化业务数据，Redis 做缓存与限流。
-
-Production-ready stack: MySQL for persistence, Redis for caching and rate-limit state.
 
 ```yaml
 # compose.yaml
@@ -144,12 +135,9 @@ docker compose logs -f one-api-pro
 
 看到 `cluster module initialized`（仅在 `CLUSTER_ENABLED=true` 时打印）或 `using MySQL as database` 字样即表示初始化成功。
 
-Look for `using MySQL as database` (and `cluster module initialized` when `CLUSTER_ENABLED=true`) in the logs to confirm a successful boot.
-
-## 多实例共用 MySQL / Redis（共享库版本）
+## 多实例共用 MySQL
 
 > 与多节点 **集群（去中心化）模式不同**：此处仅是多实例共享 DB 与 Redis 的传统主备/水平扩展方案，仍通过 `SESSION_SECRET` 与 `SYNC_FREQUENCY` 维持一致性。
-> This is **not** the decentralized cluster mode. It is the classic horizontal scale-out where every instance shares the same MySQL / Redis; consistency is maintained via `SESSION_SECRET` and `SYNC_FREQUENCY`.
 
 ```yaml
 services:
@@ -187,9 +175,7 @@ services:
 
 所有实例必须共用相同的 `SESSION_SECRET`；从节点可选 `FRONTEND_BASE_URL` 将页面请求重定向到主节点。
 
-All instances must share the same `SESSION_SECRET`; slave instances may set `FRONTEND_BASE_URL` to redirect page requests to the master.
-
-## 卸载 / Uninstall
+## 卸载
 
 ```bash
 docker compose down            # 停止并删除容器
@@ -198,6 +184,5 @@ docker compose down -v         # 同时删除数据卷（谨慎）
 
 数据卷 `mysql_data` / `redis_data` 与宿主机 `./data` 目录需手动清理。
 
-Data volumes (`mysql_data`, `redis_data`) and the host `./data` directory must be removed manually.
-
 下一步 / Next: [源码编译](/zh/install/source-build) · [备份与恢复](/zh/install/backup-restore)。
+
