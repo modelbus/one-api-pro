@@ -1,7 +1,7 @@
 ---
 title: 常见问题
 description: "用户与管理员的常见问答。"
-category: faq
+category: misc
 order: 1
 ---
 
