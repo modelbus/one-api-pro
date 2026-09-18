@@ -12,7 +12,7 @@ order: 1
 入口路由：`/admin/dashboard`，对应前端组件 `web/default-pro/src/views/admin/AdminDashboard.vue`。
 该页面对所有管理员（`role >= 10`）可见；普通用户会被 router guard 重定向到 `/dashboard`。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 仪表盘数据由三个独立的 Admin 端点提供，全部挂在 `/api/admin/dashboard` 下，使用 `AdminAuth` 中间件保护：
 
@@ -24,21 +24,21 @@ order: 1
 
 后端实现见 `controller/admin/dashboard.go` 与 `model/admin_dashboard.go`。
 
-## Overview 字段 / Overview Payload
+## Overview 字段
 
 `overview` 接口返回 `AdminDashboardOverview`（KPI-only）：
 
 | 分组 | 关键字段 | 说明 |
 |---|---|---|
-| `users` | `total / enabled / disabled / deleted / new_today / new_7d / new_30d / active_7d` | 用户总数按 `status` 枚举分桶；新增按 `created_at >= start_of_(day/week/month)` 聚合；`active_7d = DISTINCT user_id FROM logs WHERE type=2 AND created_at >= 7d AND request_count > 0` |
-| `tokens` / `channels` / `plans` | `total / enabled` | 资源计数（按 `status=1` 计 enabled） |
-| `redemptions` | `total / used / unused` | 兑换码三类状态计数 |
-| `subscriptions` | `total / active / expired` | `user_plans` 表的状态聚合 |
-| `quota` | `today / week / month / total` | 通过 `SumUsedQuota(LogTypeConsume, …)` 汇总，窗口由后端按天/周/月/全量展开 |
-| `revenue` | `total / topup / subscription / refund` | 来自 `orders` 表：`status=1` 时按 `type` 拆分（`OrderTypeTopup=2` / `OrderTypePlanSubscription=1`），退款金额来自 `status=3` |
+| `users` | `total| 用户总数按 `status` 枚举分桶；新增按 `created_at >= start_of_(day/week/month)` 聚合；`active_7d = DISTINCT user_id FROM logs WHERE type=2 AND created_at >= 7d AND request_count > 0` |
+| `tokens` / `channels` / `plans` | `total| 资源计数（按 `status=1` 计 enabled） |
+| `redemptions` | `total| 兑换码三类状态计数 |
+| `subscriptions` | `total| `user_plans` 表的状态聚合 |
+| `quota` | `today| 通过 `SumUsedQuota(LogTypeConsume, …)` 汇总，窗口由后端按天/周/月/全量展开 |
+| `revenue` | `total| 来自 `orders` 表：`status=1` 时按 `type` 拆分（`OrderTypeTopup=2` / `OrderTypePlanSubscription=1`），退款金额来自 `status=3` |
 | `range` / `generated_at` | 元数据 | `range` 为规范化后的窗口键；`generated_at` 为服务端生成时间戳（秒） |
 
-## Charts / Charts Payload
+## Charts
 
 `charts` 接口直接复用 `model.SearchLogsByDayAndModel` 的输出结构 `[]LogStatistic`：
 
@@ -58,13 +58,13 @@ interface LogStatistic {
 
 `range=30d` 与 `range=all` 都收敛为最近 30 天，避免超长历史拖垮响应。
 
-## Top Users / Top Users
+## Top Users
 
 口径：近 `range` 时间内有 `type=2` 日志、且 `users.request_count > 0` 的用户，按 `request_count DESC, quota DESC` 排序。
 `limit` 接受 1–200；越界默认回落为 20。
 "当前订阅名称"通过 `batchTopActivePlanNames(userIds)` 批量补齐，避免 N+1；多张激活订阅时只展示最早到期的那一条。
 
-## 前端面板 / Frontend Panels
+## 前端面板
 
 `AdminDashboard.vue` 顶部欢迎条带日期范围切换（`today / 7d / 30d / all`），下方按 16:8 分栏布局：
 
@@ -78,13 +78,13 @@ interface LogStatistic {
 - **右 8/24 区块**
   - 广告位占位 / 排行榜（卡片式，按 `today / 7d / 30d` 切换，显示 rank / 用户名 / 邮箱 / 请求数 / 消耗 / 当前套餐）/ 系统公告 / 更新日志 / 资源链接。
 
-## 操作提示 / Tips
+## 操作提示
 
 - `range` 切换会同时刷新 `overview` / `charts` / `top-users` 三个端点；右上的"上次刷新" chip 显示最后一次成功拉取 `overview` 的本地时间。
 - 图表数据统一来自 `/api/admin/dashboard/charts`，三张折线图（请求量 / 额度 / Token）与模型分布共用同一份 `[]LogStatistic`，避免 N+1。
 - 所有 KPI 字段均为「已软删除用户不再计入 `users.total`」的视角：`deleted` 单独展示但 `total` 仍按 `COUNT(*)` 计算。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
