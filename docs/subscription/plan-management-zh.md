@@ -9,7 +9,7 @@ order: 5
 
 > 在 `/api/plan` 上做套餐（Plan）CRUD；上线 / 下架切换；前端组件 `web/default-pro/src/views/setting/PlanSetting.vue`。
 
-## 数据模型 / Data Model
+## 数据模型
 
 `model.Plan`（`plans` 表）：
 
@@ -29,7 +29,7 @@ order: 5
 
 `Plan.ValidateDefaultModel()`：若 `default_model` 非空，必须能在 `model_limits` 键集中找到，否则报「`default_model 'X' is set but model_limits is empty`」或「`default_model 'X' is not found in model_limits`」。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -45,12 +45,12 @@ order: 5
 
 实现：`controller/plan.go`；前端 `@/api/plan.js`。
 
-## 上下架 / Toggling Publish
+## 上下架
 
 `PlanSetting.vue` 提供行内「启用 / 禁用」按钮，对当前行就地调 `PUT /api/plan/` 把 `status` 在 `1` ↔ `0` 之间切换。
 `status=0` 的套餐在 `GetPublicPlans` 会被过滤，所以不再展示给自助下单用户。
 
-## Features / Model Limits 编辑
+## Features
 
 - `features`：`StringSlice` 类型，对前端暴露为 JSON 数组。`PlanSetting.vue` 用动态行 `<a-input>` 编辑器（`featuresFromRecord` / `sanitizeFeaturesList` 工具函数 `web/default-pro/src/utils/plan.js`）。
 - `model_limits`：JSON 对象；保存为 raw JSON 字符串。结构示意：
@@ -80,7 +80,7 @@ order: 5
 - `period_h` 决定 `WindowTypePeriod`（小时级）窗口大小。
 - `request_period/week/month` = 该窗口内的调用次数上限；`token_*` 同理。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部表格列：ID / 名称 / 价格 / 有效天数 / 默认模型 / 推荐 ★ / 状态 tag / 排序 / 操作。
 - 「新增套餐」按钮打开 900px 弹窗（`arco-modal-plan-wide`）：
@@ -93,7 +93,7 @@ order: 5
 - 行内「启用 / 禁用」点击即提交；「删除」走二次确认。
 - `sort` 升序展示，多套餐排序靠它控制首页「推荐置顶」效果。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
