@@ -1,7 +1,7 @@
 ---
 title: 套餐管理
 description: "套餐（Plan）的增删改查、上下架、特性与计费字段维护。"
-category: admin
+category: subscription
 order: 5
 ---
 
