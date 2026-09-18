@@ -6,8 +6,6 @@ order: 22
 ---
 # 其他公共 API
 
-
-
 ## 3. 分组列表 (Group)
 
 ### 3.1 获取所有分组名称
@@ -20,17 +18,9 @@ order: 22
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": ["default", "vip", "svip"]
-}
 ```
 
 **说明：** 返回所有在 `group_prices` 表中定义的分组名称列表。
-
-
 
 ## 4. 系统选项 (Option)
 
@@ -44,21 +34,9 @@ order: 22
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": [
-    { "key": "QuotaForNewUser", "value": "1000000" },
-    { "key": "QuotaPerUnit", "value": "500000" },
-    { "key": "TopUpLink", "value": "" },
-    ...
-  ]
-}
 ```
 
 **说明：** 敏感选项（如 Token、SMTP 密码等）的值会被过滤或脱敏。
-
 
 ### 4.2 更新系统选项
 
@@ -68,11 +46,6 @@ order: 22
 
 **请求体：**
 
-```json
-{
-  "key": "QuotaPerUnit",
-  "value": "500000"
-}
 ```
 
 **请求字段说明：**
@@ -110,14 +83,7 @@ order: 22
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
-
-
 
 ## 14. 其他公共接口
 
@@ -141,7 +107,6 @@ order: 22
 | `/api/user/aff` | GET | 获取推广码 |
 | `/api/user/subscription` | GET | 获取订阅信息 |
 
-
 ## 附录 B：权限等级说明
 
 | 等级 | 值 | 说明 |
@@ -150,7 +115,6 @@ order: 22
 | User | 1 | 普通用户 |
 | Admin | 10 | 管理员 |
 | Root | 100 | 超级管理员 |
-
 
 ## 附录 C：计费类型说明
 
@@ -162,13 +126,9 @@ order: 22
 **Token 计费公式：**
 
 ```
-quota = ceil((inputPrice × inputTokens + outputPrice × completionTokens + cachedPrice × cachedTokens) / 1,000,000 × groupDiscount × QuotaPerUnit)
-```
 
 **按次计费公式：**
 
-```
-quota = ceil(perRequestPrice × sizeRatio × N × groupDiscount × QuotaPerUnit)
 ```
 
 **分组折扣匹配规则：**
@@ -177,7 +137,6 @@ quota = ceil(perRequestPrice × sizeRatio × N × groupDiscount × QuotaPerUnit)
 3. 无匹配 → 折扣为 1.0（无折扣）
 
 **QuotaPerUnit 说明：** 默认 500,000，表示 500,000 内部额度 = 1 元人民币。
-
 
 ## 附录 D：渠道类型对照表
 
