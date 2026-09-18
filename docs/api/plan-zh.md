@@ -63,7 +63,6 @@ order: 18
 | duration_text | string | 有效期显示文本 |
 | recommended | bool | 是否推荐 |
 
-
 ### 10.2 搜索套餐
 
 **接口：** `GET /api/plan/search`
@@ -76,13 +75,11 @@ order: 18
 |------|------|------|
 | keyword | string | 搜索关键词 |
 
-
 ### 10.3 获取套餐详情
 
 **接口：** `GET /api/plan/:id`
 
 **权限：** Admin
-
 
 ### 10.4 创建套餐
 
@@ -109,7 +106,6 @@ order: 18
 }
 ```
 
-
 ### 10.5 更新套餐
 
 **接口：** `PUT /api/plan/`
@@ -122,18 +118,6 @@ order: 18
 
 key 为模型名称，value 为 `ModelLimitRule` 对象：
 
-```json
-{
-  "gpt-4o": {
-    "period_h": 5,
-    "request_period": 100,
-    "request_week": 500,
-    "request_month": 2000,
-    "token_period": 500000,
-    "token_week": 2000000,
-    "token_month": 10000000
-  }
-}
 ```
 
 | 字段 | 类型 | 说明 |
@@ -152,7 +136,6 @@ key 为模型名称，value 为 `ModelLimitRule` 对象：
 - `default_model` 必须是 `model_limits` 中已配置的模型名称，否则创建/更新套餐时会报错
 - 如果 `default_model` 为空且用户请求的模型不在 `model_limits` 中，将返回 422 错误
 - 转发后，实际请求将使用 `default_model` 发送到上游，日志中记录的模型名称也是 `default_model`
-
 
 ### 10.6 删除套餐
 
