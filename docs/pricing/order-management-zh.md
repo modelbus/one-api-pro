@@ -9,7 +9,7 @@ order: 7
 
 > 在 `/api/order` 上对全站订单做查询、过滤、标记已付、标记退款与删除。前端组件：`web/default-pro/src/views/admin/AdminOrders.vue`。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -21,7 +21,7 @@ order: 7
 
 实现：`controller/order.go`。
 
-## 通用过滤参数 / Filter Query
+## 通用过滤参数
 
 `OrderAdminFilter`（`model/order.go`）：
 
@@ -36,7 +36,7 @@ order: 7
 
 注意 `status` 用空字符串表示「全部」而非 `0`，因为 `0` 与 `OrderStatusPending` 重叠。
 
-## 标记已付 / `PUT /api/order/:id`
+## 标记已付
 
 请求体：
 
@@ -59,17 +59,17 @@ order: 7
 
 成功消息：`订单已支付，套餐已激活` 或 `订单已标记为退款`。
 
-## 标记退款 / `PUT /api/order/:id` (status=3)
+## 标记退款
 
 仅状态翻转，不会触发套餐撤销或 quota 回退。
 充值订单退款后 user 余额仍按原值发放，仅 order 表的 `status=3` 留作审计。
 前端 UI：仅当 `o.status === 1` 时展示「退款」按钮（红色 popconfirm）。
 
-## 删除 / `DELETE /api/order/:id`
+## 删除
 
 仅 Root 可见；调用 `o.Delete()` 直接物理删除行（不级联到 `user_plans`，但 `user_plans.order_id` 是弱引用）。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部欢迎条 + 搜索框；左侧下拉：`订单类型`（套餐 / 充值）、`状态`、`来源`。
 - 顶部右侧：「重置筛选」「刷新」。
@@ -81,7 +81,7 @@ order: 7
   - **删除**（Root only，`status !== 1` 时可见）：popconfirm 后 `DELETE`。
 - 列表分页：`[10, 20, 50]`；前端用 `offset + pageSize` 兜底渲染至少还有下一页。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
