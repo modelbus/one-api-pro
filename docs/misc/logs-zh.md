@@ -9,7 +9,7 @@ order: 11
 
 > 在 `logs` 表上做全站过滤（admin）或个人过滤（user）、聚合消费 / 订阅维度 quota、定期清理历史。前端组件：`web/default-pro/src/views/log/Log.vue`（admin 与 user 复用，自动按角色显隐列）。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -23,7 +23,7 @@ order: 11
 
 实现：`controller/log.go`。
 
-## 通用过滤参数 / Common Filter
+## 通用过滤参数
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
@@ -38,16 +38,10 @@ order: 11
 
 > `LogTypeConsume` 的 `quota` 才计入计费；其它类型只用于审计。
 
-## 聚合 / Stat
+## 聚合
 
 `/api/log/stat` 返回：
 
-```json
-{
-  "quota": 1234567,
-  "normal_quota": 1000000,
-  "subscription_quota": 234567
-}
 ```
 
 - `quota` = 全口径 `sum(quota)`；
@@ -56,12 +50,12 @@ order: 11
 
 后端 `SumUsedQuotaByBillingSource(logType, start, end, model, username, token_name, channel, billing_source)`，对应 `model/log.go`。
 
-## 清理 / Delete
+## 清理
 
 `DELETE /api/log/?target_timestamp=<unix-seconds>`：删除所有 `created_at < target_timestamp` 的日志行；返回 `{ data: <affected_rows> }`。
 target_timestamp 必须显式传（`0` 会被直接拒绝）。生产环境建议搭配定时任务（`OperationSetting.vue` 提供日期选择器 + 按钮）。
 
-## 类型说明 / Log Types
+## 类型说明
 
 | 类型 | 说明 | 是否计入 quota |
 |---|---|---|
@@ -71,7 +65,7 @@ target_timestamp 必须显式传（`0` 会被直接拒绝）。生产环境建�
 | `LogTypeSystem=4` | 系统行为（新用户注册赠送、邀请赠送等） | 否 |
 | `LogTypeTest=5` | 渠道测试（`POST /api/channel/test`） | 否 |
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部欢迎条 + 「类型」下拉（全部 / 充值 / 消耗 / 管理 / 系统 / 测试）。
 - 搜索栏：
@@ -85,7 +79,7 @@ target_timestamp 必须显式传（`0` 会被直接拒绝）。生产环境建�
 - 分页：`[10, 20, 50]`，滚动到末尾自动追加下一页。
 - 操作设置（`/setting/operation`）提供「日志清理」入口：选日期 → 调 `DELETE /api/log/?target_timestamp=...`。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
