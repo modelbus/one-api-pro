@@ -9,7 +9,7 @@ order: 2
 
 > 新增渠道请求：POST `/api/channel/`，实现见 `controller/channel.go::AddChannel`。
 
-## 接口 / Endpoint
+## 接口
 
 | 项 | 值 |
 |---|---|
@@ -20,7 +20,7 @@ order: 2
 
 `AddChannel` 在 `controller/channel.go:80` 会把 `key` 字段按 `\n` 拆分：每行一个 key 在事务内生成一条渠道记录，然后由 `model.BatchInsertChannels` 调 `AddAbilities()` 把每个 `models` 字段里的模型写入 `abilities` 表。
 
-## 字段详解 / Fields
+## 字段详解
 
 | 字段 | JSON 类型 | 说明 |
 |---|---|---|
@@ -39,33 +39,24 @@ order: 2
 | `rpm` | `*int` | 每分钟请求上限；`RPMFilter` 启用。`<=0` 表示不限 |
 | `is_fallback` | `*bool` | 设为 true 后仅在所有正常渠道耗尽时由 fallback 路径选中 |
 | `fallback_priority` | `*int64` | 同为 fallback 时按此值升序选中 |
-| `config` | `string` | Provider 特定 JSON（`ChannelConfig`：region / sk / ak / user_id / api_version / library_id / plugin / vertex_ai_* 等） |
+| `config` | `string` | Provider 特定 JSON（`ChannelConfig`：region|
 | `status` | `int` | 默认 1；详见 [渠道路由](./channel-routing) |
 
 > 列表接口 `GetAllChannels`（默认 scope）会 `Omit("key")`，前端永远拿不到真实 key；只有 `GetChannel` 不带 `id` 参数或 `selectAll=true` 时才会回填。
 
-## 多 Key 批量 / Multi-key
+## 多 Key 批量
 
 把多个 key 用换行写在 `key` 字段里即可一次创建多条渠道。例如：
 
-```json
-{
-  "type": 1,
-  "name": "OpenAI-bulk",
-  "base_url": "https://api.openai.com",
-  "models": "gpt-4o,gpt-4o-mini",
-  "group": "default,vip",
-  "key": "sk-AAA...\nsk-BBB...\nsk-CCC..."
-}
 ```
 
 服务端逐条 `Insert` + `AddAbilities`，失败会回滚整批。
 
-## 更新 / `PUT /api/channel/`
+## 更新
 
 `UpdateChannel` 解析原始 JSON 后只对 payload 里实际出现的 key 做 `Updates`，避免 `{id, status}` 这类部分更新把其他字段清空。详见 `controller/channel.go:151`。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 路径：`/channel` → 「新增渠道」按钮（`web/default-pro/src/views/channel/Channel.vue`）。
 
@@ -76,7 +67,7 @@ order: 2
 - 「Model Mapping」以键值对编辑，提交时序列化为 JSON 字符串
 - 「最大并发 / RPM / 冷却秒数」`<=0` 表示不限
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -84,3 +75,4 @@ order: 2
 | 模型定义 | `model/channel.go::Channel` |
 | 能力同步 | `model/ability.go::AddAbilities` / `UpdateAbilities` |
 | 部分更新安全 | `controller/channel.go::UpdateChannel` |
+
