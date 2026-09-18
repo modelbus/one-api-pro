@@ -1,7 +1,7 @@
 ---
 title: 分组定价
 description: "按 用户分组 × 模型 维护折扣倍率；缺省折扣为 1.0。"
-category: admin
+category: pricing
 order: 4
 ---
 
