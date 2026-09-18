@@ -1,7 +1,7 @@
 ---
 title: Cluster Nodes
 description: "Register cluster nodes, distribute secrets, monitor heartbeat, enable / disable / ping."
-category: admin
+category: decentralization
 order: 17
 ---
 
