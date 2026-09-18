@@ -1,0 +1,17 @@
+{
+  "name": "one-api-pro-docs",
+  "version": "0.0.21",
+  "private": true,
+  "description": "VitePress site for One API Pro documentation",
+  "type": "module",
+  "scripts": {
+    "sync": "node ../scripts/sync-docs.mjs",
+    "dev": "npm run sync && vitepress dev .",
+    "build": "npm run sync && vitepress build .",
+    "preview": "vitepress preview ."
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3",
+    "vue": "^3.5.13"
+  }
+}
