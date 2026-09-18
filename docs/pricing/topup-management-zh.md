@@ -12,7 +12,7 @@ order: 8
 入口路由：`/admin/orders`（管理员订单中心）内的「标记已付」流程会创建 `OrderTypeTopup` 订单并即时激活。
 另外有一个独立入口（兼容旧版） `POST /api/user/topup`，由 `controller/user.go::AdminTopUp` 提供；新代码建议走订单中心的「标记已付」流程以保留审计行。
 
-## 接口 / Endpoints
+## 接口
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -35,7 +35,7 @@ order: 8
 
 > 没有 `Order` 行；若需要审计追溯，请改用 `POST /api/order` + 标记已付的流程（创建 `Order` 行再激活）。
 
-## 通过「订单中心」手动开通 / Activate Topup via Order Center
+## 通过「订单中心」手动开通
 
 推荐路径：
 
@@ -48,27 +48,25 @@ order: 8
 
 `ActivateTopupByOrder` 幂等：已 `status=1` 的订单直接返回 nil，不会重复加 quota。
 
-## 充值订单查询 / Querying Topup Orders
+## 充值订单查询
 
 `GET /api/order/?type=2`（或 admin 页面下拉筛选 `type=Topup`）即可仅看充值订单。
 列表字段与套餐订单一致：`order_no` / `user_id` / `plan_id`（充值时为 0） / `amount` / `pay_method` / `status` / `source`。
 
 `plan_info` 字段是 JSON 字符串，结构：
 
-```json
-{ "amount": 100.00, "preset_amount": 100.00, "bonus_quota": 100000, "exchange_rate": 1000 }
 ```
 
 充值订单的 `plan_id` 始终为 `0`，但 `plan_info.bonus_quota` 才是最终到账额度（避免汇率调整造成的二次解释）。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 手动加额度（兼容路径）：管理员旧 UI 在「用户」行内提供「+ 额度」入口（如有），提交 `{ user_id, quota, remark }`。
 - 标记已付：订单中心订单状态 `pending` 时，行尾出现「标记已付」按钮。
 - 退款：已支付订单出现「退款」按钮（仅翻状态，不回退 quota）。
 - 删除：Root 可对非 paid 订单执行删除。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
