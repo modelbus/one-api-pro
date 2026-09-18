@@ -18,29 +18,6 @@ order: 12
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": [
-    {
-      "id": 1,
-      "group_name": "default",
-      "model_name": "",
-      "discount": 1.0,
-      "created_at": 1718000000,
-      "updated_at": 1718000000
-    },
-    {
-      "id": 2,
-      "group_name": "vip",
-      "model_name": "gpt-4o",
-      "discount": 0.8,
-      "created_at": 1718000000,
-      "updated_at": 1718000000
-    }
-  ]
-}
 ```
 
 **返回字段说明：**
@@ -54,7 +31,6 @@ order: 12
 | created_at | int64 | 创建时间（Unix 时间戳） |
 | updated_at | int64 | 更新时间（Unix 时间戳） |
 
-
 ### 2.2 添加分组折扣
 
 **接口：** `POST /api/group_price/`
@@ -63,12 +39,6 @@ order: 12
 
 **请求体：**
 
-```json
-{
-  "group_name": "vip",
-  "model_name": "gpt-4o",
-  "discount": 0.8
-}
 ```
 
 **请求字段说明：**
@@ -81,16 +51,10 @@ order: 12
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
 
 **错误情况：**
 - `group_name` 为空：`{"success": false, "message": "分组名称不能为空"}`
-
 
 ### 2.3 更新分组折扣
 
@@ -100,13 +64,6 @@ order: 12
 
 **请求体：**
 
-```json
-{
-  "id": 2,
-  "group_name": "vip",
-  "model_name": "gpt-4o",
-  "discount": 0.7
-}
 ```
 
 **请求字段说明：**
@@ -120,16 +77,10 @@ order: 12
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
 
 **错误情况：**
 - `id` 为 0：`{"success": false, "message": "ID不能为空"}`
-
 
 ### 2.4 删除分组折扣
 
@@ -145,10 +96,5 @@ order: 12
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
 
