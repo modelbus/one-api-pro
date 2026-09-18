@@ -21,13 +21,6 @@ order: 21
 
 **请求体：**
 
-```json
-{
-  "node_id": 1,
-  "node_name": "node-cn",
-  "address": "https://cn.example.com",
-  "secret_key": "node-1-secret"
-}
 ```
 
 **请求字段说明：**
@@ -41,28 +34,7 @@ order: 21
 
 **响应（包含全部已知节点列表）：**
 
-```json
-{
-  "success": true,
-  "data": {
-    "nodes": [
-      {
-        "id": 1,
-        "node_id": 1,
-        "node_name": "node-cn",
-        "address": "https://cn.example.com",
-        "status": 1,
-        "last_heartbeat": 1718000000,
-        "ping_failures": 0,
-        "disabled": false,
-        "created_at": 1718000000,
-        "updated_at": 1718000000
-      }
-    ]
-  }
-}
 ```
-
 
 ### 13.2 数据同步（内部）
 
@@ -74,24 +46,6 @@ order: 21
 
 **请求体：**
 
-```json
-{
-  "source_node_id": 1,
-  "events": [
-    {
-      "id": 1001,
-      "table_name": "channels",
-      "operation": "UPDATE",
-      "primary_key": 5,
-      "data": {
-        "id": 5,
-        "name": "OpenAI",
-        "status": 2
-      },
-      "event_time": 1718000000
-    }
-  ]
-}
 ```
 
 **请求字段说明：**
@@ -106,7 +60,7 @@ order: 21
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | id | int64 | 事件唯一 ID |
-| table_name | string | 表名（users / tokens / channels / abilities / options / plans / user_plans / redemptions 等） |
+| table_name | string | 表名（users|
 | operation | string | 操作类型：`INSERT` / `UPDATE` / `DELETE` |
 | primary_key | uint | 主键值 |
 | data | object | 变更数据（DELETE 时为空） |
@@ -114,16 +68,7 @@ order: 21
 
 **响应：**
 
-```json
-{
-  "success": true,
-  "data": {
-    "applied": 1,
-    "skipped": 0
-  }
-}
 ```
-
 
 ### 13.3 获取全部节点列表
 
@@ -139,26 +84,6 @@ order: 21
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": [
-    {
-      "id": 1,
-      "node_id": 1,
-      "node_name": "node-cn",
-      "address": "https://cn.example.com",
-      "status": 1,
-      "last_heartbeat": 1718000000,
-      "ping_failures": 0,
-      "disabled": false,
-      "secret_key": "node-1-secret",
-      "created_at": 1718000000,
-      "updated_at": 1718000000
-    }
-  ]
-}
 ```
 
 **返回字段说明：**
@@ -175,7 +100,6 @@ order: 21
 | disabled | bool | 是否已被管理员禁用 |
 | secret_key | string | 节点的访问密钥 |
 
-
 ### 13.4 获取单个节点
 
 **接口：** `GET /api/cluster_node/:id`
@@ -188,7 +112,6 @@ order: 21
 |------|------|------|
 | id | int | 节点记录 ID（非 node_id） |
 
-
 ### 13.5 添加节点
 
 **接口：** `POST /api/cluster_node/`
@@ -197,13 +120,6 @@ order: 21
 
 **请求体：**
 
-```json
-{
-  "node_id": 2,
-  "node_name": "node-us",
-  "address": "https://us.example.com",
-  "secret_key": "node-2-secret"
-}
 ```
 
 **请求字段说明：**
@@ -215,7 +131,6 @@ order: 21
 | address | string | 是 | 节点公网地址（包含协议前缀如 `https://`） |
 | secret_key | string | 是 | 节点初始 secret，应与目标节点 `CLUSTER_SECRET` 一致 |
 
-
 ### 13.6 更新节点
 
 **接口：** `PUT /api/cluster_node/`
@@ -224,15 +139,6 @@ order: 21
 
 **请求体：**
 
-```json
-{
-  "id": 2,
-  "node_id": 2,
-  "node_name": "node-us",
-  "address": "https://us.example.com",
-  "secret_key": "new-secret-value",
-  "disabled": false
-}
 ```
 
 **请求字段说明：**
@@ -248,7 +154,6 @@ order: 21
 
 > **secret_key 更新机制：** 节点 secret 在 ping 时由 `X-Cluster-Secret` 头部携带，目标节点使用自己的 secret 校验。当管理员更新某节点的 secret 后，其他节点在下一次 ping 时会自动学习到新值。
 
-
 ### 13.7 软删除节点
 
 **接口：** `DELETE /api/cluster_node/:id`
@@ -257,7 +162,6 @@ order: 21
 
 **说明：** 不物理删除记录，而是设置 `disabled = true`。被禁用的节点仍然会响应 ping（让对方知道其在线），但其他节点不会再向其推送事件。如需物理删除需手动执行 SQL：`DELETE FROM cluster_nodes WHERE node_id = ?`。
 
-
 ### 13.8 重新启用已禁用节点
 
 **接口：** `POST /api/cluster_node/:id/enable`
@@ -265,7 +169,6 @@ order: 21
 **认证：** Root 管理员
 
 **说明：** 将 `disabled` 重置为 `false`，恢复节点参与集群通信的能力。
-
 
 ### 13.9 手动 Ping 节点
 
