@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../docs/logo.png" width="150" height="150" alt="one-api-pro logo">
+  <img src="docs/logo.png" width="150" height="150" alt="one-api-pro logo">
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license"></a>
   <a href="https://go.dev/"><img src="https://img.shields.io/badge/language-Go-00ADD8.svg?logo=go&logoColor=white" alt="language"></a>
   <a href="https://gin-gonic.com/"><img src="https://img.shields.io/badge/framework-Gin-008080.svg?logo=go&logoColor=white" alt="framework"></a>
   <a href="https://vuejs.org/"><img src="https://img.shields.io/badge/frontend-Vue%203-42B883.svg?logo=vue.js&logoColor=white" alt="frontend"></a>
@@ -174,7 +174,7 @@ A brand-new Vue 3 + Arco Design admin console delivers a visual dashboard with c
 
 | Key-metric cards | Usage trend chart |
 |:---:|:---:|
-| ![Dashboard](../docs/Demo-Index.png) | ![Dashboard](../docs/Demo-Index.png) |
+| ![Dashboard](docs/Demo-Index.png) | ![Dashboard](docs/Demo-Index.png) |
 
 ### 🔑 Fine-grained Token Management
 
@@ -182,7 +182,7 @@ Multi-dimensional token controls: per-model allowlists, sub-net IP restrictions,
 
 | Token management |
 |:---:|
-| ![Token management](../docs/Demo-Token.png) |
+| ![Token management](docs/Demo-Token.png) |
 
 ### 📦 Subscription & Plan System
 
@@ -190,7 +190,7 @@ A complete plan & subscription system: token- or request-based billing, period-b
 
 | Plan management | Subscription management |
 |:---:|:---:|
-| ![Plan management](../docs/Demo-Plan.png) | ![Subscription management](../docs/Demo-Subscribe.png) |
+| ![Plan management](docs/Demo-Plan.png) | ![Subscription management](docs/Demo-Subscribe.png) |
 
 ### 💳 Orders & Real Payments
 
@@ -213,7 +213,7 @@ Each node runs independent MySQL + Redis. Application-layer events keep data in 
 
 | Cluster node management |
 |:---:|
-| ![Cluster node management](../docs/Demo-cluster.png) |
+| ![Cluster node management](docs/Demo-cluster.png) |
 
 ### 🧩 Other Core Capabilities
 
@@ -243,19 +243,19 @@ Each node runs independent MySQL + Redis. Application-layer events keep data in 
 ## 📸 Screenshots
 
 ### 🖥️ Dashboard
-![Dashboard](../docs/Demo-Index.png)
+![Dashboard](docs/Demo-Index.png)
 
 ### 🔑 Token Management
-![Token management](../docs/Demo-Token.png)
+![Token management](docs/Demo-Token.png)
 
 ### 📦 Plan Management
-![Plan management](../docs/Demo-Plan.png)
+![Plan management](docs/Demo-Plan.png)
 
 ### 🔄 Subscription Management
-![Subscription management](../docs/Demo-Subscribe.png)
+![Subscription management](docs/Demo-Subscribe.png)
 
 ### 🌐 Cluster Node Management
-![Cluster nodes](../docs/Demo-cluster.png)
+![Cluster nodes](docs/Demo-cluster.png)
 
 ---
 
@@ -322,7 +322,7 @@ You can further customize it through environment variables or command-line argum
 20. `SQLITE_BUSY_TIMEOUT` — SQLite lock-wait timeout in milliseconds. Default `3000`.
 21. `GEMINI_SAFETY_SETTING` — Gemini safety setting. Default `BLOCK_NONE`.
 22. `GEMINI_VERSION` — Gemini API version used by One Api Pro. Default `v1`.
-23. `THEME` — admin theme. Default `default-pro` (Vue 3). Other options: `default` / `berry` / `air` (legacy React themes). See [web/README.md](../web/README.md).
+23. `THEME` — admin theme. Default `default-pro` (Vue 3). Other options: `default` / `berry` / `air` (legacy React themes). See [web/README.md](web/README.md).
 24. `ENABLE_METRIC` — auto-disable channels with low success rate. Default `false`.
 25. `METRIC_QUEUE_SIZE` — sliding window size for success-rate statistics. Default `10`.
 26. `METRIC_SUCCESS_RATE_THRESHOLD` — success-rate threshold. Default `0.8`.
@@ -385,14 +385,14 @@ You can further customize it through environment variables or command-line argum
 
 ## 📖 API Documentation
 
-The full API reference lives at [docs/API.md](../docs/API.md), covering:
+The full API reference lives at [docs/API.md](docs/API.md), covering:
 
 - **Authentication** — Cookie Session / Access Token / API Key (Bearer Token)
 - **Admin endpoints** — full CRUD for model pricing, group discounts, channels, tokens, users, logs, redemption codes, plans, subscriptions, etc.
 - **OpenAI-compatible endpoints** — `/v1/models`, `/v1/chat/completions`, `/v1/embeddings`, image, audio, moderation, etc.
 - **Cluster management API** — node discovery, heartbeats, data sync endpoints for decentralized clusters
 
-👉 [View the full API documentation →](../docs/API.md)
+👉 [View the full API documentation →](docs/API.md)
 
 ---
 
@@ -720,7 +720,7 @@ curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
 
 Or open the admin console → **Settings → Node Management** to inspect nodes, status and last heartbeats.
 
-> 💡 Cluster API details: [docs/API.md Appendix E — Cluster Management API](../docs/API.md#appendix-e-cluster-management-api)
+> 💡 Cluster API details: [docs/API.md Appendix E — Cluster Management API](docs/API.md#appendix-e-cluster-management-api)
 
 #### ⚠️ Operational Notes
 
@@ -865,4 +865,4 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/m
 
 ## 📄 License
 
-This project is released under the [MIT License](../LICENSE).
+This project is released under the [MIT License](LICENSE).
