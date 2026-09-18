@@ -9,7 +9,7 @@ order: 1
 
 > 兑换码是 One API Pro 中"按码发放额度"的载体：管理员批量生成，外部渠道（推广、合作、活动）发放给终端用户，用户在 `/redeem` 输入后到账 `quota`。
 
-## 类型 / Types
+## 类型
 
 数据模型 `model.Redemption`（`redemptions` 表）字段 `key` 是 32 位 UUID 字符串，唯一索引。
 
@@ -23,7 +23,7 @@ order: 1
 
 `is_count` 字段（`Count`，落库时 `gorm:"-:all"` 不持久化）只在批量生成时使用：服务端按 `count` 循环生成对应行，每条独立 UUID。
 
-## 用途 / Use cases
+## 用途
 
 | 场景 | 用法 |
 |---|---|
@@ -33,11 +33,11 @@ order: 1
 
 > 兑换码只是把 `users.quota` 加上对应额度，**不会** 创建或影响 `user_plans`，与套餐正交。
 
-## 单次 vs 多次 / One-time vs multi-use
+## 单次 vs 多次
 
 `redemptions` 表本身每条对应一个唯一 UUID：单条被兑换即置为 `Used=3`，是天然的一次性码。多次使用需要管理员生成多条（同 `name` 不同 `key`）。没有"一码多次"语义；如需分发额度到多用户，按数量生成即可。
 
-## 兑换成功后的副作用 / Side effects on redeem
+## 兑换成功后的副作用
 
 `model.Redeem(ctx, key, userId)`（`model/redemption.go:55`）在事务内：
 
@@ -49,11 +49,11 @@ order: 1
 
 事务提交后才会对用户可见；任一步骤失败整笔回滚，避免并发兑换与重复到账。
 
-## 与充值订单的关系 / Relation to top-up orders
+## 与充值订单的关系
 
 兑换码到账额度走的是 `users.quota += redemptions.quota`（`Redeem`），与 `OrderTypeTopup=2` 的订单激活路径（`model.ActivateTopupByOrder` → `IncreaseUserQuota`）最终都把额度累加到 `users.quota`。两者可独立使用；订单可生成对账所需的金额 / 兑换率信息，兑换码仅含纯 `quota`。
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -61,3 +61,4 @@ order: 1
 | 兑换事务 | `model/redemption.go::Redeem` |
 | CRUD | `controller/redemption.go` |
 | 用户侧入口 | `controller/user.go::TopUp`（`POST /api/user/topup`） |
+
