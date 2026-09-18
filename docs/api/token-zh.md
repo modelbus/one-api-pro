@@ -1,6 +1,6 @@
 ---
 title: 令牌 API
-description: 令牌 API：令牌管理 (Token)
+description: "令牌 API：令牌管理 (Token)"
 category: api
 order: 14
 ---
@@ -64,7 +64,6 @@ order: 14
 | models | string/null | 允许的模型（逗号分隔），null=全部 |
 | subnet | string/null | 允许的子网 |
 
----
 
 ### 6.2 搜索令牌
 
@@ -78,7 +77,6 @@ order: 14
 |------|------|------|
 | keyword | string | 搜索关键词 |
 
----
 
 ### 6.3 获取单个令牌
 
@@ -86,7 +84,6 @@ order: 14
 
 **权限：** User
 
----
 
 ### 6.4 创建令牌
 
@@ -107,7 +104,6 @@ order: 14
 }
 ```
 
----
 
 ### 6.5 更新令牌
 
@@ -117,7 +113,6 @@ order: 14
 
 与创建格式相同，加上 `id` 字段。查询参数 `status_only=1` 时仅更新状态。
 
----
 
 ### 6.6 删除令牌
 
@@ -125,4 +120,3 @@ order: 14
 
 **权限：** User
 
----
