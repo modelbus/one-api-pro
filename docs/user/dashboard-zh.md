@@ -8,27 +8,25 @@ order: 2
 # 个人仪表盘
 
 > 消费统计、订阅状态、订单概览。
-> Usage statistics, subscription status and order overview.
 
 路径 / Path：`/dashboard`（`web/default-pro/src/views/dashboard/Dashboard.vue`）。
 
-## 页面分区 / Page Sections
+## 页面分区
 
-| 区域 / Section | 字段 / Field | 数据来源 / Source | 说明 / Notes |
+| 区域| 字段| 数据来源| 说明|
 | --- | --- | --- | --- |
-| 顶部欢迎条 | 用户名 / 角色 / 版本 | `useAuthStore` + `/api/status` | 角色 chip：用户 / 管理员 / Root |
+| 顶部欢迎条 | 用户名 / 角色 / 版本 | `useAuthStore` + `/api/status` | 角色 chip：用户 / 管理员|
 | 核心指标（4 卡） | 总 Tokens / 总请求 / 总 Quota / 当前套餐 | `/api/log/self` 聚合 + `/api/user/self` + `/api/subscription/self` | 卡颜色：蓝 / 绿 / 橙 / 紫 |
 | 用量进度 | 当日 / 当周（按设定阈值） | `/api/log/self` + `model.SumUsedQuota(LogTypeConsume, ...)` | 超过 80% 转红 |
-| 趋势图 | 请求 / Quota / Tokens 三色折线（echarts） | `/api/log/self` | 默认显示最近 7 天 |
+| 趋势图 | 请求| `/api/log/self` | 默认显示最近 7 天 |
 | 模型分布 Top-N | 调用量前 N 模型柱状图 | `/api/log/self` 聚合 | `n=10` |
-| 使用明细 | 时间 / 模型 / 请求数 / quota / tokens 表格 | `/api/log/self` 分页 | 默认 `pageSize=8` |
+| 使用明细 | 时间 / 模型 / 请求数| `/api/log/self` 分页 | 默认 `pageSize=8` |
 | API Key 概览 | 最近一个令牌的脱敏 key + 创建时间 | `/api/token/self` | 点击复制 |
 | 快捷入口 | 管理 Token / 兑换码 / 用量日志 | 路由跳转 | 管理员视角下额外显示「运营仪表盘」按钮 |
 
 > 用量统计基于 `logs.type = LogTypeConsume` 过滤；充值（`LogTypeTopup`）、管理员加额（`LogTypeManage`）等不计入消费。
-> Consumption stats only count `logs.type = LogTypeConsume`. Top-ups (`LogTypeTopup`) and admin grants (`LogTypeManage`) are excluded.
 
-## 数据获取 / Data Fetching
+## 数据获取
 
 ```text
 onMounted ──► Promise.all([
@@ -45,41 +43,33 @@ onMounted ──► Promise.all([
 
 Concurrent fetch avoids waterfalls; gated by `a-spin :loading="loading" style="width:100%"`. (`arco-spin` 踩坑：`AGENTS.md` §10.4)
 
-## 关键计算 / Key Calculations
+## 关键计算
 
-| 名称 / Name | 公式 / Formula | 说明 / Notes |
+| 名称| 公式| 说明|
 | --- | --- | --- |
 | `todayTokens` | `SUM(tokens_used)` 当日 `/ < 0, now>` | 每日 0 点重置（受 `TZ` 影响） |
 | `sevendayTokens` | `SUM(tokens_used)` 最近 7 天 | 滚动 7 天窗口 |
-| `todayPercent` | `todayTokens / dailyQuota` | `dailyQuota = plan.daily_quota`，未订阅为 0 |
+| `todayPercent` | `todayTokens| `dailyQuota = plan.daily_quota`，未订阅为 0 |
 | `planFoot` | 已订阅：到期日；已过期：「已过期，去续费」；未订阅：空 | 见 `statItems` 计算 |
 | `quota` 格式 | `< 10000` 原样；`>= 10000` → `xxx.xx w` | 显示在「总 Quota」卡 |
 | `tokens` 格式 | `< 1000` 原样；`>= 1000` → `xx.x K`；`>= 1e6` → `xx.x M` | 显示在用量明细 |
 
 > `daily_quota` 是 `plans.daily_quota` 字段；若套餐未设置每日上限，`dailyPercent` 为 0，不展示进度条。
-> If the plan has no daily limit, the progress bar is not rendered.
 
 ## 时间与时区
 
 - 服务端 `helper.GetTimestamp()` 使用 `time.Now().Unix()`，未配置 `TZ` 时按 UTC；推荐设置 `TZ=Asia/Shanghai`。
-  Server time uses `time.Now().Unix()` and respects `TZ`; set `TZ=Asia/Shanghai` in CN deployments.
 - 仪表盘当天范围由前端按本地时区计算（`new Date()`），跨时区切换会有 ±1h 偏差。
-  "Today" is computed client-side; switching timezones mid-day can shift the boundary by ±1h.
 
-## 自定义 / Customize
+## 自定义
 
 - **隐藏/显示快捷入口**：编辑 `Dashboard.vue` 的 `quickActions` 计算属性。
-  Show/hide quick actions: edit `quickActions` computed in `Dashboard.vue`.
 - **调整 Top-N**：修改 `barOption` 中的 `slice(0, N)`。
-  Change the Top-N: edit `barOption`'s `slice(0, N)`.
 - **修改卡片顺序**：编辑 `statItems` 数组；保持 `value / foot / icon` 一一对应。
-  Reorder cards: edit `statItems`, keeping `value / foot / icon` aligned.
 
-## 常见问题 / FAQ
+## 常见问题
 
 - **数据延迟几分钟**：日志写入是异步的（`middleware/logger.go`），但 v0.0.21 之后 `IncreaseUserQuota` 等关键加额链路已同步刷 Redis，不会有分钟级延迟。
-  Data may lag by minutes: log writes are async, but quota updates are real-time after v0.0.21.
 - **显示「已过期」但还能用**：检查 `/api/subscription/self` 的 `expire_at` 与客户端时间；服务器 `TZ` 配置错误会触发此问题。
-  "Expired" but still works: check `expire_at` vs client time; wrong `TZ` is a common cause.
 
 下一步 / Next: [Access Token](/zh/user/access-token) · [个人资料](/zh/user/profile) · [我的订单](/zh/user/orders)。
