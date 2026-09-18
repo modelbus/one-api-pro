@@ -1,7 +1,7 @@
 ---
 title: Group Price
 description: "Per (group × model) discount multipliers that compose with model_price."
-category: admin
+category: pricing
 order: 4
 ---
 
