@@ -1,7 +1,7 @@
 ---
 title: Logs Admin
 description: "Site-wide log query (type / model / user / channel / time window), aggregate and prune."
-category: admin
+category: misc
 order: 11
 ---
 
