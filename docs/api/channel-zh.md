@@ -20,44 +20,9 @@ order: 13
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": [
-    {
-      "id": 1,
-      "type": 1,
-      "key": "sk-****xxxx",
-      "status": 1,
-      "name": "OpenAI",
-      "weight": 1,
-      "created_time": 1718000000,
-      "test_time": 0,
-      "response_time": 0,
-      "base_url": "https://api.openai.com",
-      "other": "",
-      "balance": 0,
-      "balance_updated_time": 0,
-      "models": "gpt-4o,gpt-4o-mini",
-      "group": "default",
-      "used_quota": 0,
-      "model_mapping": "",
-      "priority": 0,
-      "config": "{}",
-      "system_prompt": "",
-      "max_concurrency": 0,
-      "cooldown_seconds": 60,
-      "rpm": 0,
-      "last_error": "",
-      "last_error_time": 0
-    }
-  ]
-}
 ```
 
 > **注意：** 非 Root 用户查看时，`key` 字段会被脱敏处理。
-
 
 ### 5.2 搜索渠道
 
@@ -73,7 +38,6 @@ order: 13
 
 **返回值：** 与 5.1 相同格式
 
-
 ### 5.3 获取单个渠道
 
 **接口：** `GET /api/channel/:id`
@@ -88,7 +52,6 @@ order: 13
 
 **返回值：** 与 5.1 中单条数据格式相同
 
-
 ### 5.4 添加渠道
 
 **接口：** `POST /api/channel/`
@@ -97,23 +60,6 @@ order: 13
 
 **请求体：**
 
-```json
-{
-  "type": 1,
-  "key": "sk-xxxxxxxx",
-  "name": "OpenAI",
-  "base_url": "https://api.openai.com",
-  "models": "gpt-4o,gpt-4o-mini",
-  "group": "default",
-  "weight": 1,
-  "priority": 0,
-  "model_mapping": "",
-  "config": "{}",
-  "system_prompt": "",
-  "max_concurrency": 0,
-  "cooldown_seconds": 60,
-  "rpm": 0
-}
 ```
 
 **请求字段说明：**
@@ -137,13 +83,7 @@ order: 13
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": ""
-}
 ```
-
 
 ### 5.5 更新渠道
 
@@ -153,13 +93,11 @@ order: 13
 
 **请求体：** 与 5.4 相同格式，需包含 `id` 字段。
 
-
 ### 5.6 删除渠道
 
 **接口：** `DELETE /api/channel/:id`
 
 **权限：** Admin
-
 
 ### 5.7 删除已禁用渠道
 
@@ -168,7 +106,6 @@ order: 13
 **权限：** Admin
 
 **说明：** 删除所有状态为禁用（手动禁用+自动禁用）的渠道。
-
 
 ### 5.8 测试渠道
 
@@ -191,7 +128,6 @@ order: 13
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | scope | string | 可选，测试范围：`all`、`limited`、`disabled` |
-
 
 ### 5.9 更新渠道余额
 
