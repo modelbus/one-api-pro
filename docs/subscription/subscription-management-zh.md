@@ -11,7 +11,7 @@ order: 6
 
 入口路由：`/subscription`（同一页面，admin 与 user 复用视图；前端 `web/default-pro/src/views/subscription/Subscription.vue`，按 `authStore.isAdmin` 切换"新建订阅"按钮可见性）。
 
-## 数据模型 / Data Model
+## 数据模型
 
 `model.UserPlan`（`user_plans` 表）：
 
@@ -27,7 +27,7 @@ order: 6
 
 后台定时任务 `ExpireUserPlans()` 把 `status=1 AND end_time <= now` 的行批量改为 `expired`。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -42,7 +42,7 @@ order: 6
 
 实现：`controller/subscription.go`。
 
-## 管理员开通 / `POST /api/subscription/`
+## 管理员开通
 
 请求体：
 
@@ -67,7 +67,7 @@ order: 6
 
 `ActivatePackageByOrder` 的升级模式始终是 `stack`（管理员主动开通不应用差价逻辑）。
 
-## 调整订阅 / `PUT /api/subscription/`
+## 调整订阅
 
 ```json
 {
@@ -81,12 +81,12 @@ order: 6
 
 更新成功后调用 `model.CacheDeleteUserActivePlans(userId)` 清掉 Redis 缓存（`user_plans:<id>`），下一次请求会重新加载新数据。
 
-## 撤销订阅 / `DELETE /api/subscription/:id`
+## 撤销订阅
 
 物理删除（`user_plan` 表），同时清掉用户缓存。
 撤销后该用户的订阅额度 / 限额随之失效，不会自动重置。
 
-## 限额查询 / `/api/subscription/:id/usage`
+## 限额查询
 
 返回体：
 
@@ -106,7 +106,7 @@ order: 6
 
 `weighted` 是 `model.CalculateWeightedUsage` 把"按请求 / 按 token"两种计费维度的消耗折算成一个综合比率；用于在 UI 上展示"使用进度条"。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部表格列：ID / 用户（admin 可见）/ 套餐名 / 计费类型 / 起 / 止 / 状态 / 操作。
 - 行内操作：
@@ -116,7 +116,7 @@ order: 6
   - **删除**：直接删行（不可恢复）。
 - 顶部「新增订阅」按钮仅 admin 可见，弹窗字段：`user_id`、`plan_id`（下拉由 `/api/plan/` 提供）、`billing_type`（token / request）、`pay_method`（free / offline / wechat / alipay / bank）、备注。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
