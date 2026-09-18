@@ -1,7 +1,7 @@
 ---
 title: Troubleshooting
 description: "Diagnose channel 401s, billing anomalies, stuck orders."
-category: faq
+category: misc
 order: 2
 ---
 
