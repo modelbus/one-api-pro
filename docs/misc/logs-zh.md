@@ -1,7 +1,7 @@
 ---
 title: 日志查询
 description: "全站日志过滤（类型 / 模型 / 用户 / 渠道 / 时间窗）、聚合与清理。"
-category: admin
+category: misc
 order: 11
 ---
 
