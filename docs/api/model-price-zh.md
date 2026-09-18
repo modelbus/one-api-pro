@@ -1,6 +1,6 @@
 ---
 title: 模型定价 API
-description: 模型定价 API：模型定价管理 (Model Price)
+description: "模型定价 API：模型定价管理 (Model Price)"
 category: api
 order: 11
 ---
@@ -54,7 +54,6 @@ order: 11
 | created_at | int64 | 创建时间（Unix 时间戳） |
 | updated_at | int64 | 更新时间（Unix 时间戳） |
 
----
 
 ### 1.2 添加模型定价
 
@@ -101,7 +100,6 @@ order: 11
 - `model_name` 为空：`{"success": false, "message": "模型名称不能为空"}`
 - `model_name` 已存在：数据库唯一约束报错
 
----
 
 ### 1.3 更新模型定价
 
@@ -149,7 +147,6 @@ order: 11
 **错误情况：**
 - `id` 为 0：`{"success": false, "message": "ID不能为空"}`
 
----
 
 ### 1.4 删除模型定价
 
@@ -175,4 +172,3 @@ order: 11
 **错误情况：**
 - `id` 无效：`{"success": false, "message": "无效的ID"}`
 
----
