@@ -17,39 +17,12 @@ One API Pro 通过 `relay/adaptor/anthropic` 将 OpenAI 风格的 Chat Completio
 | `/v1/chat/completions` (model=`claude-*`) | POST | Bearer Token | OpenAI Chat Completions 入口，命中 anthropic 适配器 |
 | `/v1/models` | GET | Bearer Token | 模型列表（与 OpenAI 兼容） |
 
-
 ## 1. 请求格式（Anthropic Messages）
 
 > 适配器内部将 OpenAI `Chat Completions` 请求转换为下列 Anthropic Messages 形态（参见 `relay/adaptor/anthropic/main.go::ConvertRequest`）。
 
 **请求体：**
 
-```json
-{
-  "model": "claude-3-5-sonnet",
-  "messages": [
-    { "role": "user", "content": "Hello" }
-  ],
-  "system": "You are a helpful assistant.",
-  "max_tokens": 4096,
-  "temperature": 0.7,
-  "top_p": 0.9,
-  "top_k": 40,
-  "stop_sequences": ["\n\nHuman:"],
-  "stream": false,
-  "tools": [
-    {
-      "name": "get_weather",
-      "description": "Get current weather",
-      "input_schema": {
-        "type": "object",
-        "properties": { "city": { "type": "string" } },
-        "required": ["city"]
-      }
-    }
-  ],
-  "tool_choice": { "type": "auto" }
-}
 ```
 
 **字段说明：**
@@ -68,8 +41,6 @@ One API Pro 通过 `relay/adaptor/anthropic` 将 OpenAI 风格的 Chat Completio
 | tools | array | 否 | 工具列表，每项 `Tool` |
 | tool_choice | object/string | 否 | 工具选择；适配 OpenAI 的 `function` 形式或字符串 `auto`/`any` |
 
-**`Message`：**
-
 ```json
 { "role": "user", "content": [{ "type": "text", "text": "Hello" }] }
 ```
@@ -78,8 +49,6 @@ One API Pro 通过 `relay/adaptor/anthropic` 将 OpenAI 风格的 Chat Completio
 |------|------|------|
 | role | string | `user` / `assistant`；OpenAI 的 `tool` 角色会被映射为 `user` + `tool_result` |
 | content | array | 内容块数组，元素为 `Content` |
-
-**`Content`：**
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -92,14 +61,11 @@ One API Pro 通过 `relay/adaptor/anthropic` 将 OpenAI 风格的 Chat Completio
 | tool_use_id | string | `tool_result` 对应的 `tool_use.id` |
 | content | string | `tool_result` 的文本结果 |
 
-**`Tool`：**
-
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | name | string | 工具名 |
 | description | string | 工具描述 |
 | input_schema | object | 工具入参的 JSON Schema，含 `type` / `properties` / `required` |
-
 
 ## 2. 响应格式（非流式）
 
@@ -143,29 +109,10 @@ One API Pro 通过 `relay/adaptor/anthropic` 将 OpenAI 风格的 Chat Completio
 
 > 适配器收到上游响应后，会把 `stop_reason` 映射为 OpenAI 的 `finish_reason`：`end_turn`/`stop_sequence` → `stop`，`max_tokens` → `length`，`tool_use` → `tool_calls`。响应在 `/v1/chat/completions` 上以 OpenAI `chat.completion` 形态返回。
 
-
 ## 3. 流式响应（SSE）
 
 SSE 事件顺序与 Anthropic Messages 流式规范一致；客户端按 `event` 前缀的 `event` 类型分发：
 
-```
-event: message_start
-data: {"type":"message_start","message":{...full message...}}
-
-event: content_block_start
-data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}
-
-event: content_block_delta
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello"}}
-
-event: content_block_stop
-data: {"type":"content_block_stop","index":0}
-
-event: message_delta
-data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":18}}
-
-event: message_stop
-data: {"type":"message_stop"}
 ```
 
 | 事件 | 关键字段 | 说明 |
@@ -179,13 +126,11 @@ data: {"type":"message_stop"}
 
 > 在 `/v1/chat/completions` 端点上，One API Pro 会把上述事件归一化为 OpenAI 的 `chat.completion.chunk` 形态，便于使用 OpenAI SDK 的客户端接入。
 
-
 ## 4. 鉴权与计费
 
 - 鉴权：Bearer Token（即 `/api/token/` 创建的 `sk-xxxxxxxx`），与 OpenAI 兼容接口一致。
 - 计费：按 OpenAI 侧的 `prompt_tokens` + `completion_tokens` 计算；`cache_read_input_tokens` / `cache_creation_input_tokens` 在 `model.ClaudeUsage2OpenAI` 中折算到 `prompt_tokens`。
 - 重试 / Fallback：与 OpenAI 兼容接口一致（`config.RetryTimes`、`ErrorNext`），适用 `relay/handler` 通用重试策略。
-
 
 ## 5. 错误响应（来自上游）
 
@@ -201,13 +146,4 @@ data: {"type":"message_stop"}
 
 经 `/v1/chat/completions` 中转后，最终返回 OpenAI 风格的错误体：
 
-```json
-{
-  "error": {
-    "message": "<msg> (request id: <uuid>)",
-    "type": "one_api_error",
-    "param": "",
-    "code": "<upstream error type>"
-  }
-}
 ```
