@@ -11,7 +11,7 @@ order: 10
 
 > 该页面在普通用户视角是「我的令牌」；管理员可直接访问同一接口拉取当前用户的 token（不带 user_id 查询参数）；跨用户查询请走 `/api/order` 或 `GET /api/user/self` 等替代路径。
 
-## 数据模型 / Data Model
+## 数据模型
 
 `model.Token`（`tokens` 表，关键字段）：
 
@@ -28,7 +28,7 @@ order: 10
 | `subnet` | `text` | 客户端子网白名单（如 `10.0.0.0/8,192.168.0.0/16`） |
 | `created_time` / `accessed_time` | `int64` | 创建 / 最近访问时间 |
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -43,19 +43,10 @@ order: 10
 
 实现：`controller/token.go`。
 
-## 创建令牌 / `POST /api/token/`
+## 创建令牌
 
 请求体：
 
-```json
-{
-  "name": "my-bot",
-  "expired_time": -1,
-  "remain_quota": 500000,
-  "unlimited_quota": false,
-  "models": "gpt-4o,gpt-4o-mini",
-  "subnet": "10.0.0.0/8"
-}
 ```
 
 - `name` 不能超过 30 字符；
@@ -63,14 +54,14 @@ order: 10
 - `key` 在后端由 `random.GenerateKey()` 生成，前端永远拿不到生成前的样子（创建接口的 response 是完整 `Token`）；
 - 新建令牌状态默认 `TokenStatusEnabled=1`。
 
-## 启用前置条件 / Enabling Checks
+## 启用前置条件
 
 `UpdateToken` 在 `status = Enabled` 时会二次校验：
 
 - 如果原 token 已过期（`expired_time <= now`）：返回 "令牌已过期，无法启用，请先修改令牌过期时间，或者设置为永不过期"；
 - 如果原 token 已耗尽（`remain_quota <= 0` 且非 `unlimited_quota`）：返回 "令牌可用额度已用尽..."。
 
-## OpenAI 兼容 / `/api/token/status`
+## OpenAI 兼容
 
 `GetTokenStatus` 由 relay 调用，返回：
 
@@ -86,7 +77,7 @@ order: 10
 
 > 注意 `total_used` 当前固定返回 `0`，因为 token 没有单独的 `used_quota` 字段；如需按 token 维度用量，需后续单独聚合。
 
-## 配额消耗路径 / Quota Deduction
+## 配额消耗路径
 
 调用 `/v1/chat/completions` 时由 `relay` 中间件读取 `token` 信息：
 
@@ -96,7 +87,7 @@ order: 10
 - `expired_time > 0 AND expired_time <= now` → 视为 expired；
 - `remain_quota` 不足 → 视为 exhausted。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部 Base URL 卡片：`{{ baseUrl }}/v1`，复制即用；附带「使用指南」按钮。
 - 「新增令牌」弹窗字段：`name`、`expired_time`（unix 时间或 `-1`）、`remain_quota`、`unlimited_quota` 开关、`models`（多选/逗号分隔）、`subnet`（CIDR）。
@@ -107,7 +98,7 @@ order: 10
   - **删除**：二次确认。
 - 模型列点击「眼睛」图标弹窗展示 `models` 完整列表。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
