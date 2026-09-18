@@ -50,13 +50,11 @@ order: 16
 | plan_id | int | 套餐ID |
 | session_key | string | 会话Key |
 
-
 ### 8.2 获取用户自身日志
 
 **接口：** `GET /api/log/self`
 
 **权限：** User
-
 
 ### 8.3 搜索日志
 
@@ -75,7 +73,6 @@ order: 16
 | keyword | string | 搜索关键词 |
 | type | int | 日志类型（可选） |
 
-
 ### 8.4 日志统计
 
 **接口：** `GET /api/log/stat`
@@ -85,7 +82,6 @@ order: 16
 **接口：** `GET /api/log/self/stat`
 
 **权限：** User
-
 
 ### 8.5 删除历史日志
 
@@ -101,12 +97,6 @@ order: 16
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": 100
-}
 ```
 
 > `data` 为删除的日志条数。
