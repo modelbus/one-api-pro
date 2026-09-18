@@ -9,11 +9,11 @@ order: 3
 
 > 管理员对套餐（plan）和用户订阅（user_plan）的全部操作。实现：`controller/plan.go`、`controller/subscription.go`。
 
-## 套餐 / Plan
+## 套餐
 
 数据模型：`model.Plan`。字段见 [套餐定价](./plan) 与 `model/plan.go`。
 
-### 接口 / Endpoints
+### 接口
 
 | Endpoint | Method | Auth | 说明 |
 |---|---|---|---|
@@ -37,11 +37,6 @@ order: 3
 
 存 `text` 列，值为 JSON 对象：
 
-```json
-{
-  "gpt-4o":    { "period_h": 5, "request_period": 100, "request_week": 500, "request_month": 2000, "token_period": 50000,  "token_week": 250000, "token_month": 1000000 },
-  "claude-3.5-sonnet": { "period_h": 5, "request_period": 50, "request_week": 200, "request_month": 800, "token_period": 30000, "token_week": 120000, "token_month": 480000 }
-}
 ```
 
 - `period_h` 用于计算 period 窗口索引（`CalcWindowIndex`）；缺省回退为 5
@@ -51,7 +46,7 @@ order: 3
 
 `Features StringSlice` 字段（`model/plan.go`）：JSON 数组 `["...", "..."]`，前端展示为权益列表。
 
-## 用户订阅 / User subscription
+## 用户订阅
 
 ### 强制开通（绕过支付）
 
@@ -90,21 +85,21 @@ order: 3
 
 `DELETE /api/subscription/:id` 是硬删除：先 `First` 再 `Delete`，并清缓存。撤销后该用户立即失去该 plan 的窗口配额（无补偿）。
 
-## 公开套餐 / Public
+## 公开套餐
 
 `/api/plan/public` 与 `/api/plan/public/:id` 不需要鉴权，供用户侧订阅页与下单流程调用。`/api/plan/`（admin）会返回 `status=0` 的下架套餐，方便管理。
 
-## 周期任务 / Scheduled task
+## 周期任务
 
 `model.ExpireUserPlans` 由后台启动（具体入口见 `main.go`）周期性把 `status=1 AND end_time <= now` 的 `user_plans` 翻成 `status=0`，让 `CheckPlanQuota` 不再选择它。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - **套餐管理**：`/setting/pricing` → "套餐" Tab（`web/default-pro/src/views/setting/PlanSetting.vue`）。列表 + 弹窗编辑 `name` / `description` / `price` / `duration_days` / `duration_text` / `sort` / `status` / `recommended` / `features[]` / `model_limits` JSON / `default_model`
 - **订阅管理**：`/subscription`（`web/default-pro/src/views/subscription/Subscription.vue`）。管理员视角显示 user 列与 "添加订阅" 按钮；用户视角只读
 - **添加订阅弹窗**：用户下拉从 `GET /api/user/search` 拉取；套餐下拉从 `GET /api/plan/` 拉取；`pay_method` 选项固定为 `free` / `offline` / `wechat` / `alipay` / `bank`
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -114,3 +109,4 @@ order: 3
 | 订单 + 激活 | `model/order_payment.go::CreatePlanOrder` / `ActivatePackageByOrder` |
 | 缓存失效 | `model/plan.go::CacheDeleteUserActivePlans` |
 | 周期过期 | `model/plan.go::ExpireUserPlans` |
+
