@@ -1,7 +1,7 @@
 ---
 title: 订单中心（管理员视图）
 description: "管理员订单中心：查询 / 标记已付 / 标记退款 / 删除。"
-category: admin
+category: pricing
 order: 7
 ---
 
