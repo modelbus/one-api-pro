@@ -1,7 +1,7 @@
 ---
 title: System Settings
 description: "Site appearance, login / register policy, OAuth / Turnstile / SMTP / announcements / home content."
-category: admin
+category: misc
 order: 16
 ---
 
