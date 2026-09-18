@@ -1,7 +1,7 @@
 ---
 title: 运营设置
 description: "配额策略、监控阈值、错误处理策略、邀请 / 注册 / 新用户额度。"
-category: admin
+category: misc
 order: 15
 ---
 
