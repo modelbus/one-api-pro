@@ -1,7 +1,7 @@
 ---
 title: 兑换码管理
 description: "兑换码批量生成、状态切换、复制密钥与查询。"
-category: admin
+category: redemption
 order: 9
 ---
 
