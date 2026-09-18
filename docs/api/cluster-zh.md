@@ -1,6 +1,6 @@
 ---
 title: 集群 API
-description: 集群 API：集群管理 API
+description: "集群 API：集群管理 API"
 category: api
 order: 21
 ---
@@ -9,7 +9,7 @@ order: 21
 集群 API 用于去中心化多活集群的节点管理、数据同步和节点发现。使用两种认证方式：
 
 - **集群密钥（Cluster Secret）**：节点间内部通信，Header 格式 `X-Cluster-Secret: <节点 secret>`（目标节点的 secret，从本地 DB 查）
-- **Root 管理员**：管理后台调用，使用 `Authorization: Bearer \<Root Access Token\>` 或 Cookie Session
+- **Root 管理员**：管理后台调用，使用 `Authorization: Bearer <Root Access Token>` 或 Cookie Session
 
 ### 13.1 节点发现与心跳（内部）
 
@@ -63,7 +63,6 @@ order: 21
 }
 ```
 
----
 
 ### 13.2 数据同步（内部）
 
@@ -125,7 +124,6 @@ order: 21
 }
 ```
 
----
 
 ### 13.3 获取全部节点列表
 
@@ -177,7 +175,6 @@ order: 21
 | disabled | bool | 是否已被管理员禁用 |
 | secret_key | string | 节点的访问密钥 |
 
----
 
 ### 13.4 获取单个节点
 
@@ -191,7 +188,6 @@ order: 21
 |------|------|------|
 | id | int | 节点记录 ID（非 node_id） |
 
----
 
 ### 13.5 添加节点
 
@@ -219,7 +215,6 @@ order: 21
 | address | string | 是 | 节点公网地址（包含协议前缀如 `https://`） |
 | secret_key | string | 是 | 节点初始 secret，应与目标节点 `CLUSTER_SECRET` 一致 |
 
----
 
 ### 13.6 更新节点
 
@@ -253,7 +248,6 @@ order: 21
 
 > **secret_key 更新机制：** 节点 secret 在 ping 时由 `X-Cluster-Secret` 头部携带，目标节点使用自己的 secret 校验。当管理员更新某节点的 secret 后，其他节点在下一次 ping 时会自动学习到新值。
 
----
 
 ### 13.7 软删除节点
 
@@ -263,7 +257,6 @@ order: 21
 
 **说明：** 不物理删除记录，而是设置 `disabled = true`。被禁用的节点仍然会响应 ping（让对方知道其在线），但其他节点不会再向其推送事件。如需物理删除需手动执行 SQL：`DELETE FROM cluster_nodes WHERE node_id = ?`。
 
----
 
 ### 13.8 重新启用已禁用节点
 
@@ -273,7 +266,6 @@ order: 21
 
 **说明：** 将 `disabled` 重置为 `false`，恢复节点参与集群通信的能力。
 
----
 
 ### 13.9 手动 Ping 节点
 
@@ -283,4 +275,3 @@ order: 21
 
 **说明：** 主动发起一次 ping 请求，常用于排查节点连通性问题。
 
----
