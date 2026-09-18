@@ -1,7 +1,7 @@
 ---
 title: Users Admin
 description: "User CRUD, status toggle, quota adjustment and role management."
-category: admin
+category: user
 order: 2
 ---
 
