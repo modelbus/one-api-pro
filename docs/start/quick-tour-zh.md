@@ -8,13 +8,10 @@ order: 3
 # 5 分钟快速体验
 
 > 从安装到调用第一个模型的端到端流程。
-> End-to-end flow from install to your first model call.
 
 本指南假设你已经有了一台机器（Linux / macOS / Windows）和 Docker。完整说明见 [安装与更新](/zh/install/requirements)。
 
-This guide assumes a Docker-ready machine (Linux / macOS / Windows). See [Requirements](/en/install/requirements) for the full setup.
-
-## 第 1 步：启动 / Step 1 — Launch
+## 第 1 步：启动
 
 ```bash
 docker run -d --name one-api-pro \
@@ -27,9 +24,7 @@ docker run -d --name one-api-pro \
 
 启动后访问 `http://localhost:3000`，看到登录页即成功。默认 root 账号：`root` / `123456`，**首次登录后立即改密**。
 
-After start, open `http://localhost:3000`. Default root: `root` / `123456` — change it immediately.
-
-## 第 2 步：登录与创建 Access Token / Step 2 — Sign in & create an Access Token
+## 第 2 步：登录与创建 Access Token
 
 1. 用 root 登录后进入「个人中心」→「Access Token」。
 2. 点击「生成」，复制得到的 UUID（用户级 Token，用于调用 `/api/*`）。
@@ -47,9 +42,8 @@ curl http://localhost:3000/api/user/self -b cookies.txt
 ```
 
 > 登录页右上角可切换中 / English（`localStorage.lang` 持久化）。
-> Top-right of the auth pages has a language toggle persisted in `localStorage.lang`.
 
-## 第 3 步：新建渠道 / Step 3 — Add a Channel
+## 第 3 步：新建渠道
 
 进入「渠道」→「新建渠道」，填写：
 
@@ -60,9 +54,7 @@ curl http://localhost:3000/api/user/self -b cookies.txt
 
 新建完成后点「测试」，看到 200 即渠道可用。
 
-After creating, click "Test"; a 200 means the channel is reachable.
-
-## 第 4 步：创建 API Key / Step 4 — Create an API Key
+## 第 4 步：创建 API Key
 
 进入「令牌」→「新建令牌」：
 
@@ -73,9 +65,7 @@ After creating, click "Test"; a 200 means the channel is reachable.
 
 点复制，**只显示这一次**。该 Key 以 `sk-` 前缀，可用于调用 `/v1/*` 兼容接口。
 
-The key is shown **only once** and is prefixed with `sk-`. It works against `/v1/*` compatible endpoints.
-
-## 第 5 步：调用第一个模型 / Step 5 — Call your first model
+## 第 5 步：调用第一个模型
 
 ```bash
 curl http://localhost:3000/v1/chat/completions \
@@ -89,9 +79,7 @@ curl http://localhost:3000/v1/chat/completions \
 
 返回 JSON 即成功。流式（`"stream": true`）、工具调用（`tools`）、多模态（`image_url`）均按 OpenAI 协议透传。
 
-Non-stream, streaming (`"stream": true`), tool calls (`tools`), multimodal (`image_url`) all pass through per the OpenAI protocol.
-
-## 验证 / Verify
+## 验证
 
 进入「日志」或运行 `curl http://localhost:3000/api/log/self -b cookies.txt` 查看本次调用：
 
