@@ -8,15 +8,12 @@ order: 5
 # 我的订单
 
 > 套餐、订阅升级、充值订单。
-> Plan, subscription upgrade and topup orders.
 
 入口：`/orders`（`web/default-pro/src/views/user/Orders.vue`）。涵盖三类业务订单：
 
-Entry: `/orders` (`web/default-pro/src/views/user/Orders.vue`). Covers three kinds of business orders:
+## 订单类型
 
-## 订单类型 / Order Types
-
-| `type` | 名称 / Name | 触发场景 / Triggered by | 订单号前缀 / Prefix |
+| `type` | 名称| 触发场景| 订单号前缀|
 | --- | --- | --- | --- |
 | 1 | 套餐订阅 / 升级 | 用户购买套餐 / 升级套餐 | `TB` 新订 / `UP` 差价升级 |
 | 2 | 充值 | 在线支付充值 | `TP` |
@@ -24,9 +21,7 @@ Entry: `/orders` (`web/default-pro/src/views/user/Orders.vue`). Covers three kin
 
 订单号格式：`{prefix} + yyyyMMddHHmmss + 6 位随机数`（22 字符），由 `model.GenerateOrderNo(prefix)` 生成。
 
-Order number format: `{prefix} + yyyyMMddHHmmss + 6-digit random` (22 chars), produced by `model.GenerateOrderNo(prefix)`.
-
-## 状态机 / Status State Machine
+## 状态机
 
 ```text
         ┌───────────────┐
@@ -47,32 +42,30 @@ Order number format: `{prefix} + yyyyMMddHHmmss + 6-digit random` (22 chars), pr
         also: user self-cancel ─► 2 canceled (terminal)
 ```
 
-| 状态值 / Status | 含义 / Meaning | 触发 / Triggered by |
+| 状态值| 含义| 触发|
 | --- | --- | --- |
-| 0 待支付 / Pending | 下单未付款 | 用户新建订单 |
-| 1 已支付 / Paid | 收到回调 / 管理员标记 | `processNotify` / `MarkOrderPaid` |
-| 2 已取消 / Canceled | 用户主动取消 | `POST /api/order/self/:id/cancel` |
-| 3 已退款 / Refunded | 管理员退款 | `MarkOrderRefunded` |
+| 0 待支付| 下单未付款 | 用户新建订单 |
+| 1 已支付| 收到回调 / 管理员标记 | `processNotify` / `MarkOrderPaid` |
+| 2 已取消| 用户主动取消 | `POST /api/order/self/:id/cancel` |
+| 3 已退款| 管理员退款 | `MarkOrderRefunded` |
 
-## 列表过滤 / List Filters
+## 列表过滤
 
 UI 顶部 Tab：
-
-UI top tabs:
 
 - **全部 / All**：`/api/order/self` 不传 `type`；
 - **套餐订单 / Plan**：`?type=1`；
 - **充值订单 / Topup**：`?type=2`。
 
-## 操作 / Actions
+## 操作
 
-| 操作 / Action | 触发条件 / When | API |
+| 操作| 触发条件| API |
 | --- | --- | --- |
-| 支付 / Pay | 状态 = 0 | `POST /api/order/self/:id/pay`，复用 `controller/buildPayInfo` 拿 `pay_url / qr_code` |
-| 查看 / View | 任何状态 | `GET /api/order/self/:id` |
-| 取消 / Cancel | 状态 = 0 | `POST /api/order/self/:id/cancel`，幂等（已支付返回错误） |
+| 支付| 状态 = 0 | `POST /api/order/self/:id/pay`，复用 `controller/buildPayInfo` 拿 `pay_url|
+| 查看| 任何状态 | `GET /api/order/self/:id` |
+| 取消| 状态 = 0 | `POST /api/order/self/:id/cancel`，幂等（已支付返回错误） |
 
-## 详情字段 / Detail Fields
+## 详情字段
 
 ```text
 orderNo           订单号 / order number
@@ -89,11 +82,9 @@ refundedAt        退款时间
 note              管理员备注
 ```
 
-## 升级差价 / Upgrade Differential
+## 升级差价
 
 当 `OrderUpgradeModePriceDiff`（默认）启用且用户已有有效订阅时：
-
-When `OrderUpgradeModePriceDiff` (default) is active and the user already has an active subscription:
 
 ```text
 diff_amount = newPlan.price - max(remaining_value_of_current_plan, 0)
@@ -103,30 +94,22 @@ amount     = diff_amount
 
 `OrderUpgradeModeStack`（叠加）：按 `newPlan.price` 全额开新订阅，旧订阅在过期前继续生效。
 
-`OrderUpgradeModeStack` (stack): pay the full `newPlan.price` for a new subscription; the old one keeps running until expiry.
-
 具体策略在 `model/order_payment.go::CreatePlanOrder` 中实现。
 
-The exact logic lives in `model/order_payment.go::CreatePlanOrder`.
-
-## 支付渠道可用性 / Payment Availability
+## 支付渠道可用性
 
 「支付」按钮按 `payInfo.status` 分级处理：
 
-The "Pay" button branches on `payInfo.status`:
-
-| `payInfo.status` | UI 行为 / UI behavior |
+| `payInfo.status` | UI 行为|
 | --- | --- |
 | `success` | 显示二维码 / 跳转链接；弹窗内嵌 `qr_code` 或 `pay_url` |
 | `warning` | 弹窗提示「该支付方式尚未启用」或渠道错误；按钮保留但不可点击 |
 | `error` | 直接拒绝；提示「请更换支付方式」 |
 
-## 常见问题 / FAQ
+## 常见问题
 
 - **订单一直显示「待支付」**：异步回调未到；登录管理员后台在「订单管理」手动 `MarkOrderPaid`，或检查支付渠道配置（`payment.wechat.config` 等）。
-  Order stays "Pending": async notify hasn't arrived; admin can mark paid manually, or check `payment.wechat.config` etc.
 - **差价升级金额是负数**：通常是模式为 `price_diff` 且旧套餐剩余价值高于新套餐全价；UI 仍允许下单，但请提示用户确认。
-  Negative upgrade differential: the current plan's remaining value is larger than the new plan; UI still allows the order but should prompt the user.
 - **支付成功但订单一直未激活**：见 [故障排查 · 异步通知校验失败](/zh/faq/troubleshooting#异步通知校验失败)。
 
 下一步 / Next: [Chat Playground](/zh/user/chat) · [套餐订阅](/zh/subscription/overview) · [充值](/zh/pricing/topup)。
