@@ -1,7 +1,7 @@
 ---
 title: Glossary
 description: "Glossary of One API Pro terms."
-category: faq
+category: misc
 order: 3
 ---
 
