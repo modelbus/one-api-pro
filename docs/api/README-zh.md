@@ -40,9 +40,6 @@ curl http://localhost:3000/api/user/self -b cookies.txt
 
 **使用方式：**
 
-```bash
-curl http://localhost:3000/api/user/self \
-  -H "Authorization: <access_token>"
 ```
 
 **鉴权流程：**
@@ -63,9 +60,6 @@ curl http://localhost:3000/api/user/self \
 
 **使用方式：**
 
-```bash
-curl http://localhost:3000/v1/chat/completions \
-  -H "Authorization: Bearer sk-xxxxxxxx"
 ```
 
 **鉴权流程：**
