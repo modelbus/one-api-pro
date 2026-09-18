@@ -14,15 +14,7 @@ order: 15
 
 **请求体：**
 
-```json
-{
-  "username": "newuser",
-  "password": "password123",
-  "email": "user@example.com",
-  "verification_code": "123456"
-}
 ```
-
 
 ### 7.2 用户登录
 
@@ -32,41 +24,17 @@ order: 15
 
 **请求体：**
 
-```json
-{
-  "username": "root",
-  "password": "123456"
-}
 ```
 
 **返回值：**
 
-```json
-{
-  "success": true,
-  "message": "",
-  "data": {
-    "id": 1,
-    "username": "root",
-    "display_name": "Root User",
-    "role": 100,
-    "status": 1,
-    "email": "",
-    "quota": 500000000000000,
-    "access_token": "uuid-token-string",
-    "group": "default",
-    "aff_code": "abcdef"
-  }
-}
 ```
-
 
 ### 7.3 获取当前用户信息
 
 **接口：** `GET /api/user/self`
 
 **权限：** User
-
 
 ### 7.4 更新当前用户信息
 
@@ -76,13 +44,7 @@ order: 15
 
 **请求体：**
 
-```json
-{
-  "display_name": "New Name",
-  "password": "newpassword"
-}
 ```
-
 
 ### 7.5 删除当前用户
 
@@ -92,7 +54,6 @@ order: 15
 
 **说明：** Root 用户不可自删。
 
-
 ### 7.6 获取用户仪表盘
 
 **接口：** `GET /api/user/dashboard`
@@ -100,7 +61,6 @@ order: 15
 **权限：** User
 
 **返回值：** 7天内的使用统计。
-
 
 ### 7.7 生成访问令牌
 
@@ -110,13 +70,11 @@ order: 15
 
 **说明：** 生成一个新的 UUID 格式访问令牌。
 
-
 ### 7.8 获取推广码
 
 **接口：** `GET /api/user/aff`
 
 **权限：** User
-
 
 ### 7.9 充值（用户兑换码）
 
@@ -126,12 +84,7 @@ order: 15
 
 **请求体：**
 
-```json
-{
-  "key": "redemption-code"
-}
 ```
-
 
 ### 7.10 获取可用模型
 
@@ -140,7 +93,6 @@ order: 15
 **权限：** User
 
 **返回值：** 返回当前用户分组可用的模型列表。
-
 
 ### 7.11 管理员操作
 
@@ -167,11 +119,6 @@ order: 15
 
 **管理用户请求体：**
 
-```json
-{
-  "username": "testuser",
-  "action": "disable"
-}
 ```
 
 **action 可选值：** `disable`、`enable`、`delete`、`promote`、`demote`
