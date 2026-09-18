@@ -9,7 +9,7 @@ order: 14
 
 > 控制在线充值（topup）业务的全局开关、自定义金额、预设金额 chip 与兑换比例。前端组件：`web/default-pro/src/views/setting/TopupSetting.vue`。
 
-## 接口一览 / Endpoints
+## 接口一览
 
 | Endpoint | Method | 鉴权 | 说明 |
 |---|---|---|---|
@@ -18,7 +18,7 @@ order: 14
 
 实现：`controller/topup.go::GetTopupSettings` / `PutTopupSettings`。
 
-## 字段 / Fields
+## 字段
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -33,7 +33,7 @@ order: 14
 - 重复金额 → 「快捷金额重复：X.XX 元已存在」；
 - `exchange_rate <= 0` → 「兑换比例必须大于 0」。
 
-## 数据库 / Persistence
+## 数据库
 
 四个独立 `system_settings` 行（category=`topup`）：
 
@@ -46,7 +46,7 @@ order: 14
 
 PUT 是整体覆盖——不存在的字段会被保留（前端总会把所有字段都发上来）。
 
-## 用户侧下单 / How It Works
+## 用户侧下单
 
 `POST /api/topup/order`（`controller/topup.go::CreateTopupOrder`）的解析由 `model/topup.go::ResolveTopupAmount` 完成：
 
@@ -54,12 +54,12 @@ PUT 是整体覆盖——不存在的字段会被保留（前端总会把所有�
 2. 否则按 `amount × exchange_rate` 计算 `bonus_quota`；
 3. `allow_custom=false` 时不允许走自定义分支。
 
-## 预设 chip / Frontend Chips
+## 预设 chip
 
 `PaymentTopupModal.vue`（用户侧）按 `presets` 渲染金额 chip，并在 `allow_custom=true` 时在末尾追加一个「自定义」chip。
 选中 chip 的索引 `-1` 作为「自定义」哨兵（参考 `web/default-pro/src/utils/topup.js` 里的 `validateTopupPresets`）。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 - 顶部「总开关」「允许自定义金额」「兑换比例（1 元 = X quota）」三组竖排 `<a-form-item>`。
 - 下面「快捷金额」表格（bordered cell）支持新增、删除、编辑 `amount` / `bonus_quota`；编辑直接在 `<a-input-number>` 里改：
@@ -68,7 +68,7 @@ PUT 是整体覆盖——不存在的字段会被保留（前端总会把所有�
 - 提交前会跑 `validateTopupPresets` 给出前端预校验错误。
 - 点击「保存」调用 `PUT /api/setting/topup`；成功后 `Message.success`。
 
-## 接口实现 / Implementation Pointers
+## 接口实现
 
 | 关注点 | 位置 |
 |---|---|
