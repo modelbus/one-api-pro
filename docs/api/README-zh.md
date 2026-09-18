@@ -1,6 +1,6 @@
 ---
 title: API 参考 · 总览
-description: 鉴权机制、响应格式、权限等级与术语表
+description: "鉴权机制、响应格式、权限等级与术语表"
 category: api
 order: 1
 ---
@@ -42,7 +42,7 @@ curl http://localhost:3000/api/user/self -b cookies.txt
 
 ```bash
 curl http://localhost:3000/api/user/self \
-  -H "Authorization: \<access_token\>"
+  -H "Authorization: <access_token>"
 ```
 
 **鉴权流程：**
@@ -59,7 +59,7 @@ curl http://localhost:3000/api/user/self \
 
 适用于 `/v1/*` OpenAI 兼容接口。
 
-用户通过 `/api/token/` 创建的令牌（格式：`sk-\<random\>`），用于调用 OpenAI 兼容的 AI 模型接口。
+用户通过 `/api/token/` 创建的令牌（格式：`sk-<random>`），用于调用 OpenAI 兼容的 AI 模型接口。
 
 **使用方式：**
 
@@ -80,7 +80,7 @@ curl http://localhost:3000/v1/chat/completions \
 
 **指定渠道（管理员专用）：**
 
-管理员可在 API Key 后追加 `-\<channel_id\>` 来指定使用特定渠道：
+管理员可在 API Key 后追加 `-<channel_id>` 来指定使用特定渠道：
 
 ```
 sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
@@ -119,4 +119,3 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 | 令牌模型限制 | 403 | `{"success":false,"message":"该令牌无权使用模型：xxx"}` |
 | 普通用户指定渠道 | 403 | `{"success":false,"message":"普通用户不支持指定渠道"}` |
 
----
