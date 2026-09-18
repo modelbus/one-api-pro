@@ -34,10 +34,6 @@
         </a-select>
       </div>
       <div class="search-right">
-        <a-button @click="openSelfEditModal">
-          <template #icon><icon-edit :size="14" /></template>
-          {{ $t('userPage.editProfile') }}
-        </a-button>
         <a-button type="primary" size="large" @click="openAddModal">
           <template #icon><icon-plus :size="14" /></template>
           {{ $t('userPage.addUser') }}
@@ -313,37 +309,13 @@
         </a-form-item>
       </a-form>
     </a-modal>
-
-    <!-- 编辑个人资料 -->
-    <a-modal
-      v-model:visible="selfEditVisible"
-      :title="$t('userPage.editProfile')"
-      :width="460"
-      @ok="handleSelfEdit"
-      @cancel="resetSelfEditForm"
-      :ok-loading="submitting"
-      :ok-text="$t('userPage.save')"
-      :cancel-text="$t('userPage.cancel')"
-    >
-      <a-form ref="selfEditFormRef" :model="selfEditForm" layout="vertical" class="user-form">
-        <a-form-item field="username" :label="$t('userPage.username')">
-          <a-input v-model="selfEditForm.username" disabled />
-        </a-form-item>
-        <a-form-item field="display_name" :label="$t('userPage.displayName')">
-          <a-input v-model="selfEditForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="64" allow-clear />
-        </a-form-item>
-        <a-form-item field="password" :label="$t('userPage.password')">
-          <a-input-password v-model="selfEditForm.password" :placeholder="$t('userPage.passwordKeepPlaceholder')" :max-length="64" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IconPlus, IconEdit, IconUserGroup, IconDown, IconDelete, IconStop } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconUserGroup, IconDown, IconDelete, IconStop } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
@@ -461,14 +433,6 @@ const editForm = reactive({
   password: '',
   group: '',
   quota: 0,
-})
-
-const selfEditVisible = ref(false)
-const selfEditFormRef = ref(null)
-const selfEditForm = reactive({
-  username: '',
-  display_name: '',
-  password: '',
 })
 
 onMounted(async () => {
@@ -684,55 +648,6 @@ function resetEditForm() {
   editForm.group = ''
   editForm.quota = 0
   editFormRef.value?.clearValidate()
-}
-
-function openSelfEditModal() {
-  const user = authStore.user
-  if (!user) {
-    Message.warning(t('userPage.userNotLoaded'))
-    return
-  }
-  selfEditForm.username = user.username || ''
-  selfEditForm.display_name = user.display_name || ''
-  selfEditForm.password = ''
-  selfEditFormRef.value?.clearValidate()
-  selfEditVisible.value = true
-}
-
-async function handleSelfEdit() {
-  submitting.value = true
-  try {
-    const payload = {
-      display_name: selfEditForm.display_name,
-    }
-    if (selfEditForm.password) {
-      payload.password = selfEditForm.password
-    }
-    const { data } = await api.put('/api/user/self', payload)
-    if (data.success) {
-      Message.success(t('userPage.selfEditSuccess'))
-      selfEditVisible.value = false
-      resetSelfEditForm()
-      if (data.data) {
-        authStore.user = data.data
-        localStorage.setItem('user', JSON.stringify(data.data))
-      }
-      await fetchUsers()
-    } else {
-      Message.error(data.message || t('userPage.updateFailed'))
-    }
-  } catch (e) {
-    Message.error(e.response?.data?.message || e.message || t('userPage.updateFailed'))
-  } finally {
-    submitting.value = false
-  }
-}
-
-function resetSelfEditForm() {
-  selfEditForm.username = ''
-  selfEditForm.display_name = ''
-  selfEditForm.password = ''
-  selfEditFormRef.value?.clearValidate()
 }
 
 async function toggleStatus(record) {
