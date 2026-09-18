@@ -28,11 +28,6 @@ order: 8
 
 请求体（`CreatePlanOrderRequest`）：
 
-```json
-{
-  "plan_id": 1,
-  "mode": "price_diff | stack"
-}
 ```
 
 - `mode=price_diff`：差价升级；扣除已有订阅剩余天数比例后计算应付金额（订单号 `UP`）。
