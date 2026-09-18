@@ -9,7 +9,7 @@ order: 4
 
 > 充值（topup）= 用户在线自助支付把金额兑换成 `users.quota`。设置存储在 `system_settings` 表的 `topup.*` 键；用户侧流程走 `OrderTypeTopup=2`。实现：`model/topup.go`、`controller/topup.go`、`web/default-pro/src/views/setting/TopupSetting.vue`。
 
-## 系统设置 / Settings
+## 系统设置
 
 `model/system_setting.go` 定义：
 
@@ -22,7 +22,7 @@ order: 4
 
 类别常量：`SystemSettingCategoryTopup="topup"`。
 
-## 接口 / Endpoints
+## 接口
 
 | Endpoint | Method | Auth | 说明 |
 |---|---|---|---|
@@ -36,7 +36,7 @@ order: 4
 - `exchange_rate > 0`（`兑换比例必须大于 0`）
 - `presets == nil` 时落库为 `[]`
 
-## 快捷金额 / Presets
+## 快捷金额
 
 `model.TopupPreset`：
 
@@ -55,26 +55,18 @@ order: 4
 - `PresetAmount > 0` → 在 presets 里查 `amount == PresetAmount` 命中返回；未命中返回 `快捷金额未配置`
 - 否则走自定义金额路径，要求 `allow_custom == true`
 
-## 自定义金额与汇率 / Custom amount
+## 自定义金额与汇率
 
 当 `PresetAmount == 0` 时走自定义路径：
 
-```text
-bonus_quota = int(amount × exchange_rate)
 ```
 
 汇率缺省 `1`（即 1 元 = 1 quota）。生产环境通常调高以体现"1 元 = 1000 quota"或类似的换算，让前端不再做金额展示小数。
 
-## 充值订单 / Top-up order
+## 充值订单
 
 `POST /api/topup/order` 请求体（`CreateTopupOrderRequest`）：
 
-```json
-{
-  "amount": 100,
-  "preset_amount": 0,
-  "pay_method": "wechat"
-}
 ```
 
 服务端校验：
@@ -94,7 +86,7 @@ bonus_quota = int(amount × exchange_rate)
 
 随后 `buildPayInfo(pay_method, order_no, amount, "余额充值")` 生成预支付参数返回给前端。
 
-## 激活 / Activation
+## 激活
 
 支付回调（`controller/payment.go::processNotify`）按 `order.Type` 分发：
 
@@ -104,11 +96,11 @@ bonus_quota = int(amount × exchange_rate)
   - `IncreaseUserQuota(order.UserId, bonus_quota)` 直接加到 `users.quota`
   - `MarkOrderPaid` 落 `pay_status=1` / `pay_time` / `pay_trade_no`
 
-## 历史兼容 / Migration note
+## 历史兼容
 
 旧字段 `plan.allow_topup`（DB 行保留）已迁移到 `topup.enabled`，UI 不再读写；如需查看历史值，直接 `SELECT * FROM system_settings WHERE 'key' = 'plan.allow_topup'`。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 页面：`/setting/operation` 中的"充值"区块（`web/default-pro/src/views/setting/TopupSetting.vue`）。
 
@@ -117,7 +109,7 @@ bonus_quota = int(amount × exchange_rate)
 - 快捷金额表：行内编辑 amount + bonus_quota；新增 / 删除行；提交时整组覆盖保存
 - 用户侧 `/pricing` 或 `/topup`：preset chip + 「自定义金额」入口（仅当 `allow_custom=true`）
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -129,3 +121,4 @@ bonus_quota = int(amount × exchange_rate)
 | 设置接口 | `controller/topup.go::GetTopupSettings` / `PutTopupSettings` |
 | 用户下单接口 | `controller/topup.go::CreateTopupOrder` |
 | 支付回调分发 | `controller/payment.go::processNotify` |
+
