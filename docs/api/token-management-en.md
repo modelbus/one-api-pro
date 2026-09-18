@@ -1,7 +1,7 @@
 ---
 title: Token Admin
 description: "Per-user API token CRUD, quota tracking, status toggle and subnet whitelist."
-category: admin
+category: api
 order: 10
 ---
 
