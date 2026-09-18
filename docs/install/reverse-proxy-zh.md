@@ -8,20 +8,13 @@ order: 8
 # 反向代理
 
 > Nginx / Caddy / Cloudflare 配置示例。
-> Nginx / Caddy / Cloudflare example configs.
 
 下面示例假设 One API Pro 监听 `127.0.0.1:3000`，对外暴露 `https://api.example.com`。
 所有示例都做了三件事：
 
-The examples below assume One API Pro listens on `127.0.0.1:3000` and is published as `https://api.example.com`.
-All three examples do the same three things:
-
 1. TLS 终止与 HSTS；
-   TLS termination + HSTS.
 2. 流式接口所需的 WebSocket / `Transfer-Encoding: chunked` 透传；
-   Pass-through for streaming endpoints (WebSocket / `Transfer-Encoding: chunked`).
 3. 真实客户端 IP 透传（`X-Real-IP` / `X-Forwarded-For`），便于限流与审计生效。
-   Real client IP forwarding (`X-Real-IP` / `X-Forwarded-For`) so rate limiting and audit logs work.
 
 ## Nginx
 
@@ -78,11 +71,8 @@ server {
 要点 / Highlights:
 
 - `proxy_buffering off` 与 `proxy_cache off` 避免流式响应被缓冲；
-  `proxy_buffering off` + `proxy_cache off` prevent buffering of streaming responses.
 - `Upgrade` / `Connection: upgrade` 头对 `/v1/chat/completions` 流式响应可选启用 WebSocket；
-  The `Upgrade` / `Connection: upgrade` headers are required for WebSocket-style streams.
 - `limit_req_zone` 与 `GLOBAL_*_RATE_LIMIT` 是两层独立限流，建议至少保留 Nginx 一层做 DDoS 兜底；
-  `limit_req_zone` and `GLOBAL_*_RATE_LIMIT` are two independent limits; keep Nginx as the DDoS backstop.
 
 ## Caddy
 
@@ -110,17 +100,11 @@ api.example.com {
 
 `flush_interval -1` 让 Caddy 立即转发每个 chunk，配合流式响应。
 
-`flush_interval -1` flushes each chunk immediately for streaming responses.
-
 ## Cloudflare
 
 将 `api.example.com` 的 DNS 指向 One API Pro 的公网入口（推荐开启 Cloudflare 代理小黄云），并在 **SSL/TLS → Overview** 选择 **Full (Strict)** 模式。
 
-Point `api.example.com` DNS at your One API Pro origin (the orange-cloud proxy is recommended) and pick **Full (Strict)** under **SSL/TLS → Overview**.
-
 Cloudflare 代理已自动注入 `X-Forwarded-For`；Nginx / Caddy 侧需信任 Cloudflare 网段：
-
-Cloudflare already injects `X-Forwarded-For`; tell Nginx / Caddy to trust the Cloudflare ranges:
 
 ```nginx
 # Nginx: set_real_ip_from 信任 Cloudflare 网段
@@ -154,13 +138,10 @@ real_ip_header CF-Connecting-IP;   # 当开启 CF-Connecting-IP 头时
 ```
 
 > Cloudflare 网段会变动，部署前请以 <https://www.cloudflare.com/ips/> 为准。
-> Cloudflare IP ranges change over time; check <https://www.cloudflare.com/ips/> before deploying.
 
-## 多节点负载均衡 / Multi-node load balancing
+## 多节点负载均衡
 
 去中心化集群下推荐 `ip_hash`，将同一客户端锁定到同一节点，避免会话与计划配额被切碎：
-
-For a decentralized cluster, prefer `ip_hash` so the same client is pinned to the same node — this keeps session and plan rate-limits consistent:
 
 ```nginx
 upstream one_api_cluster {
@@ -173,9 +154,9 @@ upstream one_api_cluster {
 ```
 
 > `ip_hash` 是关键 — 它把同一客户端绑定到同一节点，让会话与 Redis 缓存命中一致。
-> `ip_hash` is critical — it pins a client to a single node so plan rate-limits and Redis cache stay consistent.
 
 详见 [多节点部署](/zh/decentralization/deployment)。
 See [Multi-node Deployment](/en/decentralization/deployment) for details.
 
 下一步 / Next: [配置项与环境变量](/zh/install/config) · [Cluster 概览](/zh/decentralization/overview)。
+
