@@ -9,7 +9,7 @@ order: 3
 
 > 套餐（Plan）是订阅的定价与配额载体。实现：`model/plan.go::Plan`、`controller/plan.go`、`web/default-pro/src/views/setting/PlanSetting.vue`。
 
-## 数据模型 / Data model
+## 数据模型
 
 `model.Plan`（`plans` 表）字段：
 
@@ -27,7 +27,7 @@ order: 3
 | `model_limits` | `text` JSON | 各模型窗口配额（见下） |
 | `default_model` | `varchar(100)` | 不在 limits 的请求被路由到该模型；`ValidateDefaultModel` 校验必须在 `model_limits` 存在 |
 
-## `model_limits` 格式 / `model_limits` shape
+## `model_limits` 格式
 
 `model/model_plan.go::ModelLimitRule`：
 
@@ -44,7 +44,7 @@ order: 3
 
 详见 [计费规则](../subscription/billing-rules)。
 
-## features / 权益列表
+## features
 
 `StringSlice` 是 `plan.go` 自定义的 JSON / 文本双向桥接：
 
@@ -52,7 +52,7 @@ order: 3
 - 读库：`Scan` 优先按 JSON 数组解析，失败则按 `\n` 拆分（兼容历史纯文本）
 - nil 时 `MarshalJSON` 输出 `[]` 而非 `null`
 
-## 接口 / Endpoints
+## 接口
 
 | Endpoint | Method | Auth | 说明 |
 |---|---|---|---|
@@ -65,7 +65,7 @@ order: 3
 | `/api/plan/public` | `GET` | Public | 仅 `status=Enabled`，用户侧套餐列表 |
 | `/api/plan/public/:id` | `GET` | Public | 公开详情 |
 
-## 分组绑定 / Group binding
+## 分组绑定
 
 套餐自身不直接绑定到具体用户组；用户组判定由渠道的 `group` 字段控制。套餐的"高级感"主要通过：
 
@@ -73,7 +73,7 @@ order: 3
 - `sort` — 升降级比较（同 `sort` 拒绝；`sort` 小的不能升到 `sort` 大的之上）
 - `default_model` — 当用户请求一个不在 `model_limits` 里的模型时，重写到该模型；为空则直接 422（`PlanQuotaCheck`）
 
-## 与订单 / 订阅的关系 / Plan ↔ Order ↔ Subscription
+## 与订单
 
 - 用户自助下单：`POST /api/order/plan` → `model.CreatePlanOrder` → `buildPayInfo` 返回预支付参数 → 支付回调 → `ActivatePackageByOrder(order, mode)`
 - 管理员 grant：`POST /api/subscription/` → 立即 `ActivatePackageByOrder(order, OrderUpgradeModeStack)`
@@ -81,7 +81,7 @@ order: 3
 
 详见 [套餐升降级](../subscription/upgrade-downgrade) 与 [订阅管理（管理员）](../subscription/admin-guide)。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 页面：`/setting/pricing` → "套餐" Tab（`web/default-pro/src/views/setting/PlanSetting.vue`）。
 
@@ -91,7 +91,7 @@ order: 3
 - 「启用 / 禁用」按钮切换 `status`
 - 删除带二次确认；删除套餐不会回滚已存在的 `user_plans`（历史订阅仍按当时快照走）
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -102,3 +102,4 @@ order: 3
 | 创建订单 | `model/order_payment.go::CreatePlanOrder` |
 | 激活 | `model/order_payment.go::ActivatePackageByOrder` |
 | 升降级 | `model/order_payment.go::CalculateUpgradePrice` |
+
