@@ -1,7 +1,7 @@
 ---
 title: 运营仪表盘
 description: "KPI、图表、用户排行聚合视图。"
-category: admin
+category: misc
 order: 1
 ---
 
