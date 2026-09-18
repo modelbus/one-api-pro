@@ -1,7 +1,7 @@
 ---
 title: Admin Dashboard
 description: "Aggregate KPIs, charts and user leaderboard."
-category: admin
+category: misc
 order: 1
 ---
 
