@@ -1,7 +1,7 @@
 ---
 title: 充值设置
 description: "在线充值的总开关、预设金额、自定义金额 chip、兑换比例与币种。"
-category: admin
+category: pricing
 order: 14
 ---
 
