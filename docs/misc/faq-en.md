@@ -1,7 +1,7 @@
 ---
 title: FAQ
 description: "Common questions for users and admins."
-category: faq
+category: misc
 order: 1
 ---
 
