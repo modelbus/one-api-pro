@@ -1,7 +1,7 @@
 ---
 title: 术语表
 description: "One API Pro 常用术语解释。"
-category: faq
+category: misc
 order: 3
 ---
 
