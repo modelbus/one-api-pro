@@ -1,7 +1,7 @@
 ---
 title: 套餐运营设置
 description: "套餐业务规则：升级模式（叠加 vs 差价）、到期策略等。"
-category: admin
+category: subscription
 order: 13
 ---
 
