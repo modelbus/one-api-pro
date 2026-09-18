@@ -13,7 +13,7 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 
 本文汇总所有**已知 message 文本**，便于前端做 i18n、监控打点或文案兜底。
 
-## 1. 鉴权 / 权限失败
+## 1. 鉴权
 
 | 触发场景 | message 原文 | HTTP | 触发位置 |
 |----------|-------------|------|----------|
@@ -32,14 +32,14 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 
 | 触发场景 | message 原文 | 触发位置 |
 |----------|-------------|----------|
-| JSON / multipart 解析失败 | `无效的参数` | 大量 controller |
+| JSON| `无效的参数` | 大量 controller |
 | 必填 ID 缺失 | `ID不能为空` | `model_price` / `group_price` |
 | 路径上 ID 非数字 / 找不到记录 | `订单不存在` / `套餐不存在` / `<err>` | 多数 controller |
 | `model_name` 为空（模型定价） | `模型名称不能为空` | `controller/model_price.go` |
 | `group_name` 为空（分组折扣） | `分组名称不能为空` | `controller/group_price.go` |
 | `key` 为空（兑换码） | `名称不能为空` | `controller/redemption.go` |
 
-## 3. 用户 / 登录
+## 3. 用户
 
 | 触发场景 | message 原文 | 触发位置 |
 |----------|-------------|----------|
@@ -50,7 +50,7 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 | Root 用户尝试自删 | `不能删除超级管理员` | `controller/user.go` |
 | 推广码已被其他用户占用 | `推广码已被其他用户使用` | `controller/user.go` |
 
-## 4. 套餐 / 订阅 / 升级
+## 4. 套餐
 
 | 触发场景 | message 原文 | 触发位置 |
 |----------|-------------|----------|
@@ -63,7 +63,7 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 | 支付非 pending 订单 | `订单当前不可支付` | `controller/order.go::PayMyOrder` |
 | 访问他人订单 | `无权访问此订单` | `controller/order.go` |
 
-## 5. 充值 / 支付
+## 5. 充值
 
 | 触发场景 | message 原文 | 触发位置 |
 |----------|-------------|----------|
@@ -77,7 +77,7 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 | Mock 通知：状态值非法 | `不支持的状态值（仅支持 1 或 3）` | `controller/payment.go::MockPay` |
 | Mock 通知：激活失败 | `激活失败: <err>` | `controller/payment.go::MockPay` |
 | 自助下单：金额非法 | `amount 或 preset_amount 至少传一个` | `controller/topup.go::CreateTopupOrder` |
-| 自助下单：支付方式不允许 | `自助充值仅支持 wechat / alipay / bank` / `自助下单仅支持 wechat / alipay / bank` | `controller/topup.go`、`controller/order.go` |
+| 自助下单：支付方式不允许 | `自助充值仅支持 wechat| `controller/topup.go`、`controller/order.go` |
 | 充值功能未开启 | `充值功能未开启` | `model/topup.go::CreateTopupOrder` |
 | 自定义金额未开启 | `未开启自定义金额` | `model/topup.go::ResolveTopupAmount` |
 | 自定义金额必须 > 0 | `充值金额必须大于 0` | `model/topup.go::ResolveTopupAmount` |
@@ -87,7 +87,7 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 | 充值设置：兑换比例非法 | `兑换比例必须大于 0` | `model/topup.go::SaveTopupSettings` |
 | 套餐设置：升级模式非法 | `upgrade_mode 必须是 price_diff 或 stack` | `controller/setting_payment.go::PutPlanSettings` |
 
-## 6. 渠道 / 转发
+## 6. 渠道
 
 | 触发场景 | message 原文 | 触发位置 |
 |----------|-------------|----------|
