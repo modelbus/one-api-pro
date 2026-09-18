@@ -61,6 +61,14 @@
 
       <div v-else class="list-body">
         <div class="list-head">
+          <div class="col col-check">
+            <a-checkbox
+              :model-value="isAllSelected"
+              :indeterminate="isPartiallySelected"
+              :disabled="pageItems.length === 0"
+              @change="toggleSelectAll"
+            />
+          </div>
           <div class="col">{{ $t('userPage.colId') }}</div>
           <div class="col">{{ $t('userPage.colUsername') }}</div>
           <div class="col">{{ $t('userPage.colDisplayName') }}</div>
@@ -75,6 +83,20 @@
 
         <a-spin :loading="loading" style="width: 100%">
           <div v-for="u in pageItems" :key="u.id" class="list-row">
+            <div class="col col-check">
+              <a-tooltip
+                v-if="u.role >= 100"
+                :content="$t('userPage.batchRootSkipped')"
+                position="top"
+              >
+                <a-checkbox :model-value="false" disabled />
+              </a-tooltip>
+              <a-checkbox
+                v-else
+                :model-value="isUserSelected(u.username)"
+                @change="(v) => toggleSelectOne(u.username, v)"
+              />
+            </div>
             <div class="col">
               <span class="cell-mono">#{{ u.id }}</span>
             </div>
@@ -188,6 +210,34 @@
       </div>
 
       <div v-if="users.length > 0 && !isSearchMode" class="list-footer">
+        <div class="batch-bar">
+          <span class="batch-count">{{ $t('userPage.selectedCount', { n: selectedUsernames.length }) }}</span>
+          <a-dropdown trigger="click" position="top">
+            <a-button
+              :disabled="selectedUsernames.length === 0 || batchOperating"
+              :loading="batchOperating"
+            >
+              {{ $t('userPage.batchOperate') }}
+              <template #icon><icon-down :size="12" /></template>
+            </a-button>
+            <template #content>
+              <a-doption
+                :disabled="selectedUsernames.length === 0 || batchOperating"
+                @click="runBatch('batch-delete')"
+              >
+                <template #icon><icon-delete /></template>
+                {{ $t('userPage.batchDelete') }}
+              </a-doption>
+              <a-doption
+                :disabled="selectedUsernames.length === 0 || batchOperating"
+                @click="runBatch('batch-disable')"
+              >
+                <template #icon><icon-stop /></template>
+                {{ $t('userPage.batchDisable') }}
+              </a-doption>
+            </template>
+          </a-dropdown>
+        </div>
         <a-pagination
           :current="activePage"
           :total="totalCountForPager"
@@ -291,9 +341,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { IconPlus, IconEdit, IconUserGroup } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconEdit, IconUserGroup, IconDown, IconDelete, IconStop } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/api'
@@ -320,6 +370,63 @@ const pageItems = computed(() => {
   const start = (activePage.value - 1) * pageSize.value
   return users.value.slice(start, start + pageSize.value)
 })
+
+// 批量操作选中状态：跨页持久化
+// Batch selection: persisted across pagination.
+const selectedUsernames = ref([])
+const batchOperating = ref(false)
+
+// 复选框工具函数：基于 username 切分，避免 id 在批量接口里被误用
+// Checkbox helpers: use username as key (matches the batch API contract).
+function isUserSelected(username) {
+  return selectedUsernames.value.includes(username)
+}
+function toggleSelectOne(username, checked) {
+  if (checked) {
+    if (!selectedUsernames.value.includes(username)) {
+      selectedUsernames.value.push(username)
+    }
+  } else {
+    selectedUsernames.value = selectedUsernames.value.filter((n) => n !== username)
+  }
+}
+function toggleSelectAll(checked) {
+  if (checked) {
+    // 仅勾选当前页里可操作的行（root 用户跳过）
+    // Only tick rows that are operable on this page (skip root).
+    const names = pageItems.value
+      .filter((u) => u.role < 100)
+      .map((u) => u.username)
+    const merged = new Set(selectedUsernames.value)
+    names.forEach((n) => merged.add(n))
+    selectedUsernames.value = Array.from(merged)
+  } else {
+    const namesOnPage = new Set(pageItems.value.map((u) => u.username))
+    selectedUsernames.value = selectedUsernames.value.filter((n) => !namesOnPage.has(n))
+  }
+}
+const isAllSelected = computed(() => {
+  const operable = pageItems.value.filter((u) => u.role < 100)
+  if (operable.length === 0) return false
+  return operable.every((u) => selectedUsernames.value.includes(u.username))
+})
+const isPartiallySelected = computed(() => {
+  if (isAllSelected.value) return false
+  return pageItems.value.some((u) => u.role < 100 && selectedUsernames.value.includes(u.username))
+})
+
+// 搜索模式下清空已选，避免跨上下文误操作
+// Reset selection when entering search mode.
+watch(isSearchMode, (val) => {
+  if (val) selectedUsernames.value = []
+})
+
+// 操作成功后保留仍存在的 username，清理已不存在的
+// After a successful operation, prune usernames no longer in the list.
+function pruneSelection() {
+  const live = new Set(users.value.map((u) => u.username))
+  selectedUsernames.value = selectedUsernames.value.filter((n) => live.has(n))
+}
 
 const totalCountForPager = computed(() => {
   if (isReachedEnd.value) return users.value.length
@@ -684,6 +791,64 @@ async function deleteUser(record) {
   }
 }
 
+// 批量操作：复用 /api/user/manage，action = batch-delete / batch-disable
+// Batch: reuses /api/user/manage with action = batch-delete / batch-disable.
+async function runBatch(action) {
+  const usernames = selectedUsernames.value.slice()
+  if (usernames.length === 0) {
+    Message.warning(t('userPage.batchEmptySelection'))
+    return
+  }
+  batchOperating.value = true
+  try {
+    const { data } = await api.post('/api/user/manage', { action, usernames })
+    if (data.success && data.data) {
+      const ok = data.data.succeeded_count || 0
+      const fail = data.data.failed_count || 0
+      if (fail > 0) {
+        // 部分失败：提示并展示失败明细
+        // Partial failure: show summary + per-user failure reasons.
+        const failedMap = data.data.failed || {}
+        const detail = Object.entries(failedMap)
+          .map(([name, reason]) => `${name}: ${reason}`)
+          .join('\n')
+        Message.warning(
+          `${t('userPage.batchPartialResult', { ok, fail })}\n${detail}`,
+          6000,
+        )
+      } else {
+        Message.success(
+          action === 'batch-delete'
+            ? t('userPage.deleteSuccess', { n: ok })
+            : t('userPage.userDisabled', { n: ok }),
+        )
+      }
+      await Promise.all([fetchUsers(), fetchSubscriptions()])
+      // 保留仍存在的 username，清理已不存在的
+      // Keep usernames still in the list, drop missing ones.
+      pruneSelection()
+      if (pageItems.value.length === 0 && activePage.value > 1) {
+        activePage.value -= 1
+      }
+    } else {
+      // 全部失败：data.data 仍包含明细
+      // All failed: data.data still carries the breakdown.
+      const failedMap = (data.data && data.data.failed) || {}
+      const detail = Object.entries(failedMap)
+        .map(([name, reason]) => `${name}: ${reason}`)
+        .join('\n')
+      Message.error(
+        `${data.message || t('userPage.userPageBatchFailed')}${detail ? '\n' + detail : ''}`,
+        6000,
+      )
+    }
+  } catch (e) {
+    Message.error(e.response?.data?.message || e.message || t('userPage.userPageBatchFailed'))
+  } finally {
+    batchOperating.value = false
+  }
+}
+
 function getRoleLabel(role) {
   if (role >= 100) return t('userPage.roleRoot')
   if (role >= 10) return t('userPage.roleAdmin')
@@ -810,7 +975,7 @@ function renderBilling(type) {
 .list-head,
 .list-row {
   display: grid;
-  grid-template-columns: 80px 130px 130px 110px 220px 170px 110px 90px 120px 240px;
+  grid-template-columns: 40px 80px 130px 130px 110px 220px 170px 110px 90px 120px 240px;
   align-items: center;
   padding: 0 20px;
   min-width: max-content;
@@ -1030,9 +1195,27 @@ function renderBilling(type) {
 
 .list-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   padding: 14px 20px;
   border-top: 1px solid var(--color-fill-3);
+}
+
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.batch-count {
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
+.col-check {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-right: 0;
 }
 
 .empty-state {
