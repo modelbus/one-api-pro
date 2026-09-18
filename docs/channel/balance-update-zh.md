@@ -9,7 +9,7 @@ order: 5
 
 > `channels.balance` 字段由 `updateChannelBalance` 在周期任务里按 Provider 调用各自上游接口写入。实现：`controller/channel-billing.go`。
 
-## 字段 / Field
+## 字段
 
 `channels` 表：
 
@@ -18,20 +18,15 @@ order: 5
 | `balance` | `float64` | 余额（美元，按 Provider 自行换算的展示值） |
 | `balance_updated_time` | `int64` | 上次刷新时间（unix 秒）；列表里可据此判定是否过期 |
 
-## 周期任务 / Scheduled refresh
+## 周期任务
 
 `controller/channel-billing.go::AutomaticallyUpdateChannels(frequency int)` 是一个死循环：
 
-```go
-for {
-  time.Sleep(time.Duration(frequency) * time.Minute)
-  _ = updateAllChannelsBalance()
-}
 ```
 
 注意：当前仓库的 `main.go` 没有显式启动该 goroutine；需要外部（运维 cron / 第三方进程 / 后续 PR）以分钟级频率调用 `updateAllChannelsBalance()`，或自行 `go controller.AutomaticallyUpdateChannels(N)`。
 
-## Provider 实现差异 / Per-provider endpoints
+## Provider 实现差异
 
 `updateChannelBalance(channel)` 按 `registry.IDByLegacyType(channel.Type)` 路由到对应实现（`controller/channel-billing.go`）：
 
@@ -52,24 +47,24 @@ for {
 
 所有实现最终都会调 `channel.UpdateBalance(value)` 写回 `channels.balance` 与 `channels.balance_updated_time`。
 
-## 余额归零自动禁用 / Auto-disable on empty
+## 余额归零自动禁用
 
 `updateAllChannelsBalance`（`controller/channel-billing.go:410`）对每个已启用渠道调用 `updateChannelBalance`；若 `balance <= 0`（含上游返回 `err=nil` 但余额非正的情况），调用 `monitor.DisableChannel(id, name, "余额不足")`，状态变为 `ChannelStatusAutoDisabled=3`。
 
 `UpdateAllChannelsBalance` 当前路由是占位实现：直接返回 `success=true`，实际刷新由周期任务驱动。
 
-## 手动刷新 / Manual refresh
+## 手动刷新
 
 | Endpoint | Method | Auth | 行为 |
 |---|---|---|---|
 | `/api/channel/update_balance/:id` | `GET` | Admin | 单条拉取一次并返回最新 `balance` |
 | `/api/channel/update_balance` | `GET` | Admin | 当前为占位实现（立即返回 `success=true`，等待周期任务 / 后续接入） |
 
-## 兜底 / Fallback
+## 兜底
 
 未实现余额接口的 Provider 不会抛错给上层调用方——`updateChannelBalance` 在分支未命中时直接返回 error，但 `updateAllChannelsBalance` 只 `continue`，跳过失败渠道。展示侧会一直保留旧值；管理员可结合 `balance_updated_time` 判定是否长时间未更新。
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -78,3 +73,4 @@ for {
 | 周期任务 | `controller/channel-billing.go::AutomaticallyUpdateChannels` |
 | 写回 | `model/channel.go::UpdateBalance` |
 | 余额归零自动禁用 | `controller/channel-billing.go::updateAllChannelsBalance` |
+
