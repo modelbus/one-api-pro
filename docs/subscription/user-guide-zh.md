@@ -9,7 +9,7 @@ order: 2
 
 > 用户视角仅看到自己的活跃订阅 + 每窗口用量；本页与 [订阅概览](./overview) 互补：概览讲机制，本页讲 UI 字段。
 
-## 接口 / Endpoints
+## 接口
 
 | Endpoint | Method | Auth | 说明 |
 |---|---|---|---|
@@ -62,25 +62,13 @@ order: 2
 
 返回结构：
 
-```jsonc
-{
-  "subscription": { /* user_plan + embedded plan */ },
-  "usage":         [ /* PlanUsage rows */ ],
-  "weighted":      { "period": 42.0, "week": 15.0, "month": 8.0 },   // percentage
-  "limits":        { "gpt-4o": { "request_period": 100, "token_period": 50000, "period_h": 5, ... } },
-  "model_usage":   { "period": [ { "model": "gpt-4o", "requests": 42, "token_percent": 21.5, "request_percent": 42.0 } ], ... },
-  "next_reset":    { "period": 1767225600, "week": 1767225600, "month": 1767225600 },
-  "now":           1735660800,
-  "start_time":    1733059200,
-  "billing_type":  "token"
-}
 ```
 
 - `weighted.*` 是 `model.CalculateWeightedUsage` 输出；以 `QuotaPoolCapacity=100` 为满分；任一窗口值 `>= 100` 时 `CheckPlanQuota` 视为耗尽。
 - `model_usage[*]` 是 `model.CalcModelUsageDetails`：每个 (model, windowType) 给出当前窗口已用 requests / tokens 与对应百分比。
 - `next_reset` 由 `model.CalcNextResetTime` 计算：period 用 `plan.model_limits[<default>].period_h`（默认 5），week=7d，month=30d。
 
-## 前端操作指南 / Frontend Guide
+## 前端操作指南
 
 页面：`/subscription`（`web/default-pro/src/views/subscription/Subscription.vue`）。表格列：
 
@@ -92,7 +80,7 @@ order: 2
 - 空状态文案：管理员与普通用户不同
 - 「添加订阅」按钮仅 `authStore.isAdmin` 可见
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -102,3 +90,4 @@ order: 2
 | 详细用量 | `controller/subscription.go::GetSubscriptionUsage` |
 | 加权计算 | `model/plan_quota.go::CalculateWeightedUsage` |
 | 下次重置时间 | `model/plan_quota.go::CalcNextResetTime` |
+
