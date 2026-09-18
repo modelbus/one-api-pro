@@ -1,7 +1,7 @@
 ---
 title: 故障排查
 description: "渠道 401、计费异常、订单不激活等问题的定位。"
-category: faq
+category: misc
 order: 2
 ---
 
