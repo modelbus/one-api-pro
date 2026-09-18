@@ -9,7 +9,7 @@ order: 4
 
 > 测试入口：`GET /api/channel/test/:id?model=`（单渠道）、`POST /api/channel/test?scope=all`（批量）。实现：`controller/channel-test.go`。
 
-## 单渠道测试 / Single channel
+## 单渠道测试
 
 请求：
 
@@ -31,18 +31,11 @@ order: 4
 
 返回结构：
 
-```json
-{
-  "success": true,
-  "message": "gpt-4o",
-  "time": 0.842,
-  "modelName": "gpt-4o"
-}
 ```
 
 失败时 `success=false`，`message` 携带上游 HTTP 状态码与错误内容。
 
-## 批量测试 / Batch test
+## 批量测试
 
 请求：
 
@@ -64,19 +57,17 @@ order: 4
 
 返回 `success=true` 表示测试已启动（实际结果异步落到 `channels.response_time` 与 `channels.last_error`）。
 
-## 周期自动测试 / Scheduled test
+## 周期自动测试
 
 `main.go:88` 在环境变量 `CHANNEL_TEST_FREQUENCY`（分钟）非空时启动 `controller.AutomaticallyTestChannels`，每 N 分钟跑一次 `testChannels(ctx, false, "all")`。
 
-## 测试 Prompt / Test prompt
+## 测试 Prompt
 
 全局可配：`config.TestPrompt`（环境变量 `TEST_PROMPT`）。生产环境建议改成能稳定区分模型的短句，例如：
 
 ```
-TEST_PROMPT="Output only your specific model name with no additional text."
-```
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -86,3 +77,4 @@ TEST_PROMPT="Output only your specific model name with no additional text."
 | 启用 / 禁用判定 | `monitor/manage.go::ShouldDisableChannel` / `ShouldEnableChannel` |
 | 测试请求构造 | `controller/channel-test.go::buildTestRequest` |
 | 测试日志 | `model.RecordTestLog` |
+
