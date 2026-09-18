@@ -1,7 +1,7 @@
 ---
 title: Model Price
 description: "Admin CRUD for model prices; also the read-only options endpoint used by the channel-edit dropdown."
-category: admin
+category: pricing
 order: 3
 ---
 
