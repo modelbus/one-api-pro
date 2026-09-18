@@ -9,7 +9,7 @@ order: 1
 
 > One API Pro 同时支持三种计费通道：订阅（plan，按限额与窗口扣减）、按量计费（pay-as-you-go，从用户 `quota` 扣减）、充值额度（topup，也是用户 `quota`）。三者由中间件统一判定后扣减。
 
-## 三种计费 / Three billing modes
+## 三种计费
 
 | 模式 | 来源 | 落库 | 扣减点 |
 |---|---|---|---|
@@ -17,7 +17,7 @@ order: 1
 | 按量计费 | 用户直接调用 `/v1/chat/completions` 且无有效订阅 | `tokens.quota` + `users.quota` | `model.PreConsumeTokenQuota` 预扣 → 上游返回 → `PostConsumeTokenQuota` 结算 |
 | 充值 | 兑换码 / 充值订单 / 管理员手动加 | `users.quota` 直接累加 | `model.IncreaseUserQuota`（不参与请求时的扣减判定，仅提供余额） |
 
-## 扣减顺序 / Deduction order
+## 扣减顺序
 
 请求到达 relay 中间件链时：
 
@@ -26,13 +26,13 @@ order: 1
    - 若 `meta.PlanId > 0`：把 `requests`、`prompt_tokens`、`completion_tokens`、`cached_tokens` 累加到该 plan 的 `plan_usages`，并把预扣的 quota 退回 token（订阅用户不消耗 `quota`）。
    - 否则：按 `priceResult.billing_type` 计算应扣 `quota` 并 `PostConsumeTokenQuota` 结算；非订阅用户从 `users.quota` 中扣减。
 
-## 订阅与 topup 的关系 / Plan vs topup
+## 订阅与 topup 的关系
 
 - 订阅有自己的窗口配额：每个 plan 在 `plan.model_limits` 中定义模型级 `request_period/week/month` / `token_period/week/month`。**不消耗** `users.quota`。
 - `topup`（充值额度）增加的是 `users.quota`，是按量计费时的真实余额；管理员手动加 quota（`/api/user/topup` legacy）或管理员 grant 走订单中心（`OrderTypeTopup=2`）也是同一条路径。
 - 一个用户可以同时有多个订阅（叠加模式 `OrderUpgradeModeStack`），订阅之间按 `end_time` 升序依次使用；topup 与订阅独立，订阅不消耗 topup 余额。
 
-## 计划升级 / Upgrade paths
+## 计划升级
 
 当用户已有活跃订阅时再次下单时，根据系统设置 `plan.upgrade_mode` 走两条路径：
 
@@ -41,11 +41,11 @@ order: 1
 
 详见 [套餐升降级](./upgrade-downgrade)。
 
-## 过期 / Expiry
+## 过期
 
 `model.ExpireUserPlans`（周期任务）把 `status=1 AND end_time <= now` 的行翻成 `UserPlanStatusExpired=0`。到期后该订阅不再出现在 `CheckPlanQuota` 结果中，用户请求走按量计费。
 
-## 实现位置 / Implementation Pointers
+## 实现位置
 
 | 关注点 | 位置 |
 |---|---|
@@ -55,3 +55,4 @@ order: 1
 | 计费结算 | `relay/handler/helper.go::postConsumeQuota` |
 | 升级 / 叠加 | `model/order_payment.go::CreatePlanOrder` / `ActivatePackageByOrder` |
 | 用户充值 | `model/topup.go::CreateTopupOrder` / `ActivateTopupByOrder` |
+
