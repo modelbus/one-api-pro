@@ -1,7 +1,7 @@
 ---
 title: 订阅管理
 description: "给指定用户开通 / 调整 / 撤销套餐订阅（user_plans）。"
-category: admin
+category: subscription
 order: 6
 ---
 
