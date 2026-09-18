@@ -90,11 +90,6 @@ features:
     <h3>去中心化</h3>
     <p>Cluster 多节点管理、配置同步与健康检查。</p>
   </a>
-  <a class="category-card" href="/admin/admin-dashboard">
-    <span class="category-icon">📊</span>
-    <h3>后台管理</h3>
-    <p>运营仪表盘、用户、订单、日志与系统设置。</p>
-  </a>
   <a class="category-card" href="/api/README">
     <span class="category-icon">🔗</span>
     <h3>API 参考</h3>
@@ -110,9 +105,9 @@ features:
     <h3>贡献</h3>
     <p>开发环境、编码规范、提交与发版流程。</p>
   </a>
-  <a class="category-card" href="/faq/faq">
+  <a class="category-card" href="/misc/faq">
     <span class="category-icon">❓</span>
     <h3>其他</h3>
-    <p>常见问题、故障排查与术语表。</p>
+    <p>运营仪表盘、日志、系统设置、常见问题与术语表。</p>
   </a>
 </div>
