@@ -13,7 +13,8 @@ const CATEGORY_LABELS = {
   redemption: ['兑换码', 'Redemption'],
   pricing: ['定价', 'Pricing'],
   decentralization: ['去中心化', 'Decentralization'],
-  api: ['API 参考', 'API Reference'],
+  schema: ['数据结构', 'Schema'],
+  api: ['API', 'API'],
   changelog: ['更新日志', 'Changelog'],
   contribute: ['贡献', 'Contribute'],
   misc: ['其他', 'Misc'],
@@ -91,6 +92,22 @@ const PAGES = {
     'node-health': ['节点健康', 'Node Health'],
     deployment: ['多节点部署', 'Multi-node Deployment'],
     'cluster-settings': ['集群设置', 'Cluster Settings'],
+  },
+  schema: {
+    overview: ['数据结构总览', 'Schema Overview'],
+    user: ['用户', 'User'],
+    token: ['访问令牌', 'Access Token'],
+    channel: ['渠道', 'Channel'],
+    'model-price': ['模型定价', 'Model Price'],
+    'group-price': ['分组折扣', 'Group Price'],
+    plan: ['套餐', 'Plan'],
+    subscription: ['订阅', 'Subscription'],
+    order: ['订单', 'Order'],
+    topup: ['充值', 'Topup'],
+    redemption: ['兑换码', 'Redemption'],
+    'cluster-node': ['集群节点', 'Cluster Node'],
+    log: ['调用日志', 'Log'],
+    option: ['系统设置', 'Option'],
   },
   api: {
     README: ['总览与鉴权', 'Overview & Auth'],
@@ -175,30 +192,42 @@ function buildSidebar(lang) {
 
 function buildNav(lang) {
   const prefix = lang === 'zh' ? '' : '/en'
-  if (lang === 'zh') {
-    return [
-      { text: '快速开始', link: '/start/overview' },
-      { text: '安装', link: '/install/docker-deploy' },
-      { text: '渠道', link: '/channel/overview' },
-      { text: '订阅', link: '/subscription/overview' },
-      { text: '定价', link: '/pricing/model-price' },
-      { text: 'API', link: '/api/README' },
-      { text: '更新日志', link: '/changelog/index' },
-    ]
-  }
-  return [
-    { text: 'Start', link: '/en/start/overview' },
-    { text: 'Install', link: '/en/install/docker-deploy' },
-    { text: 'Channel', link: '/en/channel/overview' },
-    { text: 'Subscription', link: '/en/subscription/overview' },
-    { text: 'Pricing', link: '/en/pricing/model-price' },
-    { text: 'API', link: '/en/api/README' },
-    { text: 'Changelog', link: '/en/changelog/index' },
-  ]
+  const items = lang === 'zh'
+    ? [
+        { text: '快速开始', link: '/start/overview' },
+        { text: '安装', link: '/install/docker-deploy' },
+        { text: '用户', link: '/user/registration' },
+        { text: '渠道', link: '/channel/overview' },
+        { text: '订阅', link: '/subscription/overview' },
+        { text: '兑换码', link: '/redemption/overview' },
+        { text: '定价', link: '/pricing/model-price' },
+        { text: '去中心化', link: '/decentralization/overview' },
+        { text: '数据结构', link: '/schema/overview' },
+        { text: 'API', link: '/api/README' },
+        { text: '更新日志', link: '/changelog/index' },
+        { text: '贡献', link: '/contribute/dev-setup' },
+        { text: '其他', link: '/misc/faq' },
+      ]
+    : [
+        { text: 'Start', link: '/en/start/overview' },
+        { text: 'Install', link: '/en/install/docker-deploy' },
+        { text: 'User', link: '/en/user/registration' },
+        { text: 'Channel', link: '/en/channel/overview' },
+        { text: 'Subscription', link: '/en/subscription/overview' },
+        { text: 'Redemption', link: '/en/redemption/overview' },
+        { text: 'Pricing', link: '/en/pricing/model-price' },
+        { text: 'Cluster', link: '/en/decentralization/overview' },
+        { text: 'Schema', link: '/en/schema/overview' },
+        { text: 'API', link: '/en/api/README' },
+        { text: 'Changelog', link: '/en/changelog/index' },
+        { text: 'Contribute', link: '/en/contribute/dev-setup' },
+        { text: 'Misc', link: '/en/misc/faq' },
+      ]
+  return items
 }
 
 export default defineConfig({
-  title: 'One API Pro',
+  title: 'One API Pro Docs',
   description: 'LLM 聚合网关与商业化平台 · 文档',
   srcDir: 'docs',
   cleanUrls: true,
@@ -209,7 +238,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#6d5efc' }],
     [
       'meta',
-      { property: 'og:title', content: 'One API Pro 文档' },
+      { property: 'og:title', content: 'One API Pro Docs' },
     ],
     [
       'meta',
@@ -232,6 +261,7 @@ export default defineConfig({
       lang: 'zh-CN',
       link: '/',
       themeConfig: {
+        logo: { src: '/logo.png', alt: 'One API Pro' },
         nav: buildNav('zh'),
         sidebar: buildSidebar('zh'),
         outline: { level: [2, 3], label: '本页目录' },
@@ -252,6 +282,7 @@ export default defineConfig({
       lang: 'en-US',
       link: '/en/',
       themeConfig: {
+        logo: { src: '/logo.png', alt: 'One API Pro' },
         nav: buildNav('en'),
         sidebar: buildSidebar('en'),
         outline: { level: [2, 3], label: 'On this page' },
