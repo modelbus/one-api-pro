@@ -1,64 +1,75 @@
 ---
 title: 兑换码概览
-description: "兑换码的类型、用途与典型场景。"
+description: 兑换码是什么、怎么发、用户怎么用。
 category: redemption
 order: 1
 ---
 
 # 兑换码概览
 
-> 兑换码是 One API Pro 中"按码发放额度"的载体：管理员批量生成，外部渠道（推广、合作、活动）发放给终端用户，用户在 `/redeem` 输入后到账 `quota`。
+> 管理员批量生成 → 发给用户 → 用户在 `/redeem` 输入 → 额度到账。
 
-## 类型
+## 兑换码是什么
 
-数据模型 `model.Redemption`（`redemptions` 表）字段 `key` 是 32 位 UUID 字符串，唯一索引。
+一张「兑换凭证」。形如 `ABCD-1234-EFGH-5678-...`（24 位）。
 
-| 状态 | 常量 | 含义 |
+每个码绑定：
+
+- 一个额度值（直接给账户余额）
+- 或一个套餐（兑换后激活该套餐）
+- 可兑换次数（默认 1 次）
+- 过期时间
+
+## 典型场景
+
+- **拉新活动**：注册后给新用户发一个 50 元兑换码
+- **社群福利**：在社群发若干张码
+- **客服补偿**：用户遇到问题，给一张小额补偿码
+- **企业合作**：给合作方批量兑换码，他们分发给自己的客户
+
+## 三种兑换码
+
+后台创建时选一种：
+
+| 类型 | 用户兑换后得到 |
+|---|---|
+| **额度码** | [用户余额](../schema/redemption) 直接 +N（按 `QuotaPerUnit` 换算） |
+| **套餐码** | 激活 [Subscription](../schema/subscription)，按该套餐的 duration_days 算到期时间 |
+| **限免码** | 内部用的「限时免费」标记（开发中） |
+
+## 完整生命周期
+
+```
+管理员后台创建
+    │
+    ▼
+批量导出（CSV / TXT）
+    │
+    ▼
+发给用户（社群 / 邮件 / 活动）
+    │
+    ▼
+用户在前台 /redeem 输入
+    │
+    ▼
+校验：是否过期 / 已用完 / 失效
+    │
+    ▼
+到账：余额 +N 或 激活订阅
+```
+
+## 跟其他方式的区别
+
+| 方式 | 用户得到什么 | 由谁发 |
 |---|---|---|
-| 1 | `RedemptionCodeStatusEnabled` | 已启用，可被兑换 |
-| 2 | `RedemptionCodeStatusDisabled` | 已停用（管理员手动） |
-| 3 | `RedemptionCodeStatusUsed` | 已使用（用户兑换后由事务翻转） |
+| 兑换码 | 余额 / 订阅 | 管理员后台 |
+| 套餐订单 | 订阅 | 用户自己下单支付 |
+| 充值 | 余额 | 用户自己下单支付 |
 
-> 状态值刻意避开 `0`：默认值不能落在 "已使用" 语义上。
+兑换码适合「批量发放」场景；订单 / 充值适合「用户主动购买」。
 
-`is_count` 字段（`Count`，落库时 `gorm:"-:all"` 不持久化）只在批量生成时使用：服务端按 `count` 循环生成对应行，每条独立 UUID。
+## 相关
 
-## 用途
-
-| 场景 | 用法 |
-|---|---|
-| 推广 / 邀请 | 一码一额，限定批次名（`name`）；用户自助兑换 |
-| 充值补偿 | 管理员手动发码给投诉 / 故障用户 |
-| 营销活动 | 批量生成（`count ≤ 100/批`），按渠道发放 |
-
-> 兑换码只是把 `users.quota` 加上对应额度，**不会** 创建或影响 `user_plans`，与套餐正交。
-
-## 单次 vs 多次
-
-`redemptions` 表本身每条对应一个唯一 UUID：单条被兑换即置为 `Used=3`，是天然的一次性码。多次使用需要管理员生成多条（同 `name` 不同 `key`）。没有"一码多次"语义；如需分发额度到多用户，按数量生成即可。
-
-## 兑换成功后的副作用
-
-`model.Redeem(ctx, key, userId)`（`model/redemption.go:55`）在事务内：
-
-1. `SELECT … FOR UPDATE` 锁住 `redemptions.key` 行
-2. 校验 `status == Enabled`；否则返回 `该兑换码已被使用`
-3. `UPDATE users SET quota = quota + redemptions.quota`
-4. `redemption.RedeemedTime = now`，`status = Used`，`Save`
-5. 写一条 `LogTypeTopup` 日志：`通过兑换码充值 <LogQuota(redemption.Quota)>`
-
-事务提交后才会对用户可见；任一步骤失败整笔回滚，避免并发兑换与重复到账。
-
-## 与充值订单的关系
-
-兑换码到账额度走的是 `users.quota += redemptions.quota`（`Redeem`），与 `OrderTypeTopup=2` 的订单激活路径（`model.ActivateTopupByOrder` → `IncreaseUserQuota`）最终都把额度累加到 `users.quota`。两者可独立使用；订单可生成对账所需的金额 / 兑换率信息，兑换码仅含纯 `quota`。
-
-## 实现位置
-
-| 关注点 | 位置 |
-|---|---|
-| 数据模型 | `model/redemption.go::Redemption` |
-| 兑换事务 | `model/redemption.go::Redeem` |
-| CRUD | `controller/redemption.go` |
-| 用户侧入口 | `controller/user.go::TopUp`（`POST /api/user/topup`） |
-
+- [兑换码（数据结构）](../schema/redemption)
+- [兑换码管理（管理员）](./admin-guide)
+- [兑换码使用（用户）](./user-guide)
