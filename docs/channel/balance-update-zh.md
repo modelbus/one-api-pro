@@ -1,76 +1,48 @@
 ---
-title: 余额刷新
-description: "渠道余额的周期性拉取、Provider 实现差异与兜底计数。"
+title: 余额自动更新
+description: 让系统定时从上游拉取账户余额并显示在渠道列表里。
 category: channel
 order: 5
 ---
 
-# 余额刷新
+# 余额自动更新
 
-> `channels.balance` 字段由 `updateChannelBalance` 在周期任务里按 Provider 调用各自上游接口写入。实现：`controller/channel-billing.go`。
+## 用来干什么
 
-## 字段
+让 One API Pro 定时去问上游「你账户里还剩多少钱」，并把数字展示在渠道列表里。这样你不用挨个登 Provider 后台查余额。
 
-`channels` 表：
+## 哪些 Provider 支持
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `balance` | `float64` | 余额（美元，按 Provider 自行换算的展示值） |
-| `balance_updated_time` | `int64` | 上次刷新时间（unix 秒）；列表里可据此判定是否过期 |
+支持上游暴露「账户余额查询接口」的 Provider：
 
-## 周期任务
+- OpenAI（`Usage` API）
+- Azure（订阅 API）
+- 智谱、DeepSeek 等大多数国内服务
 
-`controller/channel-billing.go::AutomaticallyUpdateChannels(frequency int)` 是一个死循环：
+不支持的渠道会显示「N/A」，不影响使用。
 
-```
+## 怎么开启
 
-注意：当前仓库的 `main.go` 没有显式启动该 goroutine；需要外部（运维 cron / 第三方进程 / 后续 PR）以分钟级频率调用 `updateAllChannelsBalance()`，或自行 `go controller.AutomaticallyUpdateChannels(N)`。
+后台 → 渠道 → 某条渠道详情页 → 底部「自动更新余额」开关 → 选间隔（默认 1 小时）→ 保存。
 
-## Provider 实现差异
+## 展示位置
 
-`updateChannelBalance(channel)` 按 `registry.IDByLegacyType(channel.Type)` 路由到对应实现（`controller/channel-billing.go`）：
+后台 → 渠道列表：每条渠道旁边有一个「余额」列。
 
-| Provider | 端点 / 公式 |
-|---|---|
-| `openai` | `GET {base_url}/v1/dashboard/billing/subscription` + `usage`；`balance = HardLimitUSD - usage.TotalUsage / 100` |
-| `azure` | 暂未实现，返回错误 `尚未实现` |
-| `custom`（任意 OpenAI 兼容） | 同 `openai`，使用 `channel.base_url` |
-| `closeai` | `GET {base_url}/dashboard/billing/credit_grants` |
-| `openai-sb` | `GET https://api.openai-sb.com/sb-api/user/status?api_key=...`，解析 `data.credit` |
-| `aiproxy` | `GET https://aiproxy.io/api/report/getUserOverview`，解析 `data.totalPoints` |
-| `api2gpt` | `GET https://api.api2gpt.com/dashboard/billing/credit_grants` |
-| `aigc2d` | `GET https://api.aigc2d.com/dashboard/billing/credit_grants` |
-| `siliconflow` | `GET https://api.siliconflow.cn/v1/user/info`，解析 `data.totalBalance` |
-| `deepseek` | `GET https://api.deepseek.com/user/balance`，取 `Currency=CNY` 的 `TotalBalance` |
-| `openrouter` | `GET https://openrouter.ai/api/v1/credits`，`balance = total_credits - total_usage` |
-| 其它 | 返回 `尚未实现` |
+- 绿色：充足
+- 黄色：低（< 阈值）
+- 红色：几乎用完
 
-所有实现最终都会调 `channel.UpdateBalance(value)` 写回 `channels.balance` 与 `channels.balance_updated_time`。
+阈值在「系统设置 → 余额提醒阈值」里配。
 
-## 余额归零自动禁用
+## 为什么不显示
 
-`updateAllChannelsBalance`（`controller/channel-billing.go:410`）对每个已启用渠道调用 `updateChannelBalance`；若 `balance <= 0`（含上游返回 `err=nil` 但余额非正的情况），调用 `monitor.DisableChannel(id, name, "余额不足")`，状态变为 `ChannelStatusAutoDisabled=3`。
+- 该 Provider 没有余额查询接口
+- 凭证错或失效（同样会让 [渠道测试] 失败）
+- 网络问题（国内访问某些 Provider 不稳定）
+- 没启用「自动更新余额」开关
 
-`UpdateAllChannelsBalance` 当前路由是占位实现：直接返回 `success=true`，实际刷新由周期任务驱动。
+## 相关文档
 
-## 手动刷新
-
-| Endpoint | Method | Auth | 行为 |
-|---|---|---|---|
-| `/api/channel/update_balance/:id` | `GET` | Admin | 单条拉取一次并返回最新 `balance` |
-| `/api/channel/update_balance` | `GET` | Admin | 当前为占位实现（立即返回 `success=true`，等待周期任务 / 后续接入） |
-
-## 兜底
-
-未实现余额接口的 Provider 不会抛错给上层调用方——`updateChannelBalance` 在分支未命中时直接返回 error，但 `updateAllChannelsBalance` 只 `continue`，跳过失败渠道。展示侧会一直保留旧值；管理员可结合 `balance_updated_time` 判定是否长时间未更新。
-
-## 实现位置
-
-| 关注点 | 位置 |
-|---|---|
-| 单 Provider 余额拉取 | `controller/channel-billing.go::updateChannelXxxBalance` |
-| 入口路由 | `controller/channel-billing.go::updateChannelBalance` |
-| 周期任务 | `controller/channel-billing.go::AutomaticallyUpdateChannels` |
-| 写回 | `model/channel.go::UpdateBalance` |
-| 余额归零自动禁用 | `controller/channel-billing.go::updateAllChannelsBalance` |
-
+- [渠道概览](./overview)
+- [渠道连通性测试](./channel-test)
