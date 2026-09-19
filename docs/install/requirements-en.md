@@ -1,63 +1,92 @@
 ---
-title: Requirements
-description: "Hardware, OS, ports, supported databases and dependencies."
+title: System Requirements
+description: Hardware, OS, ports, and database needed to run One API Pro.
 category: install
 order: 1
 ---
 
-# Requirements
+# System Requirements
 
-> Hardware, OS, ports, supported databases and dependencies.
+> Pre-flight checklist before you deploy.
 
-## Hardware & OS
+## Hardware
 
-One API Pro ships as a single Go binary with an embedded SQLite driver and Redis client — no extra system services are required to start.
+| Scale | Recommended |
+|---|---|
+| Trial / personal | 1 vCPU / 1 GB RAM / 5 GB disk |
+| Small team (< 100 users) | 2 vCPU / 4 GB RAM / 20 GB SSD |
+| Production (hundreds–thousands of users) | 4+ vCPU / 8+ GB RAM / 50 GB+ SSD (depends on log retention) |
 
-| Resource | Minimum | Recommended |
-| --- | --- | --- |
-| CPU | 1 vCPU | 2+ vCPU |
-| RAM | 512 MB | 1 GB+ |
-| Disk | 1 GB | 10 GB+ (leave headroom for logs & cache) |
-| OS | Linux, macOS, Windows | Linux (recommended for production) |
+One API Pro is a single Go binary. CPU scales with request forwarding; memory with log cache and concurrent in-flight calls.
 
-The Docker image is based on `alpine:latest`; native binaries are published for Linux (amd64 / arm64), macOS (amd64 / arm64) and Windows (amd64).
+## OS
+
+Linux (Ubuntu 22.04 / Debian 12 / CentOS Stream 9), macOS 12+, Windows 10+. Docker ignores this.
 
 ## Ports
 
-The service listens on **`3000`** by default (override with `PORT` or `--port`).
-The container `EXPOSE`s `3000`; when exposing 443 through a reverse proxy, enable WebSocket upgrade for streaming endpoints.
+| Port | Purpose | Public? |
+|---|---|---|
+| `3000` | HTTP main port (admin + `/api/*` + `/v1/*`) | **Yes** |
+| inter-node | `CLUSTER_NODE_PORT` (default `3000`) | Only for multi-node |
 
-## Databases
+## Database
 
-When `SQL_DSN` is unset, **SQLite** is used (default file `one-api-pro.db`; in the container `/app/data/one-api-pro.db`). Once set, the service auto-switches to:
+Pick one:
 
-- **MySQL** — `SQL_DSN=root:123456@tcp(localhost:3306)/oneapi`. Create the empty `oneapi` database up front; tables are created automatically by `AutoMigrate`.
-- **PostgreSQL** — `SQL_DSN=postgres://postgres:123456@localhost:5432/oneapi`.
+### Embedded SQLite (default)
 
-`LOG_SQL_DSN` (optional) splits the `logs` table onto a dedicated database. MySQL or PostgreSQL is recommended because the `logs` table is write-heavy and SQLite can hit `SQLITE_BUSY` under concurrency.
+Zero config. Good for single instance, < 1000 users, < 50 QPS.
 
-In cluster mode every node must run its **own** MySQL instance (see `decentralization/deployment` for the rationale around the instance-level `auto_increment_offset`).
+- DB lives at `/app/data/one-api.db` inside the container.
+- Backup = copy that file.
 
-## Redis (Optional)
+### External MySQL (production)
 
-The service runs without Redis (in-process cache + direct DB read). Setting `REDIS_CONN_STRING` activates a distributed cache layer that can offload DB reads; if the DB is already low-latency, enabling Redis may introduce short-term staleness — choose based on your trade-off.
+For multi-instance / high QPS / large data.
 
-Supports single-node, Sentinel (set `REDIS_MASTER_NAME`) and Cluster mode (comma-separated nodes + `REDIS_PASSWORD`).
+- MySQL ≥ 5.7 / 8.0
+- Create the empty DB + user in advance.
+- Connection string goes in env `SQL_DSN`.
 
-## Network
+> Decide before going live. Migrating SQLite → MySQL later requires a downtime window.
 
-Since v0.0.21 the tiktoken encodings for common models are **embedded** into the binary; startup no longer requires network access by default. An HTTP download fallback is only triggered when the user supplies a custom encoding via `TIKTOKEN_CACHE_DIR` whose URL is not in the embedded allow-list.
+## Redis (optional but recommended)
 
-Outbound traffic for payment callbacks and upstream relays still requires network; whitelist accordingly for air-gapped deployments.
+Multi-node cluster **requires** Redis:
 
-## Dev Dependencies
+- Redis ≥ 6.0
+- Used for inter-node state and rate limiting.
+- Single instance can skip Redis.
 
-Toolchain required to build the Go backend and the web theme, matching `AGENTS.md §2`:
+## Reverse proxy (recommended in production)
 
-| Tool | Version |
-| --- | --- |
-| Go | 1.25.0 (declared in `go.mod`; toolchain auto-fetched) |
-| Node.js | 22+ |
-| pnpm | 9 (`pnpm-lock.yaml` is committed) |
+Don't expose the container port directly. Put something in front:
 
-Next: [Docker Deploy](/en/install/docker-deploy) · [Docker Compose](/en/install/docker-compose) · [Source Build](/en/install/source-build).
+- Nginx / Caddy / Cloudflare.
+- Handles TLS termination + HSTS + real client IP.
+- See [Reverse Proxy](./reverse-proxy).
+
+## Other
+
+- **Domain**: a real domain + TLS certificate.
+- **SMTP** (optional): for password reset / redemption / order mails.
+- **Payment channels**: to enable top-up / plan checkout, configure [Payment Settings](../pricing/payment-settings) first.
+
+## Pre-deploy checklist
+
+- [ ] Server ≥ 2 vCPU / 4 GB RAM
+- [ ] OS Linux / macOS / Windows
+- [ ] Port 80/443 (reverse proxy) or 3000 (direct) reachable
+- [ ] Database: SQLite default works; or MySQL ≥ 5.7
+- [ ] Redis ≥ 6.0 (multi-node only)
+- [ ] Reverse proxy (Nginx / Caddy / Cloudflare)
+- [ ] Domain + TLS
+- [ ] (Optional) SMTP
+- [ ] (Optional) Payment channel credentials
+
+## Next
+
+- Fastest start → [Docker Deploy](./docker-deploy)
+- Production → [Docker Compose](./docker-compose)
+- Build from source → [Source Build](./source-build)
