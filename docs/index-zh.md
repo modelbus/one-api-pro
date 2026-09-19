@@ -4,8 +4,8 @@ title: One API Pro
 titleTemplate: LLM 聚合网关与商业化平台
 hero:
   name: One API Pro
-  text: LLM 聚合网关与商业化平台
-  tagline: 统一接入 40+ 主流大模型，内置渠道路由、订阅计费、充值支付与多节点集群，开箱即用。
+  text: 统一接入大模型 · 一站式商业化
+  tagline: 40+ 主流大模型 · 渠道路由 · 订阅与充值 · 多节点集群
   image:
     src: /logo.png
     alt: One API Pro
@@ -14,11 +14,11 @@ hero:
       text: 快速开始
       link: /start/overview
     - theme: alt
-      text: API 参考
-      link: /api/README
+      text: 数据结构
+      link: /schema/overview
     - theme: alt
-      text: 更新日志
-      link: /changelog/index
+      text: API
+      link: /api/README
 features:
   - icon: 🚀
     title: 40+ 模型渠道
@@ -46,8 +46,8 @@ features:
     details: 完整接口文档与一键 Docker 部署，二次开发与私有化落地成本极低。
 ---
 
-<h2 class="home-section-title">文档分类</h2>
-<p class="home-section-subtitle">按场景选择入口，或使用顶部导航直接跳转。</p>
+<h2 class="home-section-title">从场景入手</h2>
+<p class="home-section-subtitle">按角色或功能选择入口，每个卡片直达对应分类。</p>
 
 <div class="category-grid">
   <a class="category-card" href="/start/overview">
@@ -90,9 +90,14 @@ features:
     <h3>去中心化</h3>
     <p>Cluster 多节点管理、配置同步与健康检查。</p>
   </a>
+  <a class="category-card" href="/schema/overview">
+    <span class="category-icon">🗂️</span>
+    <h3>数据结构</h3>
+    <p>用户、渠道、套餐、订单等持久化数据的含义与关系。</p>
+  </a>
   <a class="category-card" href="/api/README">
     <span class="category-icon">🔗</span>
-    <h3>API 参考</h3>
+    <h3>API</h3>
     <p>鉴权、全部 <code>/api/*</code> 与 OpenAI 兼容接口。</p>
   </a>
   <a class="category-card" href="/changelog/index">
@@ -111,4 +116,3 @@ features:
     <p>运营仪表盘、日志、系统设置、常见问题与术语表。</p>
   </a>
 </div>
-
