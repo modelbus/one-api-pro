@@ -1,78 +1,77 @@
 ---
 title: 管理员手动充值
-description: "管理员直接给用户加额度；以及管理员视角的充值订单查询。"
+description: 管理员如何直接给用户加额度（绕过支付通道）。
 category: pricing
 order: 8
 ---
 
 # 管理员手动充值
 
-> 绕过支付通道，直接给指定用户加 `quota`（走 `model.IncreaseUserQuota`），同时落 `LogTypeTopup` 审计日志。
+> 客服补偿、活动赠送、对账修复 —— 看这里。
 
-入口路由：`/admin/orders`（管理员订单中心）内的「标记已付」流程会创建 `OrderTypeTopup` 订单并即时激活。
-另外有一个独立入口（兼容旧版） `POST /api/user/topup`，由 `controller/user.go::AdminTopUp` 提供；新代码建议走订单中心的「标记已付」流程以保留审计行。
+## 两种方式
 
-## 接口
+### 方式 1：通过订单中心（推荐，有审计）
 
-| Endpoint | Method | 鉴权 | 说明 |
-|---|---|---|---|
-| `/api/user/topup` | `POST` | Admin | 直接累加 user.quota（旧路径，保留兼容） |
-| `/api/topup/order` | `POST` | User | 用户自助充值下单（需要 `topup.enabled=true`） |
-| `/api/order/:id` | `PUT` | Admin | 标记已付（管理员支付渠道，详见 orders 文档） |
-| `/api/order/` | `GET` | Admin | 在订单中心按 `type=2` 过滤充值订单 |
+1. 后台 → 订单管理 → 新建订单（选「充值」类型）
+2. 线下转账（银行转账）或管理员手动确认
+3. 行内「标记已付」→ 系统创建充值订单 + 加额度 + 写审计日志
 
-> 用户自助入口请参考用户侧文档；本页只覆盖管理员视角。
+**优点**：每笔充值都有 `Order` 记录，便于对账。
 
-## POST `/api/user/topup`（兼容路径）
+### 方式 2：直接加额度（兼容旧版）
 
-```json
-{ "user_id": 42, "quota": 100000, "remark": "客服补偿" }
-```
-
-- 调 `model.IncreaseUserQuota(user_id, quota)` 直接累加（带 Redis 缓存失效）。
-- `remark` 为空时自动生成 `通过 API 充值 <LogQuota(quota)>`。
-- 写一条 `LogTypeTopup` 审计日志（`model.RecordTopupLog`）。
-
-> 没有 `Order` 行；若需要审计追溯，请改用 `POST /api/order` + 标记已付的流程（创建 `Order` 行再激活）。
-
-## 通过「订单中心」手动开通
-
-推荐路径：
-
-1. 在 `/admin/orders` 顶部点「新建订单」或在前端「充值」表单走 `POST /api/order` 创建 `OrderTypeTopup=2` 订单。
-2. 用户完成线下转账（`pay_method=bank` / `offline`），管理员在订单中心点「标记已付」。
-3. 后端 `PUT /api/order/:id { status:1, pay_method, pay_trade_no }` 调 `model.ActivateTopupByOrder`：
-   - 解析 `plan_info` 拿到下单时快照的 `bonus_quota`；
-   - 调 `IncreaseUserQuota` 累加；
-   - 把 `status` / `pay_status` / `pay_time` / `pay_trade_no` 落库。
-
-`ActivateTopupByOrder` 幂等：已 `status=1` 的订单直接返回 nil，不会重复加 quota。
-
-## 充值订单查询
-
-`GET /api/order/?type=2`（或 admin 页面下拉筛选 `type=Topup`）即可仅看充值订单。
-列表字段与套餐订单一致：`order_no` / `user_id` / `plan_id`（充值时为 0） / `amount` / `pay_method` / `status` / `source`。
-
-`plan_info` 字段是 JSON 字符串，结构：
+仅用于特殊情况：内部测试 / 紧急补偿 / 修复对账。
 
 ```
+POST /api/user/topup
+{
+  "user_id": 42,
+  "quota": 100000,
+  "remark": "客服补偿"
+}
+```
 
-充值订单的 `plan_id` 始终为 `0`，但 `plan_info.bonus_quota` 才是最终到账额度（避免汇率调整造成的二次解释）。
+`remark` 是审计说明，必填。空时会自动填 `通过 API 充值 <LogQuota(quota)>`。
 
-## 前端操作指南
+**缺点**：没有 `Order` 行，事后审计困难。
 
-- 手动加额度（兼容路径）：管理员旧 UI 在「用户」行内提供「+ 额度」入口（如有），提交 `{ user_id, quota, remark }`。
-- 标记已付：订单中心订单状态 `pending` 时，行尾出现「标记已付」按钮。
-- 退款：已支付订单出现「退款」按钮（仅翻状态，不回退 quota）。
-- 删除：Root 可对非 paid 订单执行删除。
+## 推荐用方式 1
 
-## 接口实现
+默认走订单中心：每笔充值都能追溯到具体来源（哪个银行流水 / 哪个客服工单）。
 
-| 关注点 | 位置 |
-|---|---|
-| 兼容路径手动加额度 | `controller/user.go::AdminTopUp` |
-| 用户自助下单 | `controller/topup.go::CreateTopupOrder` |
-| 订单中心标记已付 | `controller/order.go::MarkOrderPaid` |
-| 充值激活（幂等） | `model/topup.go::ActivateTopupByOrder` |
-| 充值下单 | `model/topup.go::CreateTopupOrder` |
-| 路由 | `router/api.go` |
+## 怎么查充值订单
+
+后台 → 订单管理 → 类型下拉选「充值」：
+
+- `order_no`：`TP` 前缀
+- `user_id`：充值目标用户
+- `amount`：充值金额（元）
+- `plan_info` 是 JSON，含 `bonus_quota`（实际到账额度）
+- `pay_method`：微信 / 支付宝 / 银行 / 线下 / 免费
+- `status`：待支付 / 已支付 / 已取消 / 已退款
+- `pay_time`：支付完成时间
+
+## 怎么标记已付
+
+详见 [订单管理](./order-management)。
+
+## 常见问题
+
+- **用户反映付款了但余额没到**：看订单详情 `pay_time` / `pay_trade_no`；手动标记已付
+- **加了多次重复**：系统幂等，已支付的订单不会被重复激活
+- **退款后用户余额还在**：是的，系统不自动回退。需要手动 [调整用户余额](../user/user-management)
+
+## 相关页面
+
+- [充值（业务概念）](./topup)
+- [充值业务配置](./topup-settings)
+- [订单管理](./order-management)
+- [用户管理（管理员）](../user/user-management)
+
+## 相关 API
+
+- `POST /api/user/topup` — 直接加额度（旧路径，兼容保留）
+- `POST /api/order` — 创建充值订单（推荐）
+- `PUT /api/order/:id` — 标记已付（Admin）
+- `GET /api/order/?type=2` — 查充值订单
