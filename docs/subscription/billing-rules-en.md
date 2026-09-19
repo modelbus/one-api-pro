@@ -1,101 +1,70 @@
 ---
 title: Billing Rules
-description: "Three windows (period/week/month), the weighted-usage formula, the batchUpdate path, and the deduction order."
+description: Subscription window quotas, deduction formula, and billing details.
 category: subscription
 order: 4
 ---
 
 # Billing Rules
 
-> Window quotas and per-request deduction. Implementation: `model/plan.go::CalcWindowIndex`, `model/plan_quota.go::WeightedUsage`, middleware `middleware/plan_quota.go::PlanQuotaCheck`.
+> How subscription quota is deducted and when the plan is considered exhausted.
 
 ## Three windows
 
-| windowType | Length | Anchor |
+Each plan can set three window quotas per model:
+
+| Window | Length | Meaning |
 |---|---|---|
-| `period` | `rule.period_h` hours (default 5) | `start_time` |
-| `week` | 7 days | `start_time` |
-| `month` | 30 days | `start_time` |
+| `period` | 5 hours (default) | Short rolling window |
+| `week` | 7 days | Weekly quota |
+| `month` | 30 days | Monthly quota |
 
-`model.CalcWindowIndex(now, startTime, windowType, periodH)`:
-
-```go
-elapsed := now - startTime
-period   = elapsed / (period_h * 3600)
-week     = elapsed / (7 * 86400)
-month    = elapsed / (30 * 86400)
-```
-
-`CalcNextResetTime = start_time + (windowIndex+1) * windowDuration`, so a 5-hour period window rolls based on `start_time` rather than the calendar day.
+**If any window is exhausted, the plan is considered used up.** E.g. if monthly is gone, calls fall back to pay-as-you-go even if weekly still has room.
 
 ## Weighted usage
 
-Multiple models within a plan each have their own limit. `WeightedUsage` collapses all `(consumed, limit)` pairs into a single 0..100 ratio:
+System computes a "usage" for each window:
 
-```text
-weighted = Σ consumed_i × QuotaPoolCapacity / limit_i
-        = Σ consumed_i × 100 / limit_i
+```
+usage = Σ (consumed_in_window / quota) × 100
 ```
 
-Any window whose `weighted >= 100` is considered exhausted.
+Any window ≥ 100% → plan exhausted.
 
-`model/plan_quota.go::WeightedUsage` rules:
+## Counting rules
 
-1. Walk `PlanUsage` rows; match the current `(model, window_type, window_index)`
-2. Pick `(limit, consumed)` by `billing_type`:
-   - `BillingTypeRequest="request"`: `consumed = requests`, `limit = rule.request_period|week|month`
-   - `BillingTypeToken="token"`: `consumed = prompt_tokens + completion_tokens`, `limit = rule.token_period|week|month`
-   - Otherwise / default: try request first; if `limit <= 0`, fall back to token
-3. `consumed × 100 / limit` is summed; models with `limit <= 0` are skipped
-4. Only rows whose `windowIndex` matches the current window contribute
+Each plan/model can count by one of two dimensions:
 
-## Finding the limit
+- **By request count**: calls per day / week / month
+- **By token total**: tokens per day / week / month
 
-`FindLimit(limits, model, defaultModel)` priority:
+Which one is used depends on the plan setting ([Plan Management](../subscription/plan-management)).
 
-1. Exact hit `limits[model]` → use it
-2. Fall back to `limits[defaultModel]`
-3. Otherwise `not found`; that usage row is excluded from the weighted sum
+## Per-call deduction order
 
-`CheckPlanQuota` also exposes the resolved `default_model` to the middleware. `PlanQuotaCheck` rewrites `RequestModel` to `default_model` so an off-list model is funneled into the plan default.
+1. **Check subscription**: does one of your active subscriptions cover this model?
+   - Yes → deduct within the subscription window; **no balance charged**
+   - No → fall to step 2
+2. **Pay-as-you-go**: deduct from [User balance](../schema/user)
+   - Enough → call succeeds
+   - Not enough → 429 reject
+3. **Cache**: subscription state is cached for 5 minutes; updates invalidate.
 
-## Deduction order
+## Plan expiry
 
-A request walks the relay middleware chain as follows:
+- Subscription auto-expires when the period ends.
+- Calls still work, but billing falls back to pay-as-you-go.
+- To regain the discount: **resubscribe**.
 
-1. `PlanQuotaCheck` → `CheckPlanQuota` walks `CacheGetUserActivePlans(userId)` (sorted by `end_time` ASC). For each `user_plan`:
-   - If `end_time <= now`, flip status to expired and skip
-   - Get `plan.model_limits`; if nil, treat the plan as usable
-   - Compute period / week / month weighted values; any `>= 100` exhausts the plan and we move on
-   - The first usable plan is admitted; `plan_id` is written to `meta.PlanId`, `billing_type` to `meta.BillingType`
-2. No plan match → admit anyway; `meta.PlanId=0` falls through to pay-as-you-go
-3. `postConsumeQuota` (`relay/handler/helper.go`):
-   - `PlanId > 0`: call `IncrementPlanUsage(plan_id, model, window_type, window_index, 1, prompt_tokens, completion_tokens, cached_tokens)` for each of the three windows; refund any pre-deducted quota back to the token
-   - `PlanId == 0`: compute `quota` from `priceResult.BillingType` — `PerRequest` uses `per_request_price`; `Token` uses `(input_price × prompt + output_price × completion + cached_price × cached) × group_discount`; `PostConsumeTokenQuota` settles `users.quota` and `tokens.quota`
+## FAQ
 
-## Caches
+- **"Quota remaining" jumps**: subscription cache is 5 minutes; restart or invalidate to refresh immediately.
+- **Just topped up but no balance deducted**: check whether the call hit a subscription; subscriptions are deducted first.
+- **Monthly quota exhausted but weekly still has room**: yes, each window is independent; any one triggers pay-as-you-go.
 
-- `user_plans:<id>`: Redis cache of the user's active plans (`UserPlanCacheSeconds=300`). `AddSubscription` / `UpdateSubscription` / `DeleteSubscription` call `CacheDeleteUserActivePlans` after writes
-- `model_price:<name>` / `group_price:<group>:<model>`: model and group discounts (`ModelPriceCacheSeconds=300`)
-- The `model_price` and `group_price` tables are kept fresh by `SyncModelPriceCache` / `SyncGroupPriceCache`
+## Related
 
-## batchUpdate path
-
-When `BATCH_UPDATE_ENABLED=true`:
-
-- `model.UpdateChannelUsedQuota` queues channel used-quota increments in memory; a background task flushes them every `BATCH_UPDATE_INTERVAL` seconds (default 5s)
-- `model.IncreaseUserQuota` also goes through batch; other writes stay synchronous
-
-This reduces DB write amplification but requires `main.go` to call `model.InitBatchUpdater()` and run as a single instance.
-
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| Window math | `model/plan.go::CalcWindowIndex` / `GetWindowDurationSeconds` |
-| Weighted deduction | `model/plan_quota.go::WeightedUsage` / `CalculateWeightedUsage` |
-| Limit lookup | `model/plan_quota.go::FindLimit` |
-| Middleware check | `middleware/plan_quota.go::PlanQuotaCheck` |
-| plan_usage writer | `model/plan.go::IncrementPlanUsage` |
-| Billing settlement | `relay/handler/helper.go::postConsumeQuota` |
-| Cache | `model/plan.go::CacheGetUserActivePlans` / `CacheDeleteUserActivePlans` |
+- [Subscription Overview](./overview)
+- [Subscription Schema](../schema/subscription)
+- [Plan Schema](../schema/plan)
+- [Plan Settings](./plan-settings)
