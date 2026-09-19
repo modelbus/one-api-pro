@@ -1,6 +1,38 @@
 import { defineConfig } from 'vitepress'
 
 // ---------------------------------------------------------------------------
+// Footer helpers
+// ---------------------------------------------------------------------------
+// Inline SVG icons (16px, currentColor) used by the footer action links.
+const ICON_SITE =
+  '<svg class="op-footer-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 0 0-18z"/></svg>'
+
+const ICON_GITHUB =
+  '<svg class="op-footer-icon" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.73.5.5 5.74.5 12.02c0 5.1 3.29 9.41 7.86 10.94.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.25 5.69.41.36.78 1.07.78 2.16 0 1.56-.01 2.82-.01 3.2 0 .31.21.68.8.56A11.53 11.53 0 0 0 23.5 12.02C23.5 5.74 18.27.5 12 .5z"/></svg>'
+
+const ICON_RELEASE =
+  '<svg class="op-footer-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4 12.6 21.4a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V4a1 1 0 0 1 1-1h8.8a2 2 0 0 1 1.4.6l7.2 7.2a2 2 0 0 1 0 2.6z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>'
+
+// Build the footer right-hand action links with icons.
+function footerActions(lang) {
+  const releasesHref = lang === 'zh' ? '/changelog/index' : '/en/changelog/index'
+  const releasesText = lang === 'zh' ? '版本发布' : 'Releases'
+  return (
+    '<span class="op-footer-actions">' +
+    `<a class="op-footer-link" href="https://one-api.pro" target="_blank" rel="noreferrer">${ICON_SITE}<span>one-api.pro</span></a>` +
+    `<a class="op-footer-link" href="https://github.com/modelbus/one-api-pro" target="_blank" rel="noreferrer">${ICON_GITHUB}<span>GitHub</span></a>` +
+    `<a class="op-footer-link" href="${releasesHref}">${ICON_RELEASE}<span>${releasesText}</span></a>` +
+    '</span>'
+  )
+}
+
+function footerCopyright(lang) {
+  return lang === 'zh'
+    ? 'Copyright © 2024-present One API Pro · 基于 MIT 许可发布'
+    : 'Copyright © 2024-present One API Pro · Released under the MIT License'
+}
+
+// ---------------------------------------------------------------------------
 // Sidebar definitions
 // ---------------------------------------------------------------------------
 // Category meta: slug -> [zh label, en label] (12 categories per spec)
@@ -317,15 +349,10 @@ export default defineConfig({
         lastUpdatedText: '最后更新',
         langMenuLabel: '切换语言',
         footer: {
-          message:
-            '<span class="op-footer-links">' +
-            '<a href="https://one-api.pro" target="_blank" rel="noreferrer">one-api.pro</a>' +
-            '<span class="op-footer-sep">·</span>' +
-            '<a href="https://github.com/modelbus/one-api-pro" target="_blank" rel="noreferrer">GitHub</a>' +
-            '<span class="op-footer-sep">·</span>' +
-            '<a href="/changelog/index">版本发布</a>' +
-            '</span>',
-          copyright: 'Copyright © 2024-present One API Pro · 基于 MIT 许可发布',
+          // Copyright is rendered on the left, action links on the right
+          // (the two are flipped visually via CSS `order`).
+          message: footerActions('zh'),
+          copyright: footerCopyright('zh'),
         },
       },
     },
@@ -349,15 +376,8 @@ export default defineConfig({
         lastUpdatedText: 'Last updated',
         langMenuLabel: 'Change language',
         footer: {
-          message:
-            '<span class="op-footer-links">' +
-            '<a href="https://one-api.pro" target="_blank" rel="noreferrer">one-api.pro</a>' +
-            '<span class="op-footer-sep">·</span>' +
-            '<a href="https://github.com/modelbus/one-api-pro" target="_blank" rel="noreferrer">GitHub</a>' +
-            '<span class="op-footer-sep">·</span>' +
-            '<a href="/en/changelog/index">Releases</a>' +
-            '</span>',
-          copyright: 'Copyright © 2024-present One API Pro · Released under the MIT License',
+          message: footerActions('en'),
+          copyright: footerCopyright('en'),
         },
       },
     },
