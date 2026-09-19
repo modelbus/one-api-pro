@@ -1,115 +1,70 @@
 ---
 title: 我的订单
-description: "套餐、订阅升级、充值订单。"
+description: 套餐订单、订阅升级差价、充值订单都在这里。
 category: user
 order: 5
 ---
 
 # 我的订单
 
-> 套餐、订阅升级、充值订单。
+> 你买过的所有东西：套餐、套餐升级差价、充值。
 
-入口：`/orders`（`web/default-pro/src/views/user/Orders.vue`）。涵盖三类业务订单：
+## 在哪里
 
-## 订单类型
+登录后访问 `/orders`。
 
-| `type` | 名称| 触发场景| 订单号前缀|
-| --- | --- | --- | --- |
-| 1 | 套餐订阅 / 升级 | 用户购买套餐 / 升级套餐 | `TB` 新订 / `UP` 差价升级 |
-| 2 | 充值 | 在线支付充值 | `TP` |
-| - | 管理员后台下单 | 管理员代客下单 / 免费赠送 | 同上 |
+## 三种订单
 
-订单号格式：`{prefix} + yyyyMMddHHmmss + 6 位随机数`（22 字符），由 `model.GenerateOrderNo(prefix)` 生成。
+| 类型 | 是什么 | 触发场景 |
+|---|---|---|
+| **套餐订单** | 买 / 升级一个套餐 | 订阅页下单、套餐到期升级 |
+| **充值订单** | 充额度到账户余额 | 充值页下单 |
+| **管理员代单** | 后台直接帮你创建 | 管理员后台手动下单 / 免费赠送 |
 
-## 状态机
+订单号前缀：`TB`（新订）/ `UP`（差价升级）/ `TP`（充值）。
 
-```text
-        ┌───────────────┐
-        │ 0 待支付       │   pending
-        └──────┬────────┘
-               │ callback verified / admin marked paid
-               ▼
-        ┌───────────────┐
-        │ 1 已支付       │   paid
-        └──────┬────────┘
-               │ admin refunded
-               ▼
-        ┌───────────────┐
-        │ 3 已退款       │   refunded
-        └───────────────┘
+## 订单的几种状态
 
-  同时：用户自助取消 ─► 2 已取消（终态）
-        also: user self-cancel ─► 2 canceled (terminal)
-```
+| 状态 | 含义 | 怎么变成这样 |
+|---|---|---|
+| 待支付 | 下单了还没付款 | 你刚点完支付 |
+| 已支付 | 收到支付回调 / 管理员标记 | 微信 / 支付宝确认 / 管理员手动 |
+| 已取消 | 你主动取消 | 点取消按钮（仅待支付可取消） |
+| 已退款 | 管理员退了款 | 管理员在后台操作 |
 
-| 状态值| 含义| 触发|
-| --- | --- | --- |
-| 0 待支付| 下单未付款 | 用户新建订单 |
-| 1 已支付| 收到回调 / 管理员标记 | `processNotify` / `MarkOrderPaid` |
-| 2 已取消| 用户主动取消 | `POST /api/order/self/:id/cancel` |
-| 3 已退款| 管理员退款 | `MarkOrderRefunded` |
+## 怎么支付一张订单
 
-## 列表过滤
+如果是「待支付」状态，列表里这张订单旁边会有「去支付」按钮。点它会用你之前选的支付方式（微信 / 支付宝 / 银行）打开支付窗口。
 
-UI 顶部 Tab：
-
-- **全部 / All**：`/api/order/self` 不传 `type`；
-- **套餐订单 / Plan**：`?type=1`；
-- **充值订单 / Topup**：`?type=2`。
-
-## 操作
-
-| 操作| 触发条件| API |
-| --- | --- | --- |
-| 支付| 状态 = 0 | `POST /api/order/self/:id/pay`，复用 `controller/buildPayInfo` 拿 `pay_url|
-| 查看| 任何状态 | `GET /api/order/self/:id` |
-| 取消| 状态 = 0 | `POST /api/order/self/:id/cancel`，幂等（已支付返回错误） |
-
-## 详情字段
-
-```text
-orderNo           订单号 / order number
-type              1=套餐 2=充值
-source            1=用户自助 2=管理员下单
-planName          套餐名称（充值订单为空）
-amount            金额（元）
-payMethod         wechat / alipay / bank / offline / free
-payTradeNo        支付渠道流水号
-status            0/1/2/3
-createdAt         下单时间
-paidAt            支付完成时间
-refundedAt        退款时间
-note              管理员备注
-```
+支付完成会自动跳回来，不需要你刷新。
 
 ## 升级差价
 
-当 `OrderUpgradeModePriceDiff`（默认）启用且用户已有有效订阅时：
+从一个套餐升级到更高价套餐时：
 
-```text
-diff_amount = newPlan.price - max(remaining_value_of_current_plan, 0)
-orderNo    = "UP" + timestamp + random
-amount     = diff_amount
-```
+- 默认按「差价」扣款：新套餐价格 - 旧套餐剩余价值 = 实际付款
+- 订单号前缀 `UP`
+- 升级后剩余额度按比例折算到新套餐
 
-`OrderUpgradeModeStack`（叠加）：按 `newPlan.price` 全额开新订阅，旧订阅在过期前继续生效。
+也可以选「叠加」模式：付全款开新订阅，旧订阅继续生效到原到期日。管理员可在 [套餐业务配置](../subscription/plan-settings) 切换。
 
-具体策略在 `model/order_payment.go::CreatePlanOrder` 中实现。
+## 列表筛选
 
-## 支付渠道可用性
+页面顶部有 3 个标签：
 
-「支付」按钮按 `payInfo.status` 分级处理：
-
-| `payInfo.status` | UI 行为|
-| --- | --- |
-| `success` | 显示二维码 / 跳转链接；弹窗内嵌 `qr_code` 或 `pay_url` |
-| `warning` | 弹窗提示「该支付方式尚未启用」或渠道错误；按钮保留但不可点击 |
-| `error` | 直接拒绝；提示「请更换支付方式」 |
+- **全部**：所有订单
+- **套餐订单**：仅 `TB` / `UP` 开头
+- **充值订单**：仅 `TP` 开头
 
 ## 常见问题
 
-- **订单一直显示「待支付」**：异步回调未到；登录管理员后台在「订单管理」手动 `MarkOrderPaid`，或检查支付渠道配置（`payment.wechat.config` 等）。
-- **差价升级金额是负数**：通常是模式为 `price_diff` 且旧套餐剩余价值高于新套餐全价；UI 仍允许下单，但请提示用户确认。
-- **支付成功但订单一直未激活**：见 [故障排查 · 异步通知校验失败](/zh/faq/troubleshooting#异步通知校验失败)。
+- **订单一直停在「待支付」**：支付回调没到。联系管理员在后台「订单管理」手动标记已支付；或检查支付渠道是否配好
+- **支付成功但订单没激活**：通常 1 分钟内会自动激活。超过 5 分钟还没动，看 [故障排查](../misc/troubleshooting#支付成功但订单一直未激活)
+- **差价是负数**：从高价位套餐降到低价位，旧套餐剩余价值反而更高，会出现负数。联系管理员确认
 
-下一步 / Next: [Chat Playground](/zh/user/chat) · [套餐订阅](/zh/subscription/overview) · [充值](/zh/pricing/topup)。
+## 相关
+
+- [套餐订阅](../subscription/overview)
+- [套餐升降级](../subscription/upgrade-downgrade)
+- [充值](../pricing/topup)
+- [支付配置（管理员）](../pricing/payment-settings)
