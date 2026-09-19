@@ -1,113 +1,113 @@
 ---
-title: Cluster Nodes
-description: "Register cluster nodes, distribute secrets, monitor heartbeat, enable / disable / ping."
+title: Cluster Settings
+description: Cluster mode env vars, node management, and API.
 category: decentralization
-order: 17
+order: 6
 ---
 
-# Cluster Nodes
+# Cluster Settings
 
-> Register every node with the master so logs, channel routing and failover work across the cluster. UI: `web/default-pro/src/views/setting/ClusterSetting.vue`.
+> Cluster mode config, admin UI, and API.
 
-> Cluster mode is gated by env vars. When `CLUSTER_ENABLED != "true"` all `/api/cluster_node/*` endpoints return `集群模式未启用`.
+## Environment variables
 
-## Cluster Environment Variables
+Loaded at startup:
 
-Boot parameters (`cluster/config.go::LoadConfig`):
+| Variable | Required | Default | Notes |
+|---|---|---|---|
+| `CLUSTER_ENABLED` | Yes | — | Set to `"true"` to enable cluster |
+| `CLUSTER_NODE_ID` | Yes | — | Integer 1–49; out-of-range fails fast |
+| `CLUSTER_NODE_NAME` | No | `node-<id>` | Node name |
+| `CLUSTER_NODE_ADDRESS` | Yes | — | This node's publicly reachable URL |
+| `CLUSTER_SECRET` | Yes | — | This node's initial secret |
+| `CLUSTER_SEEDS` | No | empty | Seed addresses for first-time discovery (comma-separated) |
+| `CLUSTER_DISCOVERY_INTERVAL` | No | 30 | Discovery period (seconds) |
+| `CLUSTER_DEAD_PING_INTERVAL` | No | 120 | Dead-node ping period (seconds) |
+| `CLUSTER_MAX_PING_FAILURES` | No | 3 | Failures before marking dead |
+| `CLUSTER_PUSH_INTERVAL` | No | 3 | Pusher push period (seconds) |
+| `CLUSTER_BATCH_SIZE` | No | 50 | Sync batch size |
+| `CLUSTER_SYNC_LOGS` | No | true | Set `"false"` to disable log sync |
 
-| Variable | Required | Notes |
-|---|---|---|
-| `CLUSTER_ENABLED` | yes | `"true"` enables clustering; anything else falls back to single-node |
-| `CLUSTER_NODE_ID` | yes | Integer in `[1, 49]`; out-of-range calls `FatalLog` and refuses to start |
-| `CLUSTER_NODE_NAME` | no | Default `node-<id>` |
-| `CLUSTER_NODE_ADDRESS` | yes | Externally reachable URL of this node |
-| `CLUSTER_SECRET` | yes | Initial secret for this node |
-| `CLUSTER_SEEDS` | no | Comma-separated seed-node URLs |
-| `CLUSTER_PUSH_INTERVAL` | no | Push interval (s); default 3 |
-| `CLUSTER_DISCOVERY_INTERVAL` | no | Discovery interval (s); default 30 |
-| `CLUSTER_DEAD_PING_INTERVAL` | no | Dead-node re-ping interval (s); default 120 |
-| `CLUSTER_MAX_PING_FAILURES` | no | Max consecutive ping failures; default 3 |
-| `CLUSTER_SYNC_LOGS` | no | `"false"` disables log sync; default on |
-| `CLUSTER_BATCH_SIZE` | no | Sync batch size; default 50 |
+> If `CLUSTER_ENABLED != "true"`, all `/api/cluster_node/*` endpoints return `cluster mode not enabled`.
 
-## Data Model
+## Admin → Cluster
 
-`model.ClusterNode` (table `cluster_nodes`):
+The node list lives in [Node Management](./node-management).
+
+## Node fields
 
 | Field | Type | Notes |
 |---|---|---|
-| `node_id` | `int` UNIQUE | Cluster-local id (1–49) |
-| `node_name` | `varchar(64)` | Display name |
-| `address` | `varchar(256)` | HTTP URL |
-| `secret_key` | `varchar(128)` | Shared secret used for cross-node auth |
-| `status` | `int` | `1=alive` / `2=failed` |
-| `disabled` | `bool` | Soft-disable flag |
-| `last_heartbeat` / `last_ping_attempt` | `bigint` | unix seconds |
-| `ping_failures` | `int` | Consecutive failure count |
-| `created_at` / `updated_at` | `bigint` | unix seconds |
+| `node_id` | int UNIQUE | Cluster-wide node number (1–49) |
+| `node_name` | varchar(64) | Node name |
+| `address` | varchar(256) | Node URL (with `http://` or `https://`) |
+| `secret_key` | varchar(128) | Cross-node auth key |
+| `status` | int | `1=alive` / `2=failed` |
+| `disabled` | bool | Soft-disable flag |
+| `last_heartbeat` | bigint | Last heartbeat unix seconds |
+| `ping_failures` | int | Consecutive ping failures |
 
-`IsAlive()` = `status == 1 && !disabled`.
+## API
 
-## Endpoints
-
-| Endpoint | Method | Auth | Description |
+| Endpoint | Method | Auth | Notes |
 |---|---|---|---|
-| `/api/cluster_node/` | `GET` | Root | Full list with `is_self` flag |
-| `/api/cluster_node/:id` | `GET` | Root | Single node detail |
-| `/api/cluster_node/` | `POST` | Root | Register a new node (`node_id` 1–49) |
-| `/api/cluster_node/` | `PUT` | Root | Update name / address / secret (passing a new secret resets `status` and `ping_failures`) |
-| `/api/cluster_node/:id` | `DELETE` | Root | **Soft-disable** (`disabled=true`, `status=2`). Physical delete requires manual SQL |
-| `/api/cluster_node/:id/enable` | `POST` | Root | Re-enable (`disabled=false` + status=1 + reset failures + refresh heartbeat) |
-| `/api/cluster_node/ping/:id` | `GET` | Root | Active ping; returns the target node's response on success |
+| `/api/cluster_node/` | GET | Root | All nodes (with `is_self` flag) |
+| `/api/cluster_node/:id` | GET | Root | One node |
+| `/api/cluster_node/` | POST | Root | Register a new node |
+| `/api/cluster_node/` | PUT | Root | Edit name / address / secret |
+| `/api/cluster_node/:id` | DELETE | Root | Soft-disable |
+| `/api/cluster_node/:id/enable` | POST | Root | Re-enable |
+| `/api/cluster_node/ping/:id` | GET | Root | Manual ping |
 
-Implementation: `controller/cluster_node.go`.
-
-## Register a New Node — `POST /api/cluster_node/`
+## Register a new node
 
 ```json
 {
-  "node_id": 2,
-  "node_name": "node-shanghai",
-  "address": "https://sh.example.com",
-  "secret": "<32+ char shared secret>"
+  "node_id": 1,
+  "node_name": "node-cn",
+  "address": "https://cn.example.com",
+  "secret": "<peer's CLUSTER_SECRET>"
 }
 ```
 
 Constraints:
-- `node_id ∈ [1, 49]` — otherwise `节点编号必须在 1-49 之间`.
-- `address` required.
-- `secret` required (shared secret other nodes use to authenticate against this node).
 
-## "This Node" Marker
+- `node_id` ∈ [1, 49]
+- `address` non-empty
+- `secret` non-empty
 
-`GetAllClusterNodes` decorates the list with `is_self: bool = (n.NodeId == cluster.NodeID)`. The UI uses this to badge the current node.
+> Self-registration (auto-write on startup) covers most cases; manual add is for debugging / transitory setups.
 
-## Disable vs Hard-Delete
+## "This node" badge
 
-- **Delete** = soft-disable: sets `disabled=true`, `status=2`. The UI's disable button does exactly this and the response reminds you that physical deletion requires `DELETE FROM cluster_nodes WHERE node_id = ?`.
-- **Enable** = `POST /api/cluster_node/:id/enable` — resets `disabled`, status, `ping_failures` and `last_heartbeat`.
-- The current node (`nodeId == cluster.NodeID`) cannot be disabled — the controller explicitly rejects it.
+The list endpoint adds `is_self: bool` (`n.NodeId == cluster.NodeID`). The UI uses this to highlight the local node.
 
-## Active Ping
+## Delete vs Disable
 
-`GET /api/cluster_node/ping/:id` invokes `cluster.PingNode(cluster.GetDB(), &node)`. Failures return `success: false` with a descriptive `message` (HTTP error, auth error, timeout). Success returns `{ data: <peerResponse> }`.
+| Action | API | Effect |
+|---|---|---|
+| Delete (soft) | `DELETE /api/cluster_node/:id` | `disabled=true` + `status=2` |
+| Enable | `POST /api/cluster_node/:id/enable` | `disabled=false` + `status=1` + reset failure counter |
+| Hard delete | Manual SQL | `DELETE FROM cluster_nodes WHERE node_id = ?` |
 
-## Frontend Guide
+> The current node cannot be disabled (controller explicitly blocks it).
 
-- Table columns: node_id / node_name / address (truncated tooltip) / status chip (green/red) / last heartbeat / actions.
-- Row actions:
-  - **Ping** — calls the ping endpoint immediately, with a per-row loading spinner.
-  - **Edit** — opens a 500 px modal (`node_id` is locked when editing); changing `secret` resets status immediately.
-  - **Enable / Disable** — popconfirm.
-  - **Delete** — popconfirm → soft-delete.
-- **Add node** opens the same modal; the same validations apply.
+## Manual Ping
 
-## Implementation Pointers
+`GET /api/cluster_node/ping/:id` pings the target node:
 
-| Concern | Location |
-|---|---|
-| Handler | `controller/cluster_node.go` |
-| Node model | `model/cluster_node.go` |
-| Config loader | `cluster/config.go::LoadConfig` |
-| Heartbeat / ping | `cluster/handler.go`, `cluster/cluster.go` |
-| Routes | `router/api.go` |
+- Success → `{ data: <peer response> }`
+- Failure → `{ success: false, message: <reason> }`
+
+Useful for diagnosing "why is this node dead".
+
+## FAQ
+
+- **All env vars correct but endpoints return "cluster mode not enabled"**: confirm `CLUSTER_ENABLED` literally equals the string `"true"`.
+- **`CLUSTER_NODE_ID` out of range**: must be 1–49; otherwise the process refuses to start.
+
+## Related
+
+- [Cluster Overview](./overview)
+- [Node Management](./node-management)
+- [Multi-node Deployment](./deployment)
