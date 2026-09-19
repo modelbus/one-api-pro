@@ -1,64 +1,92 @@
 ---
 title: 系统要求
-description: "硬件、操作系统、端口、数据库与依赖说明。"
+description: 部署 One API Pro 需要什么样的硬件、操作系统、端口与数据库。
 category: install
 order: 1
 ---
 
 # 系统要求
 
-> 硬件、操作系统、端口、数据库与依赖说明。
+> 部署前要确认的环境清单。
 
-## 硬件与操作系统
+## 硬件
 
-One API Pro 是单一 Go 二进制，自带内嵌 SQLite 与 Redis 客户端，无需额外系统组件即可运行。
+| 规模 | 推荐 |
+|---|---|
+| 试用 / 个人 | 1 vCPU / 1 GB RAM / 5 GB 磁盘 |
+| 小团队（< 100 用户） | 2 vCPU / 4 GB RAM / 20 GB SSD |
+| 生产（数百到数千用户） | 4+ vCPU / 8+ GB RAM / 50 GB+ SSD（取决于日志保留时长） |
 
-| 资源| 最低| 推荐|
-| --- | --- | --- |
-| CPU | 1 vCPU | 2 vCPU 及以上 / 2+ vCPU |
-| 内存| 512 MB | 1 GB 及以上 / 1 GB+ |
-| 磁盘| 1 GB | 10 GB+（日志与缓存按需扩容|
-| OS | Linux、macOS、Windows | Linux（生产建议|
+One API Pro 是单一 Go 二进制。CPU 主要吃在请求转发上；内存主要吃在日志缓存与并发请求。
 
-Docker 镜像基于 `alpine:latest`；二进制可在 Linux（amd64 / arm64）、macOS（amd64 / arm64）、Windows（amd64）上原生运行。
+## 操作系统
+
+Linux（推荐 Ubuntu 22.04 / Debian 12 / CentOS Stream 9）、macOS 12+、Windows 10+。Docker 部署忽略此条。
 
 ## 端口
 
-默认监听 **`3000`**（环境变量 `PORT`，CLI 参数 `--port` 可覆盖）。
-容器内已 `EXPOSE 3000`；通过反向代理对外暴露 443 时，记得开启 WebSocket 升级以支持流式接口。
+| 端口 | 用途 | 是否必须对外开放 |
+|---|---|---|
+| `3000` | HTTP 主端口（管理后台 + `/api/*` + `/v1/*`） | **是** |
+| 集群节点间 | `CLUSTER_NODE_PORT`（默认 `3000`） | 仅多节点部署需要 |
 
 ## 数据库
 
-主库 `SQL_DSN` 不设置时使用 **SQLite**（默认 `one-api-pro.db`，容器内 `/app/data/one-api-pro.db`）；设置后自动切换为：
+两种选择，二选一：
 
-- **MySQL** — `SQL_DSN=root:123456@tcp(localhost:3306)/oneapi`，需要预先创建空库 `oneapi`，表由 `AutoMigrate` 自动建好。
-- **PostgreSQL** — `SQL_DSN=postgres://postgres:123456@localhost:5432/oneapi`。
+### 内嵌 SQLite（默认）
 
-`LOG_SQL_DSN` 可独立指定 `logs` 表所用的数据库（推荐 MySQL / PostgreSQL，因为 `logs` 表写入频繁，SQLite 在并发下易触发 `SQLITE_BUSY`）。
+零配置，开箱即用。适合单实例、< 1000 用户、QPS 较低（< 50）。
 
-集群模式下要求每个节点使用各自独立的 MySQL 实例（受 `auto_increment_offset` 实例级特性约束，详见 `decentralization/deployment`）。
+- 数据落盘在容器内 `/app/data/one-api.db`
+- 备份只需复制这个文件
 
-## Redis（可选
+### 外部 MySQL（生产推荐）
 
-不启用 Redis 服务即可运行（走进程内缓存 + 直读 DB）。启用 `REDIS_CONN_STRING` 后会作为分布式缓存层生效，可显著降低 DB 读压力；当 DB 延迟本身很低时，启用 Redis 可能带来短期数据陈旧，请按场景权衡。
+适合多实例、高 QPS、大数据量场景。
 
-支持单节点、哨兵（`REDIS_MASTER_NAME`）与 Cluster 模式（节点列表逗号分隔 + `REDIS_PASSWORD`）。
+- 最低 MySQL 5.7 / 8.0
+- 需要提前创建空数据库 + 用户
+- 连接串通过环境变量 `SQL_DSN` 配置
 
-## 网络
+> 部署前决定好：上线后从 SQLite 迁到 MySQL 是可以的，但需要停机做数据迁移。
 
-自 v0.0.21 起，tiktoken 通用模型的 BPE 编码已 **内嵌** 进二进制，启动时默认不再访问网络；只有在用户通过 `TIKTOKEN_CACHE_DIR` 显式提供自定义编码、且 URL 不在内嵌清单中时，才会触发 HTTP 下载兜底。
+## Redis（可选但推荐）
 
-支付回调、对外代理等出站流量仍需正常出网；离线部署时评估白名单。
+集群多节点模式**必须** Redis：
 
-## 开发依赖
+- 最低 Redis 6.0
+- 用于节点间状态共享与限流
+- 单实例部署可不用 Redis
 
-构建 Go 后端与前端主题所需工具，与 `AGENTS.md §2` 保持一致 / Toolchain required to build the Go backend and web theme, matching `AGENTS.md §2`:
+## 反向代理（生产推荐）
 
-| 工具| 版本|
-| --- | --- |
-| Go | 1.25.0（`go.mod` 中声明，toolchain 自动拉取） |
-| Node.js | 22+ |
-| pnpm | 9（仓库提交 `pnpm-lock.yaml`） |
+直接暴露容器端口到公网不安全。建议在前面套一层：
 
-下一步 / Next: [Docker 单实例部署](/zh/install/docker-deploy) · [Docker Compose](/zh/install/docker-compose) · [源码编译](/zh/install/source-build)。
+- Nginx / Caddy / Cloudflare
+- 用于 TLS 终止 + HSTS + 真实 IP 透传
+- 见 [反向代理](./reverse-proxy)
 
+## 其他
+
+- **域名**：建议准备一个正式域名 + TLS 证书
+- **SMTP**：可选，用于发送密码重置 / 兑换码 / 订单通知邮件
+- **支付通道**：若要启用充值 / 套餐支付，需先在 [支付配置](../pricing/payment-settings) 里配好微信 / 支付宝 / 银行
+
+## 准备清单（部署前确认）
+
+- [ ] 服务器 ≥ 2 vCPU / 4 GB RAM
+- [ ] 操作系统 Linux / macOS / Windows
+- [ ] 80 / 443（反向代理）或 3000（直连）可达
+- [ ] 数据库就绪：默认 SQLite 即可，或 MySQL ≥ 5.7
+- [ ] Redis ≥ 6.0（仅多节点）
+- [ ] 反向代理（Nginx / Caddy / Cloudflare 之一）
+- [ ] 域名 + TLS 证书
+- [ ] （可选）SMTP 邮件账号
+- [ ] （可选）支付通道凭证
+
+## 下一步
+
+- 最快的部署 → [Docker 单实例部署](./docker-deploy)
+- 生产环境 → [docker-compose 部署](./docker-compose)
+- 想自己编译 → [源码编译](./source-build)
