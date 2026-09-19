@@ -1,94 +1,99 @@
 ---
-title: Group Pricing
-description: "`group_price` table, discount multipliers, per-model overrides, and default groups."
+title: Group Price
+description: Discounts for user groups on specific models.
 category: pricing
 order: 2
 ---
 
-# Group Pricing
+# Group Price
 
-> User-group multipliers on top of model pricing. `group_price` defines "this group on this model" at a decimal multiplier; default `1.0` (no discount). Implementation: `model/model_price.go::GroupPrice`.
+> VIP at 20% off, SVIP at 50% off specific models — this is where you set it.
 
-## Data model
+## What it is
 
-`model.GroupPrice` (`group_price` table):
+`GroupPrice` lets a user group apply a discount multiplier on specific models. It composes with [Model Price](/en/pricing/model-price):
 
-| Field | Type | Notes |
-|---|---|---|
-| `group_name` | `varchar(32)` | Matches `users.group`; first column of the composite unique index |
-| `model_name` | `varchar(100)` | Model name; empty string means "default multiplier for this group", second column of the unique index |
-| `discount` | `decimal(10,4)` | Multiplier: `1.0` no discount; `0.8` charges 80% (vip 20% off) |
-| `created_at` / `updated_at` | `bigint` | unix seconds |
-
-`(group_name, model_name)` is the unique key; the same combination cannot be inserted twice.
-
-## Endpoints
-
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/group_price/` | `GET` | Admin | Full list, ordered by `group_name, model_name` |
-| `/api/group_price/` | `POST` | Admin | Create; `group_name` required; `discount=0` falls back to `1.0` |
-| `/api/group_price/` | `PUT` | Admin | Update |
-| `/api/group_price/:id` | `DELETE` | Admin | Delete (rebuilds `groupPriceMap` after) |
-
-## Lookup order
-
-`model.GetGroupDiscount(groupName, modelName)`:
-
-1. `groupPriceMap[groupName][modelName]` — exact hit
-2. `groupPriceMap[groupName][""]` — group-wide default
-3. Otherwise `1.0`
-
-`relay/billing/ratio/model.go::GetGroupDiscount(groupName, modelName, fallbackNames...)` retries step 1 with each fallback name before falling back to `""` (e.g. `claude-3.5-sonnet-internet` → `claude-3.5-sonnet`); the fallback chain mirrors `GetModelPrice`.
-
-## Default groups
-
-`model_price.go::defaultGroupPrices` seeds three rows:
-
-```go
-{GroupName: "default", ModelName: "", Discount: 1.0}
-{GroupName: "vip",     ModelName: "", Discount: 1.0}
-{GroupName: "svip",    ModelName: "", Discount: 1.0}
+```
+deducted = consumption × ModelPrice × GroupPrice(group, model)
 ```
 
-Inserted when the table is empty. `Discount=1.0` is a placeholder; admins tune them in the UI.
+`GroupPrice` defaults to 1.0 (no discount).
 
-## Cache
+## Where to find it
 
-- Boot: `InitGroupPriceCache` loads the entire table into `groupPriceMap map[string]map[string]float64`
-- After writes: every CRUD calls `InitGroupPriceCache`
-- Scheduled: `SyncGroupPriceCache(frequency)` shares the frequency with `SyncModelPriceCache`
-- Redis: `CacheGetGroupPrice(group, model)` second-tier cache (`ModelPriceCacheSeconds=300`); DB on miss
+Admin → Group Prices.
 
-## Coverage interaction
+## What to set
 
-- A row with `model_name=""` is the group's default for every model
-- A per-model row (`model_name="gpt-4o"`) only takes precedence for that exact model; other models fall back to the group's `""` row
+Per row:
 
-Examples:
+| Field | Meaning | Effect |
+|---|---|---|
+| `group_name` | Group name | Matches the user's `group` field |
+| `model_name` | Model name | Empty = default for the group; specific = that model only |
+| `discount` | Multiplier | `1.0`=no change; `0.8`=20% off; `1.2`=20% markup |
 
-| group | model | discount | Meaning |
-|---|---|---|---|
-| `vip` | `""` | `0.8` | vip users pay 80% on all models |
-| `vip` | `gpt-4o` | `0.5` | vip users pay 50% on gpt-4o |
-| `svip` | `""` | `1.0` | svip placeholder (no discount) |
+## Match order
 
-## Frontend Guide
+1. Exact `(user_group, model)` match
+2. Otherwise `(user_group, "")` — the group's default multiplier
+3. Otherwise 1.0
 
-Route: `/setting/pricing` → **Group Pricing** tab (`web/default-pro/src/views/setting/PricingSetting.vue`).
+## Common recipes
 
-- List: `group_name` / `model_name` / `discount`
-- Edit modal: the three fields; `discount` defaults to `1.0`
-- **Add** uses the same form
+### Flat VIP discount
 
-## Implementation Pointers
+| group | model | discount |
+|---|---|---|
+| `vip` | _(empty)_ | `0.8` |
 
-| Concern | Location |
-|---|---|
-| Data model | `model/model_price.go::GroupPrice` |
-| Cache init | `model/model_price.go::InitGroupPriceCache` |
-| Lookup (with fallback) | `model/model_price.go::GetGroupDiscount` |
-| Redis cache | `model/model_price.go::CacheGetGroupPrice` |
-| CRUD | `controller/model_price.go` |
-| Default groups | `model/model_price.go::defaultGroupPrices` |
-| Billing settlement | `relay/handler/helper.go::postConsumeQuota` |
+### VIP + extra on a premium model
+
+| group | model | discount |
+|---|---|---|
+| `vip` | _(empty)_ | `0.8` |
+| `vip` | `gpt-4o` | `0.5` |
+
+### Multiple groups
+
+On first start the system seeds `default` / `vip` / `svip` at `discount=1.0`. Tune them in the UI as needed.
+
+## How to change
+
+Admin → Group Prices → Add:
+
+1. Pick `group_name` (e.g. `vip`)
+2. Fill `model_name` (empty = group default)
+3. Fill `discount` (e.g. `0.8`)
+4. Save
+
+## Don't
+
+- Don't set every group to 1.0 (it's already the default)
+- Don't create two rows with the same `(group, model)` (unique constraint)
+
+## vs. subscription discounts
+
+[Subscription plans](/en/subscription/overview) have their own discount (`subscription.discount`). The two compose:
+
+- Call hits a subscription → use `subscription.discount`
+- Call misses → use `GroupPrice`
+
+## FAQ
+
+- **Set VIP 80% but user says it didn't apply**: confirm the user is actually in the `vip` group (Personal Center or admin)
+- **Effective immediately?**: Yes. Next call uses the new discount.
+- **Can one user stack discounts?**: Yes — `GroupPrice` × subscription discount (if active).
+
+## Related
+
+- [Group Price Management (admin)](./group-price-management)
+- [Group Price Schema](/en/schema/group-price)
+- [Model Price](/en/pricing/model-price)
+
+## Related API
+
+- `GET /api/group_price/` — list
+- `POST /api/group_price/` — add
+- `PUT /api/group_price/` — update
+- `DELETE /api/group_price/:id` — delete
