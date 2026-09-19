@@ -317,8 +317,15 @@ export default defineConfig({
         lastUpdatedText: '最后更新',
         langMenuLabel: '切换语言',
         footer: {
-          message: '基于 MIT 许可发布 · 文档持续更新中',
-          copyright: 'Copyright © 2024-present One API Pro',
+          message:
+            '<span class="op-footer-links">' +
+            '<a href="https://one-api.pro" target="_blank" rel="noreferrer">one-api.pro</a>' +
+            '<span class="op-footer-sep">·</span>' +
+            '<a href="https://github.com/modelbus/one-api-pro" target="_blank" rel="noreferrer">GitHub</a>' +
+            '<span class="op-footer-sep">·</span>' +
+            '<a href="/changelog/index">版本发布</a>' +
+            '</span>',
+          copyright: 'Copyright © 2024-present One API Pro · 基于 MIT 许可发布',
         },
       },
     },
@@ -342,8 +349,15 @@ export default defineConfig({
         lastUpdatedText: 'Last updated',
         langMenuLabel: 'Change language',
         footer: {
-          message: 'Released under the MIT License · Docs are a work in progress',
-          copyright: 'Copyright © 2024-present One API Pro',
+          message:
+            '<span class="op-footer-links">' +
+            '<a href="https://one-api.pro" target="_blank" rel="noreferrer">one-api.pro</a>' +
+            '<span class="op-footer-sep">·</span>' +
+            '<a href="https://github.com/modelbus/one-api-pro" target="_blank" rel="noreferrer">GitHub</a>' +
+            '<span class="op-footer-sep">·</span>' +
+            '<a href="/en/changelog/index">Releases</a>' +
+            '</span>',
+          copyright: 'Copyright © 2024-present One API Pro · Released under the MIT License',
         },
       },
     },
