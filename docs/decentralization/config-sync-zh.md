@@ -1,146 +1,94 @@
 ---
 title: 配置同步
-description: "事件分发、Watcher、Applier 与冲突解决。"
+description: 数据如何在节点间同步、什么时候会冲突、冲突如何收敛。
 category: decentralization
 order: 3
 ---
 
 # 配置同步
 
-> 事件分发、Watcher、Applier 与冲突解决。
+> 节点 A 改了一条记录，节点 B、C、D 多久能看见？答：通常 < 1 秒。
 
-数据同步链路：`业务 SQL → GORM 回调 → sync_events → 推送协程 → 远端 /sync → Applier`。
+## 同步流程
 
-## 同步的表
-
-由 `cluster/event.go::syncTableList` 控制：
-
-```text
-users, tokens, channels, abilities,
-options, redemptions, plans,
-user_plans, plan_usages,
-channel_counters,
-logs（受 CLUSTER_SYNC_LOGS 控制）
+```
+节点 A 写入数据库
+    ↓
+GORM 回调自动捕获变更
+    ↓
+写入 sync_events 临时表
+    ↓
+Pusher 协程批量推送到每个存活节点
+    ↓
+节点 B/C/D 的 Applier 收到事件并应用
 ```
 
-`cluster_nodes`、`sync_events` 等内部表**不会**被同步。
+任一节点改数据，其他节点通常 **< 1 秒**内可见。
 
-## Watcher：捕获变更
+## 同步哪些表
 
-`cluster/watcher.go` 注册了四个 GORM 回调，仅对非内部表生效：
+- `users` / `tokens`：账号与 Token
+- `channels` / `abilities`：渠道
+- `options`：系统设置
+- `redemptions`：兑换码
+- `plans` / `user_plans` / `plan_usages`：套餐 / 订阅 / 用量
+- `channel_counters`：渠道限流计数
+- `logs`：调用日志（可通过 `CLUSTER_SYNC_LOGS=false` 关掉）
 
-| 回调| 触发时机| 写入事件|
-| --- | --- | --- |
-| `cluster:after_create` | GORM `Create` 之后 | `insert` |
-| `cluster:after_update` | GORM `Update` 之后 | `update` |
-| `cluster:before_delete` | GORM `Delete` 之前 | 抓取旧行 JSON 备用 |
-| `cluster:after_delete` | GORM `Delete` 之后 | `delete` |
+**不同步**：`cluster_nodes` / `sync_events`（内部表，由发现机制维护）。
 
-每个事件都会向 `sync_events` 写入一行：
+## 冲突怎么处理
 
-```text
-sync_events (
-  id, table_name, row_id, row_key, action,
-  data TEXT, node_id, created_at, pushed
-)
+如果两个节点**几乎同时**改同一条记录，系统按「最后写入胜出」：
+
+```
+A 改记录的 updated_at = 10:00:01.100
+B 改记录的 updated_at = 10:00:01.050
+→ A 的版本最终保留
 ```
 
-- `row_id`：单主键表的 `id`；复合主键表（如 `channel_counters`、`abilities`）为空，由 `data` JSON 携带完整字段；
-- `row_key`：仅 `options` 表存 `key`；
-- `node_id`：写入时打上当前节点编号，用于接收方识别与去重；
-- `pushed=0`：等待 Pusher 推送；推送成功后由 Pusher 批量删除。
+规则：
 
-> 关键：写入 `sync_events` 用 `WithSkipHook(db).Session(NewDB: true).Exec(...)` 直接执行 SQL，**完全绕开 GORM 回调**，避免 `createSyncEvent → DB.Create → afterCreate → createSyncEvent` 的无限递归。
+- 接收方收到事件，比较入站记录的 `updated_at` 与本地
+- 入站更新才覆盖；本地更新则丢弃入站
 
-## Pusher：推送协程
+> 所有节点的**系统时钟必须基本一致**（建议启用 NTP）。漂移过大会导致本应被采纳的更新被错误丢弃。
 
-`cluster/pusher.go` 启动一个 goroutine 监听 `syncNotifyChan`（带 256 容量）：
+## 节点离线期间产生的变更
 
-```text
-watcher 写入事件 → NotifySyncEvent() → syncNotifyChan (非阻塞满则丢弃)
-                                ↓
-                       StartPusher 收到信号
-                                ↓
-                  100ms 节流 + drainNotifyChan
-                                ↓
-                  pushEvents: 读取 pushed=0 的事件 (按 created_at, Limit=BatchSize)
-                                ↓
-           对每个事件用 WithSkipHook 直接 HTTP POST 到每个存活节点 /api/cluster/sync
-                                ↓
-            全部成功 → 批量 DELETE FROM sync_events WHERE id IN (...)
-```
+**不会自动回填**。比如节点 B 离线 1 小时，期间节点 A 改了 100 条记录；B 恢复后只能看到恢复后的新变更，看不到离线期间的。
 
-要点 / Highlights:
+修复方法：从存活节点手工 `mysqldump` 同步一次。
 
-- **节流**：每次通知后 sleep 100ms 并 drain 通道，把同一窗口内的多次变更合并推送；
-- **批量**：`BatchSize`（默认 50）限制单次推送事件数，防止请求过大；
-- **仅存活节点**：`GetAliveNodesForSync` 只取 `status=1 AND disabled=false AND node_id != ?` 的节点；
-- **失败不删除**：单个节点推送失败不会把该事件标为已推送，等下一周期重试；
-- **重传兜底**：启动时统计 `pushed=0` 的事件数并触发一次补推。
+## 节点间推送的请求头
 
-请求头 / Headers:
+每次推送会带：
 
-- `X-Cluster-Secret`: 目标节点的 secret（本地 DB 查）
-- `X-Cluster-Node-Id`: 当前节点的 `CLUSTER_NODE_ID`
+- `X-Cluster-Secret`：目标节点的 secret（校验通过才接收）
+- `X-Cluster-Node-Id`：发送方节点 ID
 - 超时 5 秒
-- 5-second timeout
 
-## 接收方：Applier
+## 同步出问题了怎么排查
 
-`cluster/handler.go::handleSync` 接收到事件后，**在 goroutine 内**调用 `ApplyEvents`，立即返回 200：
+1. **A 改了 B 没收到**：
+   - 看 B 后端日志是否有 sync 事件
+   - 在 A 端手动 Ping B，看是否通
+   - 检查两边的 `secret_key` 是否一致
+2. **数据冲突，丢了一条更新**：
+   - 检查两节点时钟是否同步（开启 NTP）
+   - 看数据库 `sync_events` 表是否有积压（`pushed=0` 太多 = 推送阻塞）
+3. **同步延迟很大（> 几秒）**：
+   - 看 `sync_events` 积压
+   - 看 Pusher 协程是否在运行（看进程监控）
+   - 看节点间网络延迟
 
-```go
-go func() {
-    defer func() { recover() ... }()   // 防御性：panic 不拖垮进程
-    ApplyEvents(req.Events)
-}()
-c.JSON(http.StatusOK, gin.H{"success": true})
-```
+## 哪些场景关掉同步更快
 
-`ApplyEvents` 按 `action` 分发：
+- 日志表巨大：在节点环境变量设 `CLUSTER_SYNC_LOGS=false`，日志只存在本地节点
+- 节点只读：把当前节点的 secret 设为随机值（拒绝接收）
 
-| `action` | 处理| 说明|
-| --- | --- | --- |
-| `insert` | `applyInsert` | 若主键已存在则转为 update；保证幂等 |
-| `update` | `applyUpdate` | 比较 `updated_at`，仅当入站更新才写入 |
-| `delete` | `applyDelete` | 复合主键表走复合条件；缺 `row_id` 时尝试从 `data` JSON 兜底 |
+## 相关
 
-特殊表 / Special tables:
-
-- `options`：按 `key` upsert；
-- `abilities`：复合主键 `(group, model, channel_id)`；
-- `channel_counters`：复合主键 `(channel_id, node_id)`；
-
-所有写入通过 `WithSkipHook(db)`，**避免接收方再次触发 Watcher 产生新事件**。
-
-## 冲突解决
-
-`applyUpdate` 比较 `incoming.updated_at` 与本地 `updated_at`：
-
-```text
-incoming.updated_at <= local.updated_at   → 跳过（本地更新或相同）
-incoming.updated_at >  local.updated_at   → 覆盖
-```
-
-最后写入胜出（Last-Writer-Wins）。
-
-> 注意：所有节点需保证系统时钟基本一致（建议启用 NTP）。漂移过大会导致本应被采纳的更新被错误丢弃。
-
-## 缓存失效
-
-`applier.go::invalidateCache` 在事件应用后清理 Redis 缓存（仅当 Redis 启用时生效）：
-
-| 表| 失效键|
-| --- | --- |
-| `users` | `user_group:<id>`, `user_quota:<id>`, `user_enabled:<id>`, `user_plans:<id>` |
-| `tokens` | `token:<key>` |
-| `channels` | 重载渠道缓存；删除全部 `group_models:*` |
-| `options` | 重新加载 `OptionMap` |
-| `user_plans` | `user_plans:<user_id>` |
-
-## 日志清理
-
-`cluster/pusher.go::StartEventCleanup` 每小时清理 `created_at < now - 7d` 的 `sync_events` 行，避免表膨胀。
-
-下一步 / Next: [节点健康](/zh/decentralization/node-health) · [多节点部署](/zh/decentralization/deployment)。
-
+- [Cluster 概览](./overview)
+- [节点管理](./node-management)
+- [节点健康](./node-health)
