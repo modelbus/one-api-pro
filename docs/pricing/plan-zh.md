@@ -1,105 +1,130 @@
 ---
 title: 套餐定价
-description: "`Plan` 数据模型、有效期、模型覆盖、分组绑定与升降级语义。"
+description: 套餐是什么、怎么设置、用户怎么买。
 category: pricing
 order: 3
 ---
 
 # 套餐定价
 
-> 套餐（Plan）是订阅的定价与配额载体。实现：`model/plan.go::Plan`、`controller/plan.go`、`web/default-pro/src/views/setting/PlanSetting.vue`。
+> 用户在前台订阅页看到的「包月套餐」是怎么定义的。
 
-## 数据模型
+## 这是什么
 
-`model.Plan`（`plans` 表）字段：
+`Plan` 是「可订阅商品」的模板。它定义了：
 
-| 字段 | 类型 | 说明 |
+- 叫什么 / 多贵 / 多长有效期
+- 哪些模型能用、能用多少
+- 是不是推荐套餐
+
+用户在前台看到的套餐就是它。
+
+## 在哪里看到
+
+- **后台 → 套餐管理**（管理员）：新增、上下架
+- **前台 → 订阅**（用户）：列出当前上架的 Plan
+
+## 创建套餐时需要填的
+
+| 项 | 含义 | 设置后影响 |
 |---|---|---|
-| `name` | `varchar(100)` | 套餐名（必须；`Insert` 时为空则报错） |
-| `description` | `text` | 套餐描述 |
-| `price` | `decimal(10,2)` | 价格（元） |
-| `duration_days` | `int` | 有效天数（默认 30）；创建订阅时 `end_time = start_time + duration_days * 86400` |
-| `duration_text` | `varchar(50)` | 展示文本（如 "30 天"、"季度"） |
-| `status` | `int` | `PlanStatusEnabled=1` / `PlanStatusDisabled=0`；`/api/plan/public` 仅返回 `Enabled` |
-| `recommended` | `bool` | 前端 "推荐" 标签 |
-| `sort` | `int` | 升降级比较键；值越大越高级 |
-| `features` | `StringSlice` (text JSON) | 权益文案列表 |
-| `model_limits` | `text` JSON | 各模型窗口配额（见下） |
-| `default_model` | `varchar(100)` | 不在 limits 的请求被路由到该模型；`ValidateDefaultModel` 校验必须在 `model_limits` 存在 |
+| 名称 | 用户看到的名字 | 修改后所有位置同步更新 |
+| 价格 | ¥ | 用户下单金额 |
+| 有效期 | 天数 | 过期后用户进入「套餐已过期」状态，但仍可调用到额度耗尽 |
+| 折扣倍率 | 数字 | 用户订阅期间内调用的最终折扣（默认 1.0 = 无折扣） |
+| 模型配额 | JSON | 每个模型的窗口配额（见下） |
+| 默认模型 | 模型名 | 不在配额里的请求被路由到该模型；空则 422 |
+| 描述 | 富文本 | 前台展示 |
+| 推荐 | 开关 | 前台套餐卡显示「★ 推荐」徽章 |
+| 状态 | 上架 / 下架 | 下架后用户不能新订；已有订阅不受影响 |
 
-## `model_limits` 格式
+## 模型配额（model_limits）JSON
 
-`model/model_plan.go::ModelLimitRule`：
+每个套餐对每个模型可以设三档窗口配额：
 
 ```json
 {
-  "gpt-4o":            { "period_h": 5, "request_period": 100, "request_week": 500, "request_month": 2000, "token_period": 50000,  "token_week": 250000, "token_month": 1000000 },
-  "claude-3.5-sonnet": { "period_h": 5, "request_period": 50,  "request_week": 200, "request_month": 800,  "token_period": 30000,  "token_week": 120000, "token_month": 480000 }
+  "gpt-4o": {
+    "period_h": 5,
+    "request_period": 100,
+    "request_week": 500,
+    "request_month": 2000,
+    "token_period": 50000,
+    "token_week": 250000,
+    "token_month": 1000000
+  }
 }
 ```
 
-- `period_h` = period 窗口小时数（缺省 5）
-- `request_*` / `token_*` = 三个窗口的请求次数 / token 上限；`0` 表示不限
-- `model_limits` 为 null 时 `CheckPlanQuota` 直接视为 usable（无窗口限制）
+| 字段 | 含义 |
+|---|---|
+| `period_h` | period 窗口小时数（默认 5） |
+| `request_period` / `request_week` / `request_month` | 三窗口调用次数上限（`0` = 不限） |
+| `token_period` / `token_week` / `token_month` | 三窗口 token 上限 |
+
+`model_limits` 为 null 时套餐对该模型不限（按量计费路径）。
 
 详见 [计费规则](../subscription/billing-rules)。
 
-## features
+## 用户购买流程
 
-`StringSlice` 是 `plan.go` 自定义的 JSON / 文本双向桥接：
+```
+用户在前台 /pricing 选套餐
+    ↓
+POST /api/order/plan  (生成订单号 TB / UP)
+    ↓
+支付 → 回调 → ActivatePackageByOrder
+    ↓
+创建 Subscription (end_time = now + duration_days)
+```
 
-- 写库：`MarshalJSON` 输出数组；`Value()` 序列化为 JSON 字符串
-- 读库：`Scan` 优先按 JSON 数组解析，失败则按 `\n` 拆分（兼容历史纯文本）
-- nil 时 `MarshalJSON` 输出 `[]` 而非 `null`
+管理员也可以「手动开通」绕过支付，常用于客服补偿。
 
-## 接口
+## 升降级
 
-| Endpoint | Method | Auth | 说明 |
-|---|---|---|---|
-| `/api/plan/` | `GET` | Admin | 分页 |
-| `/api/plan/search?keyword=` | `GET` | Admin | `name LIKE kw%` |
-| `/api/plan/:id` | `GET` | Admin | 详情 |
-| `/api/plan/` | `POST` | Admin | 新建（`name` 必填；`ValidateDefaultModel`） |
-| `/api/plan/` | `PUT` | Admin | 更新（同上） |
-| `/api/plan/:id` | `DELETE` | Admin | 删除 |
-| `/api/plan/public` | `GET` | Public | 仅 `status=Enabled`，用户侧套餐列表 |
-| `/api/plan/public/:id` | `GET` | Public | 公开详情 |
+切换套餐时：
 
-## 分组绑定
+- **差价模式**（默认）：按差价扣费，旧订阅剩余额度折算到新订阅
+- **叠加模式**：付全款开新订阅，旧订阅继续生效
 
-套餐自身不直接绑定到具体用户组；用户组判定由渠道的 `group` 字段控制。套餐的"高级感"主要通过：
+管理员在 [套餐业务配置](../subscription/plan-settings) 切换。
 
-- `recommended=true` — 列表标记推荐
-- `sort` — 升降级比较（同 `sort` 拒绝；`sort` 小的不能升到 `sort` 大的之上）
-- `default_model` — 当用户请求一个不在 `model_limits` 里的模型时，重写到该模型；为空则直接 422（`PlanQuotaCheck`）
+## 怎么上架新套餐
 
-## 与订单
+1. 后台 → 套餐管理 → 新增
+2. 填名称、价格、有效期、折扣
+3. 填 model_limits（每个模型的三窗口配额）
+4. 填 default_model（建议填套餐的主推模型）
+5. 状态改为「上架」
+6. 保存
 
-- 用户自助下单：`POST /api/order/plan` → `model.CreatePlanOrder` → `buildPayInfo` 返回预支付参数 → 支付回调 → `ActivatePackageByOrder(order, mode)`
-- 管理员 grant：`POST /api/subscription/` → 立即 `ActivatePackageByOrder(order, OrderUpgradeModeStack)`
-- 升降级模式由系统设置 `plan.upgrade_mode` 决定（默认 `price_diff`）
+建议填完先测一遍再上架：开通一个测试订阅，验证调用、配额、升级、降级。
 
-详见 [套餐升降级](../subscription/upgrade-downgrade) 与 [订阅管理（管理员）](../subscription/admin-guide)。
+## 与用户组的关系
 
-## 前端操作指南
+套餐**不直接绑定用户组**。一个 VIP 用户买普通套餐，扣费规则：
 
-页面：`/setting/pricing` → "套餐" Tab（`web/default-pro/src/views/setting/PlanSetting.vue`）。
+```
+调用消耗 × ModelPrice × 套餐折扣 × (用户组折扣 / 用户组默认折扣)
+```
 
-- 列表列：name / price / duration_days / duration_text / sort / status / recommended
-- 编辑弹窗：name / description / price / duration_days / duration_text / sort / status / recommended / features[] / model_limits JSON / default_model
-- 「推荐」开关（★）：`recommended=true`
-- 「启用 / 禁用」按钮切换 `status`
-- 删除带二次确认；删除套餐不会回滚已存在的 `user_plans`（历史订阅仍按当时快照走）
+## 常见问题
 
-## 实现位置
+- **改了 model_limits 老订阅会变吗**：不会。老订阅沿用订阅时的快照
+- **默认模型必须填吗**：套餐要限制模型时必填，否则不限模型时为空
+- **删除套餐后老订阅还能用吗**：能，删除只影响新订阅
 
-| 关注点 | 位置 |
-|---|---|
-| 数据模型 | `model/plan.go::Plan` / `ModelLimitRule` |
-| 校验 | `model/plan.go::ValidateDefaultModel` |
-| CRUD | `controller/plan.go` |
-| 公开接口 | `controller/plan.go::GetPublicPlans` / `GetPublicPlanDetail` |
-| 创建订单 | `model/order_payment.go::CreatePlanOrder` |
-| 激活 | `model/order_payment.go::ActivatePackageByOrder` |
-| 升降级 | `model/order_payment.go::CalculateUpgradePrice` |
+## 相关页面
 
+- [套餐（数据结构）](/schema/plan)
+- [套餐管理（后台）](../subscription/plan-management)
+- [套餐升降级](../subscription/upgrade-downgrade)
+- [我的订单（用户）](../user/orders)
+
+## 相关 API
+
+- `GET /api/plan/` — 列表（管理员）
+- `GET /api/plan/public` — 列表（前台公开）
+- `POST /api/plan/` — 新增（Root）
+- `PUT /api/plan/` — 更新（Root）
+- `DELETE /api/plan/:id` — 删除（Root）
