@@ -1,84 +1,63 @@
 ---
 title: Channel Test
-description: "Single-channel and batch tests, the test request shape, and how the auto-disable path reacts."
+description: When and how to test a channel's connectivity.
 category: channel
 order: 4
 ---
 
 # Channel Test
 
-> Two endpoints: `GET /api/channel/test/:id?model=` for a single channel and `POST /api/channel/test?scope=all` for batch. Implementation: `controller/channel-test.go`.
+> When to use it, which button to click, how to read the result.
 
-## Single-channel test
+## When to use
 
-| Field | Value |
-|---|---|
-| Method | `GET` |
-| Path | `/api/channel/test/:id` |
-| Query | `model` (optional; falls back to the first entry in `channel.models`) |
-| Auth | Admin |
+- Right after creating a channel: test before enabling.
+- After a channel has been auto-disabled: running a test re-enables it on success.
+- When users report "this model isn't working": isolate whether it's the channel.
+- After editing fields on [Add a Channel](./add-channel) (Base URL, model list).
 
-Server behavior (`controller/channel-test.go::TestChannel`):
+## Two kinds of test
 
-1. `model.GetChannelById(id, true)` fetches the channel including `key`
-2. `buildTestRequest(model)` constructs an OpenAI ChatCompletion body with one `user` message using `config.TestPrompt` (default `Output only your specific model name with no additional text.`)
-3. If the requested model is not in `channel.models`, the first listed model is used; `model_mapping` then rewrites it to the upstream model name
-4. `relay.GetAdaptorByChannel(channel.Type)` returns the provider adaptor; the test calls `ConvertRequest` → `DoRequest` → `DoResponse`
-5. Parses the response and extracts `choices[0].content`; on success writes a `Log` via `RecordTestLog`
-6. Stores the elapsed milliseconds on `channels.response_time`
+### Single-channel test
 
-Response on success:
+Admin → Channels → click a channel → "Test" button.
 
-```json
-{
-  "success": true,
-  "message": "gpt-4o",
-  "time": 0.842,
-  "modelName": "gpt-4o"
-}
-```
+- **What it does**: sends a minimal request using the channel's actual credentials against one of its allowed models.
+- **Time**: typically < 5 s.
+- **Outcome**:
+  - **Pass**: channel is usable; if it was auto-disabled, it's re-enabled.
+  - **Fail**: shows the specific error (401 / 404 / 500 etc.) — diagnose from there.
 
-On failure `success=false` and `message` carries the upstream status and error body.
+### Batch test
 
-## Batch test
+Admin → Channels → "Batch test" at the top of the list.
 
-| Field | Value |
-|---|---|
-| Method | `POST` |
-| Path | `/api/channel/test` |
-| Query | `scope` — `all` (default) / `disabled` |
-| Auth | Admin |
+- **What it does**: tests every enabled channel.
+- **Time**: ~1–2 min for 50 channels.
+- **Use**: weekly cron to catch channels that silently went bad.
+- **Outcome**: full results on the "Test log" page.
 
-`testChannels` uses a process-wide `testAllChannelsLock` so only one batch run is alive at any time. Flow:
+## Which model to test with
 
-1. Loads every channel (including disabled ones for `scope=all`); walks them with `config.RequestInterval` between each
-2. After each channel's test:
-   - If it was enabled and response time > `config.ChannelDisableThreshold * 1000` ms (default 5 s), auto-disable (when `AutomaticDisableChannelEnabled=true`) or send a notification
-   - If it was enabled and `monitor.ShouldDisableChannel(openaiErr, -1)` decides it should be disabled, call `monitor.DisableChannel`
-   - If it was disabled but this run succeeded, call `monitor.EnableChannel` to bring it back
-3. When the run finishes and `notify=true`, root receives a "channel test completed" message
+The test model must be in the channel's model allow-list. Safe choices:
 
-Response `success=true` means the test was started. Results land asynchronously on `channels.response_time` and `channels.last_error`.
+- OpenAI: `gpt-4o-mini` (cheap, almost always works)
+- Anthropic: `claude-haiku-4-5`
+- Others: pick the "basic" model from the provider's docs
 
-## Scheduled test
+## Error troubleshooting
 
-`main.go:88` starts `controller.AutomaticallyTestChannels` whenever the `CHANNEL_TEST_FREQUENCY` env var (minutes) is set; it runs `testChannels(ctx, false, "all")` every N minutes.
+| Error | Meaning | Fix |
+|---|---|---|
+| 401 Unauthorized | Wrong / expired credential | Re-issue the API key in the upstream console and update the channel. |
+| 404 Not Found | Wrong Base URL | Cross-check against the provider's docs. |
+| 400 Bad Request | Format mismatch | Check the Provider type (OpenAI vs Anthropic). |
+| 429 Too Many Requests | Upstream rate limit | Lower the concurrency cap or try later. |
+| 500 Server Error | Upstream outage | Retry later; pause the channel if it persists. |
+| Timeout | Network | Check if the Base URL is reachable; bump the timeout. |
 
-## Test prompt
+## Related
 
-Globally configurable: `config.TestPrompt` (env `TEST_PROMPT`). In production use a short prompt that the model will answer cleanly, e.g.:
-
-```
-TEST_PROMPT="Output only your specific model name with no additional text."
-```
-
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| Single-channel test | `controller/channel-test.go::TestChannel` |
-| Batch test | `controller/channel-test.go::testChannels` |
-| Scheduled runner | `controller/channel-test.go::AutomaticallyTestChannels` |
-| Enable / disable decision | `monitor/manage.go::ShouldDisableChannel` / `ShouldEnableChannel` |
-| Test request builder | `controller/channel-test.go::buildTestRequest` |
-| Test log | `model.RecordTestLog` |
+- [Channel Overview](./overview)
+- [Add a Channel](./add-channel)
+- [Channel Routing](./channel-routing)
