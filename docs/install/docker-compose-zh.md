@@ -1,188 +1,159 @@
 ---
 title: docker-compose 部署
-description: "通过 docker-compose 编排单实例或带依赖的部署。"
+description: 通过 docker-compose 编排 One API Pro + 数据库，适合生产环境。
 category: install
 order: 3
 ---
 
 # docker-compose 部署
 
-> 通过 docker-compose 编排单实例或带依赖的部署。
+> 适合生产、单节点有 MySQL/Redis 的标准部署。
 
 ## 仅 One API Pro
 
-最简编排，只使用容器内嵌的 SQLite。
+最简编排，只用容器内嵌的 SQLite。
+
+`docker-compose.yml`：
 
 ```yaml
-# compose.yaml
 services:
   one-api-pro:
     image: ghcr.io/modelbus/one-api-pro:latest
     container_name: one-api-pro
-    restart: unless-stopped
+    restart: always
     ports:
       - "3000:3000"
+    volumes:
+      - ./data:/app/data
     environment:
       TZ: Asia/Shanghai
-      SESSION_SECRET: please-change-me
-    volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/status"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
 ```
 
-启动 / Start:
+启动：
 
+```bash
+docker compose up -d
 ```
 
-健康检查复用镜像内 `HEALTHCHECK` 指令；`wget` 已在镜像中预装。
+## One API Pro + MySQL
 
-## MySQL + Redis 全栈
+推荐生产配置。
 
-生产推荐组合：MySQL 持久化业务数据，Redis 做缓存与限流。
+`docker-compose.yml`：
 
 ```yaml
-# compose.yaml
 services:
   one-api-pro:
     image: ghcr.io/modelbus/one-api-pro:latest
     container_name: one-api-pro
-    restart: unless-stopped
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      TZ: Asia/Shanghai
+      SQL_DSN: "oneapi:oneapi-pass@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    container_name: one-api-pro-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root-pass
+      MYSQL_DATABASE: oneapi
+      MYSQL_USER: oneapi
+      MYSQL_PASSWORD: oneapi-pass
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+```
+
+启动：
+
+```bash
+docker compose up -d
+```
+
+数据库自动初始化。
+
+## One API Pro + MySQL + Redis（生产推荐）
+
+加一个 Redis 服务，并打开 Redis 依赖：
+
+```yaml
+services:
+  one-api-pro:
+    # ... 同上 ...
+    environment:
+      SQL_DSN: "oneapi:oneapi-pass@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
+      REDIS_CONN_STRING: "redis://redis:6379/0"
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "3000:3000"
-    environment:
-      TZ: Asia/Shanghai
-      SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
-      LOG_SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi_logs?charset=utf8mb4&parseTime=True&loc=Local"
-      REDIS_CONN_STRING: "redis://default:redispw@redis:6379/0"
-      SESSION_SECRET: "please-change-me"
-      SYNC_FREQUENCY: "60"
-    volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/status"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-  mysql:
-    image: mysql:8.0
-    container_name: one-api-mysql
-    restart: unless-stopped
-    command:
-      - --default-authentication-plugin=mysql_native_password
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    environment:
-      MYSQL_ROOT_PASSWORD: oneapi_pw
-      MYSQL_DATABASE: oneapi
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-poneapi_pw"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
   redis:
     image: redis:7-alpine
-    container_name: one-api-redis
-    restart: unless-stopped
-    command:
-      - redis-server
-      - --requirepass
-      - redispw
-      - --appendonly
-      - "yes"
+    container_name: one-api-pro-redis
+    restart: always
     volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
+      - ./redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispw", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-volumes:
-  mysql_data:
-  redis_data:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 ```
 
-启动 / Start:
+## 关键环境变量
+
+| 变量 | 说明 |
+|---|---|
+| `TZ` | 时区 |
+| `SQL_DSN` | MySQL 连接串；留空用 SQLite |
+| `REDIS_CONN_STRING` | Redis 连接串；留空不用 Redis |
+| `CLUSTER_NODE_ID` / `CLUSTER_NODE_SECRET` / `CLUSTER_NODE_PORT` | Cluster 模式（多节点时需要） |
+| 其他高级项 | 见 [配置项](./config) |
+
+## 数据持久化
+
+通过 `./data`、`./mysql-data`、`./redis-data` 三个挂载目录持久化。**升级或重启容器数据不丢**。
+
+## 升级版本
 
 ```bash
-# 准备一个空目录，把上面保存为 compose.yaml
+docker compose pull one-api-pro
 docker compose up -d
-docker compose logs -f one-api-pro
 ```
 
-看到 `cluster module initialized`（仅在 `CLUSTER_ENABLED=true` 时打印）或 `using MySQL as database` 字样即表示初始化成功。
+只重启 one-api-pro 容器，其他服务不受影响。
 
-## 多实例共用 MySQL
-
-> 与多节点 **集群（去中心化）模式不同**：此处仅是多实例共享 DB 与 Redis 的传统主备/水平扩展方案，仍通过 `SESSION_SECRET` 与 `SYNC_FREQUENCY` 维持一致性。
-
-```yaml
-services:
-  one-api-pro-1:
-    image: ghcr.io/modelbus/one-api-pro:latest
-    restart: unless-stopped
-    ports:
-      - "3001:3000"
-    environment:
-      SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
-      REDIS_CONN_STRING: "redis://default:redispw@redis:6379/0"
-      SESSION_SECRET: "all-instances-must-share-this"
-      SYNC_FREQUENCY: "60"
-      NODE_TYPE: master
-    depends_on:
-      mysql: { condition: service_healthy }
-      redis: { condition: service_healthy }
-
-  one-api-pro-2:
-    image: ghcr.io/modelbus/one-api-pro:latest
-    restart: unless-stopped
-    ports:
-      - "3002:3000"
-    environment:
-      SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
-      REDIS_CONN_STRING: "redis://default:redispw@redis:6379/0"
-      SESSION_SECRET: "all-instances-must-share-this"
-      SYNC_FREQUENCY: "60"
-      NODE_TYPE: slave
-      FRONTEND_BASE_URL: "http://host-master:3001"
-    depends_on:
-      mysql: { condition: service_healthy }
-      redis: { condition: service_healthy }
-```
-
-所有实例必须共用相同的 `SESSION_SECRET`；从节点可选 `FRONTEND_BASE_URL` 将页面请求重定向到主节点。
-
-## 卸载
+## 备份
 
 ```bash
-docker compose down            # 停止并删除容器
-docker compose down -v         # 同时删除数据卷（谨慎）
+# 停服后备份（确保一致性）
+docker compose stop one-api-pro
+cp -r ./mysql-data ./backup-$(date +%Y%m%d)
+docker compose start one-api-pro
 ```
 
-数据卷 `mysql_data` / `redis_data` 与宿主机 `./data` 目录需手动清理。
+更详细的备份恢复策略见 [备份与恢复](./backup-restore)。
 
-下一步 / Next: [源码编译](/zh/install/source-build) · [备份与恢复](/zh/install/backup-restore)。
+## 相关文档
 
+- [Docker 单实例部署](./docker-deploy)
+- [配置项与环境变量](./config)
+- [备份与恢复](./backup-restore)
+- [反向代理](./reverse-proxy)
