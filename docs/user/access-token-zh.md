@@ -1,81 +1,91 @@
 ---
 title: Access Token
-description: "管理用户的系统级 Access Token。"
+description: 个人中心生成的 Access Token 用来调用管理后台 API。
 category: user
 order: 4
 ---
 
 # Access Token
 
-> 管理用户的系统级 Access Token。
+> 浏览器登录失效了，但你的脚本 / CI 还想调管理后台 API？用 Access Token。
 
-Access Token 是 **UUID 格式** 的字符串，用作 `/api/*` 管理接口的鉴权头；当浏览器 Cookie 失效时（如脚本调用、CI），使用 Access Token 是最稳妥的方式。
+## Access Token 是什么
 
-## 与 API Key 的区别
+个人中心里生成的一串 UUID。它让你不用登录网页，也能调用 One API Pro 的 `/api/*` 管理接口（比如查自己、改资料、查日志等）。
 
-| 维度| Access Token | API Key（`sk-…`） |
-| --- | --- | --- |
-| 格式| UUID 字符串 | `sk-` + 随机串 |
-| 用途| `/api/*` 管理接口 | `/v1/*` OpenAI 兼容接口 |
-| 鉴权方式| `Authorization: <uuid>` | `Authorization: Bearer sk-…` |
-| 颁发方| 用户自生成（个人中心） | 用户在「令牌」页自创建 |
-| 重生| 任何时候都可重新生成，旧 Token 立即失效 | 删除重建，旧 Key 立即失效 |
+适合这种场景：
 
-## 生成
+- 写脚本 / 自动化任务
+- 在 CI / 服务器上调用
+- 浏览器 Cookie 不可用的场景
 
-UI：个人中心 → Access Token → 「生成」。
+## 和 API Key 的区别
+
+| 项 | Access Token | API Key（`sk-…`） |
+|---|---|---|
+| 是什么 | UUID 字符串 | `sk-` 开头的随机串 |
+| 用来调哪 | `/api/*` 管理接口 | `/v1/*` OpenAI 兼容接口 |
+| 鉴权头 | `Authorization: <uuid>` | `Authorization: Bearer sk-…` |
+| 谁生成 | 你（个人中心） | 你（令牌页面） |
+| 失效 | 重新生成后旧 Token 立即失效 | 删除旧 Key 后失效 |
+
+简而言之：**Access Token 管理 One API Pro 自己**，**API Key 让别人用 One API Pro 调模型**。
+
+## 怎么生成
+
+**方式一：网页**
+
+1. 登录后台
+2. 右上角头像 → **个人中心**
+3. 找到 **Access Token** 一栏
+4. 点「生成」
+5. **立刻复制保存** —— 刷新页面就再也看不到了
+
+**方式二：用现有 Cookie 调一次 API**
+
+如果你已经在别处登录了，可以直接：
 
 ```bash
 curl http://localhost:3000/api/user/token -b cookies.txt
-# { success:true, data:"<uuid>" }
 ```
 
-仅显示一次，必须立刻复制保存；刷新页面后再访问就拿不到了。
+返回值就是新生成的 UUID。
 
-## 使用
+## 怎么用
+
+把 UUID 放到 `Authorization` 请求头里（**没有** `Bearer` 前缀）：
 
 ```bash
-# 调用管理接口
 curl http://localhost:3000/api/user/self \
   -H "Authorization: <your_access_token>"
-
-# 调 list 类的 admin API（要求 admin）
-curl http://localhost:3000/api/user/list \
-  -H "Authorization: <your_access_token>"
 ```
 
-后端中间件鉴权优先级：Cookie Session 优先 → Access Token 兜底（详见 [API 总览 · 鉴权](/zh/api/README#附录-a鉴权机制)）。
+请求成功后会返回当前登录用户的信息。
 
-## 重新生成
+## 重新生成（撤销旧 Token）
 
-再次点「生成」会生成新的 UUID，旧的立即失效。这是一种「紧急撤销」手段。
+回到个人中心 → Access Token → 再次点「生成」。会得到新 UUID，**旧 UUID 立即失效**。
 
-## 配合 SDK
+适用于：怀疑泄露、紧急撤销、定期轮换。
 
-脚本 / CI 里常见的两种用法：
+## 安全建议
 
-```bash
-# 1. 临时导出环境变量
-export OAP_TOKEN=$(curl -s http://localhost:3000/api/user/token -b cookies.txt | jq -r .data)
-
-# 2. 直接放 Secret Manager
-gh secret set OAP_TOKEN < token.txt
-```
-
-## 安全实践
-
-| 建议| 说明|
-| --- | --- |
-| **像密码一样保护** | 一旦泄露，攻击者可以读取 / 修改你的 `/api/*` 资源 |
-| **避免提交到仓库** | CI 临时文件、`.env` 都加进 `.gitignore` |
-| **定期重生** | 推荐每 90 天重生一次；外泄时立即重生 |
-| **不同环境用不同 Token** | 生产 / 预发 / 测试不要共用 |
-| **配合限流** | `GLOBAL_API_RATE_LIMIT` 兜底防爆破 |
+| 建议 | 原因 |
+|---|---|
+| 像密码一样保管 | 拿到它的人能调 `/api/*` 全部权限 |
+| 别提交到仓库 | 一旦提交，git 历史里永久可见 |
+| 不同环境用不同的 Token | 减少爆炸半径 |
+| 怀疑泄露就立即重生成 | 重生成后旧 Token 立即失效 |
+| CI 里用专门的 Token | 别用你个人登录那个 |
 
 ## 常见问题
 
-- **「生成」按钮没反应**：检查 `status` 接口返回的 `github_oauth` 等字段；正常情况下所有用户都能生成。
-- **重生成后旧 Token 仍可调用**：缓存层延迟几秒；建议立即刷新页面并清掉本地凭证。
-- **能否给其他人用**：Access Token 与 `users.id` 一一对应；他人使用 = 越权。
+- **「生成」按钮点不动**：刷新页面后再试；或检查是否被弹窗拦截
+- **重生成后旧 Token 还能用**：系统有几秒缓存，等几秒再试
+- **能不能给别人用**：不行。Access Token 和你的账号一一对应，给别人 = 把账号给他
 
-下一步 / Next: [API Key（令牌）](/zh/api/token) · [我的订单](/zh/user/orders) · [Chat Playground](/zh/user/chat)。
+## 相关
+
+- [个人资料](/user/profile) — 改密码、邮箱
+- [我的订单](/user/orders)
+- [API 文档](/api/README)
