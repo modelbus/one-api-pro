@@ -1,83 +1,64 @@
 ---
-title: Redemption Admin
-description: "Batch generation, status toggle, edit, delete, and search."
+title: Redemption Management (Admin)
+description: Bulk generate, switch state, copy, and query redemption codes.
 category: redemption
 order: 2
 ---
 
-# Redemption Admin
+# Redemption Management (Admin)
 
-> Route: `/redemption` (`web/default-pro/src/views/redemption/Redemption.vue`). CRUD implementation: `controller/redemption.go`.
+> Admin → Redemption Codes.
 
-## Endpoints
+## Generate
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/redemption/` | `GET` | Admin | Paginated (`config.ItemsPerPage`) |
-| `/api/redemption/search?keyword=` | `GET` | Admin | `id=?` or `name LIKE kw%` |
-| `/api/redemption/:id` | `GET` | Admin | Single row |
-| `/api/redemption/` | `POST` | Admin | Batch generate (see below) |
-| `/api/redemption/` | `PUT` | Admin | Edit; with `?status_only=true` only changes `status` |
-| `/api/redemption/:id` | `DELETE` | Admin | Hard delete |
+1. Admin → Redemption Codes → "Bulk generate"
+2. Pick type (Quota / Plan)
+3. Fill value (quota amount / pick a plan)
+4. Max redemptions (default 1)
+5. Expiry (default 30 days / custom)
+6. Quantity (e.g. 100)
+7. "Generate"
 
-## Batch generate — `POST /api/redemption/`
+Codes appear in the list immediately. **The codes are shown only once** — export CSV / TXT right away.
 
-Request body:
+## Export
 
-```json
-{
-  "name": "2026-Q1 推广",
-  "count": 50,
-  "quota": 10000
-}
-```
+Top-right "Export":
 
-Server-side rules (`controller/redemption.go::AddRedemption`):
+- CSV: each line `key,type,value,expires_at`
+- TXT: one code per line
 
-- `name` length 1–20; otherwise `兑换码名称长度必须在1-20之间`
-- `count ∈ [1, 100]`; otherwise `一次兑换码批量生成的个数不能大于 100`
-- Each row gets a UUID for `key`; one failed `Insert` aborts the whole batch
+Send the file to the community / support team / partner.
 
-`data` is `string[]` (the generated `key` list); the frontend uses this for the "Batch Export" dialog.
+## Search
 
-## Edit — `PUT /api/redemption/`
+Top search bar:
 
-```json
-{ "id": 88, "name": "新名字", "quota": 20000 }
-```
+- Exact match on key
+- Filter by type (Quota / Plan)
+- Filter by status (Enabled / Disabled / Exhausted / Expired)
 
-The server `GetRedemptionById` first, then overwrites `Name` and `Quota`. `gorm.Select("name", "status", "quota", "redeemed_time")` keeps updates on the allow-list only.
+## Disable
 
-## Status toggle — `PUT /api/redemption/?status_only=true`
+1. Row → "Disable"
+2. Double-confirm → immediately invalid; subsequent redempts are rejected
 
-```json
-{ "id": 88, "status": 2 }   // 2 = Disabled
-```
+Common for: leaking code → emergency lock.
 
-Only `status` is updated. `status=3 (Used)` cannot be set manually — only the `Redeem` transaction can flip it.
+## Delete
 
-## Delete — `DELETE /api/redemption/:id`
+1. Row → "Delete"
 
-Hard-deletes the `redemptions` row. Used codes can also be deleted; deletion does not touch `users.quota` (already-credited quota is not clawed back).
+> Delete is irreversible and loses audit trail. Prefer "Disable".
 
-## Frontend Guide
+## FAQ
 
-Route: `/redemption`.
+- **Lost the codes after generation**: codes are shown once at generation. Export CSV / TXT immediately.
+- **User says code is invalid**: check expired / disabled / exhausted; the admin can look up the code's status.
+- **Generated 100 codes, only 30 redeemed**: remaining 70 still work. To kill them all, disable one by one (consider a script / SQL).
 
-- Top search bar: exact id match or `name LIKE kw%`
-- List rows: ID / name / status chip / quota / created_time / redeemed_time (`-` when unused) / actions
-- Row actions:
-  - **Copy**: writes `key` to the clipboard for distribution
-  - **Enable / Disable**: popconfirm + `PUT ?status_only=true`
-  - **Edit**: modal for `name` / `quota`
-  - **Delete**: secondary confirmation
-- **Generate** opens a modal for `name` / `count` / `quota`; the response opens a "Batch Export" dialog showing `data.key[]`
+## Related
 
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| CRUD | `controller/redemption.go` |
-| Data model | `model/redemption.go::Redemption` |
-| Status constants | `model/redemption.go` (`RedemptionCodeStatusEnabled/Disabled/Used`) |
-| User-side redeem | `controller/user.go::TopUp` → `model.Redeem` |
+- [Redemption Overview](./overview)
+- [Redemption Schema](../schema/redemption)
+- [Redemption Use (user)](./user-guide)
