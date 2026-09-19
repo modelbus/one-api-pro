@@ -148,6 +148,8 @@ body {
   /* Sidebar layout overrides the title to absolute — keep it on row 1. */
   .VPNavBar.has-sidebar .title {
     height: var(--op-nav-row-1) !important;
+
+    border-bottom: none!important;
   }
 
   /* Hide the theme's bottom divider (row 2 provides its own borders). */
@@ -235,8 +237,16 @@ body {
     z-index: 1;
   }
 
+  /* `#local-search` is a flex item; without an explicit width it shrinks to
+     the button's intrinsic width. Force it to fill the search container. */
+  .VPNavBarSearch.search #local-search {
+    width: 100%;
+  }
+
   .VPNavBarSearch.search .DocSearch-Button {
     width: 100%;
+    display: flex;
+    justify-content: space-between;
   }
 
   /* Compact menu links so all 13 categories fit on one line. */
@@ -498,3 +508,52 @@ div[class*='language-'] {
 }
 
 
+/* ---------------------------------------------------------------------- */
+/* Footer                                                                  */
+/* ---------------------------------------------------------------------- */
+/* VitePress hides the footer whenever a sidebar is present; docs pages all
+   have a sidebar, so force it back on and offset it past the sidebar. */
+.VPFooter.has-sidebar {
+  display: block !important;
+  padding-left: 24px;
+}
+
+@media (min-width: 960px) {
+  .VPFooter.has-sidebar {
+    padding-left: calc(var(--vp-sidebar-width) + 32px);
+  }
+}
+
+.VPFooter .message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.VPFooter .op-footer-links {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 2px;
+}
+
+.VPFooter .op-footer-links a {
+  color: var(--vp-c-text-2);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.VPFooter .op-footer-links a:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.VPFooter .op-footer-sep {
+  margin: 0 8px;
+  color: var(--vp-c-text-3);
+}
+
+.VPFooter .copyright {
+  color: var(--vp-c-text-3);
+}
