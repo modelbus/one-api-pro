@@ -1,47 +1,54 @@
 ---
 title: 渠道概览
-description: "渠道概念、生命周期与支持的 Provider 范围。"
+description: 渠道是什么、为什么要有渠道、它的几种状态。
 category: channel
 order: 1
 ---
 
 # 渠道概览
 
-> 渠道（Channel）是对一个上游 LLM Provider 接入实例的封装，保存鉴权、地址、模型与路由策略，并参与请求时的过滤与冷却决策。
+## 渠道是什么
 
-## 概念
+**渠道就是「一个上游 Provider 的接入点」**。比如：
 
-渠道是 One API Pro 中"上游凭证 + 路由策略"的最小单位。一条渠道对应一个 Provider 的一种接入方式（如 DeepSeek 官方、Azure OpenAI 自部署、OpenAI 兼容的中转站）。每条渠道独立保存：
+- 同一个 OpenAI，你可能有官方直连渠道、Azure 自部署渠道、第三方中转渠道
+- 同一个 DeepSeek，你有官方渠道和一个代理渠道
 
-- 凭证与基础 URL（`key` / `base_url` / `config`）
-- 模型白名单（`models`，逗号分隔）
-- 用户组白名单（`group`，逗号分隔）
-- 模型名映射（`model_mapping`，JSON 对象）
-- 路由参数：权重（`weight`）、优先级（`priority`）、并发上限（`max_concurrency`）、RPM 上限（`rpm`）、冷却秒数（`cooldown_seconds`）
-- 业务开关：是否纯 fallback（`is_fallback` / `fallback_priority`）、系统提示词（`system_prompt`）
-- 运行时指标：`status`（启用/手动禁用/自动禁用）、`balance`（美元）、`response_time`、`last_error`
+每个渠道**独立保存凭证、地址、可调用模型、路由权重**，用户发起调用时系统按 [路由策略](./channel-routing) 挑选一个最合适的渠道转发。
 
-数据模型定义见 `model/channel.go::Channel`；插入/更新时会同步生成 `abilities` 表行（每条 (channel_id, model) 一行）供路由层快速过滤。
+## 为什么要建多条渠道
 
-## 状态机
+- **冗余**：一条渠道挂了（欠费 / 限流 / 维护），自动切别的
+- **性价比**：便宜渠道优先，贵渠道兜底
+- **地域 / 合规**：不同地区用不同 Provider
+- **同一 Provider 多账号**：分散额度、分散风险
 
-| 值 | 常量 | 含义 |
+## 渠道的几种状态
+
+| 状态 | 谁改的 | 含义 |
 |---|---|---|
-| 0 | `ChannelStatusUnknown` | 默认值；新渠道不会出现此值（默认 1） |
-| 1 | `ChannelStatusEnabled` | 启用；路由层可选 |
-| 2 | `ChannelStatusManuallyDisabled` | 管理员手动禁用 |
-| 3 | `ChannelStatusAutoDisabled` | 系统因余额不足 / 错误率过高 / 超时自动禁用 |
+| 启用 | 管理员 | 正常参与路由 |
+| 手动禁用 | 管理员 | 你点过禁用，路由跳过 |
+| 自动禁用 | 系统 | 系统发现错误率过高 / 余额不足 / 超时，暂时跳过；管理员需手动恢复 |
 
-自动禁用后必须由管理员手动或在批量测试通过后回到 `Enabled`。
+自动禁用是**临时熔断**，不是永久下线。可以在后台「渠道」列表里点恢复，或运行 [渠道测试](./channel-test) 通过后自动恢复。
 
-## 支持的 Provider
+## 一条渠道包含哪些信息
 
-完整 Provider 列表见 [Provider 一览](./provider-list)。所有走 OpenAI 兼容协议的中转站都可以复用 `openai` 类型：填好 `base_url` 与 `models`，再通过 `model_mapping` 校正模型名即可。
+具体在 [新增渠道](./add-channel) 页面上看到。简而言之：
 
-## 相关文档
+- **必填**：Provider 类型、Base URL、API Key、可调用模型列表
+- **常用**：权重 / 优先级、并发上限
+- **很少用**：自定义请求头、响应 JSONPath
 
-- [新增渠道](./add-channel) — 字段含义与新增流程
-- [渠道路由](./channel-routing) — 过滤、冷却、并发、RPM、Sticky、fallback
-- [渠道测试](./channel-test) — 单渠道与全渠道测试
-- [余额刷新](./balance-update) — 自动与手动拉取上游余额
+详细字段解释见 [新增渠道](./add-channel) 页面。
 
+## 支持哪些 Provider
+
+完整清单见 [Provider 全清单](./provider-list)。凡是走 **OpenAI 兼容协议** 的中转站都可以直接复用 `openai` 类型：填好 `base_url` 与 `models`，再通过 `model_mapping` 校正模型名即可。
+
+## 下一步
+
+- 新建你的第一条渠道 → [新增渠道](./add-channel)
+- 想了解多渠道如何被选择 → [渠道路由](./channel-routing)
+- 排查「为什么这条渠道不被调用」 → [渠道测试](./channel-test)
