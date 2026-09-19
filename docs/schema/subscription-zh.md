@@ -21,12 +21,12 @@ order: 8
 
 | 字段 | 含义 | 设置后影响 |
 |---|---|---|
-| 所属用户 | 关联 User | 删除用户会级联删除订阅 |
-| 关联套餐 | 关联 Plan | 改了 Plan 不会回溯到现有订阅；想批量更新需要手动 |
-| 起始时间 | 订阅开始时间 | 通常由下单时间自动写入 |
-| 到期时间 | 订阅失效时间 | 过期后用户进入「套餐过期」状态，但**仍可调用**到 `used_quota == quota` |
-| 已用额度 `used_quota` | 本订阅累计消耗 | 仅记录 |
-| 状态 | 生效中 / 已过期 / 已取消 | 决定扣费时是否享受套餐折扣 |
+| `user_id` | 所属用户 | 关联到 [User](/schema/user) |
+| `plan_id` | 关联套餐 | 关联到 [Plan](/schema/plan)；改了 Plan 不会回溯到现有订阅 |
+| `start_time` | 订阅开始时间 | 通常由下单时间自动写入 |
+| `end_time` | 订阅失效时间 | 过期后用户进入「套餐过期」状态，但**仍可调用**到 `used_quota == quota` |
+| `used_quota` | 已用额度 | 本订阅累计消耗；仅记录 |
+| `status` | 状态 | 生效中 / 已过期 / 已取消 |
 
 ## 订阅对扣费的影响
 
@@ -44,7 +44,7 @@ final = consumption × ModelPrice × GroupPrice(group, model)
 ## 订阅 vs 用户额度
 
 - 用户额度（`User.quota`）：扣调用费时优先扣这里
-- 订阅额度（`Subscription.quota`）：订阅期间内的「总量」，扣到 0 后降级为原价
+- 订阅额度（`Plan.quota` / `Subscription` 配额）：订阅期间内的「总量」，扣到 0 后降级为原价
 - 订阅和用户额度是**两条独立的扣费源**，具体见 [计费规则](/subscription/billing-rules)
 
 ## 相关页面
