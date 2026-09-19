@@ -1,79 +1,82 @@
 ---
-title: 模型定价
-description: "模型价格 CRUD，供计费系统实时查询；为渠道编辑弹窗提供下拉数据源。"
+title: 模型定价管理
+description: 管理员如何在后台维护模型单价。
 category: pricing
 order: 3
 ---
 
-# 模型定价
+# 模型定价管理
 
-> 给每个模型维护输入 / 输出 / 缓存 / 单次请求单价与计费类型；供 `relay` 计费链路实时查询。
+> 后台 → 模型定价。管理员在这里维护每个模型的单价。
 
-入口路由：管理员设置 → **Pricing**（`/setting/pricing`）。前端组件：`web/default-pro/src/views/setting/PricingSetting.vue`。
-该页签是 Root-only；普通管理员在「下拉候选」接口里也能拉取启用列表。
+## 在哪里
 
-## 数据模型
+后台 → 模型定价。
 
-`model.ModelPrice`（`model_price` 表）：
+## 列表看到什么
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `model_name` | `varchar(100)` UNIQUE | 模型主键 |
-| `input_price` | `decimal(16,6)` | 输入 token 单价（USD / 1K token） |
-| `output_price` | `decimal(16,6)` | 输出 token 单价 |
-| `cached_price` | `decimal(16,6)` | 缓存 token 单价 |
-| `per_request_price` | `decimal(16,6)` | 单次请求固定价（如 dall-e|
-| `billing_type` | `varchar(20)` | `token` 或 `per_request` |
-| `enabled` | `bool` | 是否启用；`false` 不参与计费、也不出现在下拉候选中 |
-| `created_at` / `updated_at` | `bigint` | unix 秒 |
+每行展示：
 
-启动时会由 `InitDefaultPrices()` 写入一份主流模型默认表（gpt-4o、claude-3.5、deepseek、qwen-plus 等）；用户可自由增删覆盖。
+- 模型名
+- 输入价 / 输出价 / 缓存价 / 单次请求价
+- 计费类型（token / per_request）
+- 状态（启用 / 禁用）
+- 操作按钮
 
-## 接口一览
+## 怎么新增
 
-| Endpoint | Method | 鉴权 | 说明 |
-|---|---|---|---|
-| `/api/model_price/` | `GET` | Root | 全量返回 `model_price` 表所有行（含 `enabled=false`） |
-| `/api/model_price/options` | `GET` | Admin | **仅返回 `enabled=true` 的 `model_name` 列表**，供渠道编辑弹窗用 |
-| `/api/model_price/` | `POST` | Root | 新建一行；`Insert()` 会把 `id` 强制置零以防脏数据撞主键 |
-| `/api/model_price/` | `PUT` | Root | 更新指定 `id` 的字段（`input_price/output_price/cached_price/per_request_price/billing_type/enabled`） |
-| `/api/model_price/:id` | `DELETE` | Root | 删除一行 |
+1. 列表右上角「新增」
+2. 填：
+   - 模型名（必填，唯一）
+   - 输入价 / 输出价 / 缓存价 / 单次请求价
+   - 计费类型（`token` 默认，或 `per_request`）
+   - 启用（默认开）
+3. 保存
 
-实现：`controller/model_price.go`；前端调用走 `@/api`（GET/POST/PUT/DELETE）。
+## 怎么编辑
 
-## 缓存行为
+行内「编辑」打开弹窗，修改任意字段保存即可。改后立即生效。
 
-每次 Add / Update / Delete 后都会同步调用 `model.InitModelPriceCache()`，把内存 cache `modelPriceMap` 整表重建。
-后台还有 `SyncModelPriceCache(frequency)` 定时协程，按配置频率（默认 300 秒）从 DB 拉取同步，保证多实例部署的最终一致性。
-计费热路径走 `model.CacheGetModelPrice(modelName)`（Redis 优先，无 Redis 时回 DB），键 `model_price:<name>`，TTL `ModelPriceCacheSeconds = 300`。
+## 怎么禁用
 
-## 下拉候选
+行内「禁用」：
 
-`GET /api/model_price/options` 是路由 `/api/channel` 表单里"可用模型"下拉的真实来源（admin 即可访问，避免把计费细节泄漏给普通渠道编辑流程）。
-返回值是 `string[]`，按 `model_name asc` 排序；空字符串模型会被去重忽略。
+- 禁用后该模型不可被调用（不会出现在「渠道编辑」下拉里）
+- 不影响已开始的调用
 
-## 计费模式
+通常用于：上游 Provider 下架某个模型时。
 
-- `billing_type = "token"`（默认）：按 `(prompt_tokens + completion_tokens)` 计费；命中缓存的 token 按 `cached_price` 单价。
-- `billing_type = "per_request"`：按调用次数计费，忽略 token（适用 dall-e / whisper / tts 等）。
+## 怎么删除
 
-`FindModelPriceByPattern` 提供子串兜底匹配：未命中精确键时按 `strings.Contains(modelName, pattern)` 兜底（适用于按系列统一价）。
+行内「删除」（二次确认）。删除后该模型彻底不可用。
 
-## 前端操作指南
+通常不需要删除：默认状态改成「禁用」即可。
 
-- 页签顶部切换「模型定价」/「分组定价」。
-- 列表列：模型名 / 输入价 / 输出价 / 缓存价 / 单次请求价 / 计费类型（token / per_request tag）/ 操作。
-- 点击「新增」打开 640px 弹窗：模型名（必填）、输入价/输出价/缓存价/单次请求价（`precision=6`）、计费类型下拉。
-- 编辑时模型名允许修改但**主键重复**会被 GORM 唯一索引拦截；保存后立即刷新整张表（包含缓存重建）。
-- 删除走二次确认弹窗。
+## 注意事项
 
-## 接口实现
+- **价格单位是元 / 百万 token**。例：`0.002` 表示每百万 token 收 0.002 元
+- **缓存价通常 = 输入价的一半**。0 表示不区分缓存
+- **新增模型后** 还要在 [渠道](/channel/add-channel) 里的「可用模型」勾选上，才能被路由到
 
-| 关注点 | 位置 |
-|---|---|
-| CRUD handler | `controller/model_price.go` |
-| 下拉候选 handler | `controller/model_price.go::ListModelPriceOptions` |
-| 默认价格表 | `model/model_price.go::defaultModelPrices` |
-| 缓存初始化 / 同步 | `model/model_price.go::InitModelPriceCache` / `SyncModelPriceCache` |
-| 计费热路径 | `model/model_price.go::CacheGetModelPrice` |
-| 路由 | `router/api.go` |
+## 系统自带默认价格
+
+系统启动时会种入一些主流模型的默认价格（GPT-4o / Claude / DeepSeek 等）。可在后台调整覆盖。
+
+## 常见问题
+
+- **价格改完后调用没按新价扣**：检查缓存重建是否完成；通常改后立即生效
+- **调用返回「model price not set」**：模型不在 [ModelPrice](/pricing/model-price) 表里，或 `enabled=false`
+- **想给某 Provider 全系列统一价**：可在渠道编辑时用 `model_mapping`，但每条 ModelPrice 仍要逐个加
+
+## 相关页面
+
+- [模型定价（业务概念）](/pricing/model-price)
+- [模型定价（数据结构）](/schema/model-price)
+- [渠道管理](/channel/add-channel)
+
+## 相关 API
+
+- `GET /api/model_price/` — 列表（Root）
+- `POST /api/model_price/` — 新增（Root）
+- `PUT /api/model_price/` — 更新（Root）
+- `DELETE /api/model_price/:id` — 删除（Root）
