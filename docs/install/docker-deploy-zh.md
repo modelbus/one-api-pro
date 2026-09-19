@@ -1,94 +1,90 @@
 ---
 title: Docker 单实例部署
-description: "通过官方镜像运行单实例。"
+description: 用官方镜像跑一条 One API Pro 实例（最简最快）。
 category: install
 order: 2
 ---
 
 # Docker 单实例部署
 
-> 通过官方镜像运行单实例。
+> 适用：试用、个人、小团队。
+> 部署时长：5 分钟。
 
-## 拉取镜像
-
-```bash
-docker pull ghcr.io/modelbus/one-api-pro:latest
-```
-
-> 多架构镜像自动覆盖 `linux/amd64` 与 `linux/arm64`。
-
-## 启动容器
+## 一条命令跑起来
 
 ```bash
-docker run -d \
-  --name one-api-pro \
-  --restart unless-stopped \
+docker run -d --name one-api-pro --restart always \
   -p 3000:3000 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
+  -v $(pwd)/data:/app/data \
   -e TZ=Asia/Shanghai \
   ghcr.io/modelbus/one-api-pro:latest
 ```
 
-挂载说明 / Volume notes:
+启动后访问 `http://localhost:3000`。默认管理员账号：
 
-| 容器路径| 用途|
-| --- | --- |
-| `/app/config` | `.env` 配置文件目录，由 `docker-entrypoint.sh` 自动 `--env` 加载 |
-| `/app/data` | SQLite 数据库、日志、上传缓存；`SQLITE_PATH` 默认指向此目录 |
+- 用户名：`root`
+- 密码：`123456`
 
-入口脚本默认行为 / Entry-point behaviour:
+**第一件事**：登录后立即改密码（个人中心）。
 
-- 若 `$CONFIG_DIR/.env`（默认 `/app/config/.env`）存在，则以 `--env` 形式加载；
-- 任何用户传入的 CLI 参数都会被透传给二进制；
-- 健康检查：`wget http://localhost:3000/api/status`（容器内置 `wget`，镜像已声明 `HEALTHCHECK`）。
+## 关键参数解释
 
-## 自定义端口
+| 项 | 含义 |
+|---|---|
+| `-d` | 后台运行 |
+| `--restart always` | 进程崩溃 / Docker 重启时自动拉起 |
+| `-p 3000:3000` | 把宿主机的 3000 端口映射到容器 3000 |
+| `-v $(pwd)/data:/app/data` | 把数据库和上传文件持久化到宿主机 `./data` 目录 |
+| `-e TZ=Asia/Shanghai` | 设置时区（影响日志时间戳、CRON 任务） |
+
+## 后续要做什么
+
+按顺序：
+
+1. **改默认密码**：登录后 → 个人中心 → 修改密码
+2. **添加渠道**：后台 → 渠道 → 新增，参考 [新增渠道](../channel/add-channel)
+3. **配置模型定价**：后台 → 模型定价，参考 [模型定价](../pricing/model-price-management)
+5. **（可选）启用反向代理**：直接暴露 3000 端口不安全，生产建议用 [反向代理](./reverse-proxy)
+6. **（可选）配置备份**：参考 [备份与恢复](./backup-restore)
+
+## 数据存在哪
+
+容器内的 `/app/data` 目录：
+
+- `one-api.db` — SQLite 主库
+- `logs/` — 调用日志导出
+- `uploads/` — 用户上传文件
+
+通过 `-v` 挂载到宿主机，**重启 / 升级容器数据不丢**。
+
+## 查看日志
 
 ```bash
-docker run -d \
-  --name one-api-pro \
-  -p 8080:8080 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
-  -e PORT=8080 \
-  ghcr.io/modelbus/one-api-pro:latest
+docker logs -f one-api-pro
 ```
 
-`PORT` 环境变量会被二进制与 `HEALTHCHECK` 同时读取。
+只显示最近 200 行加 `-n 200`。问题排查时常用 [容器内日志 + 后台日志查询] 配合定位。
 
-## 接入外部数据库
-
-```bash
-docker run -d \
-  --name one-api-pro \
-  -p 3000:3000 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
-  -e SQL_DSN='root:secret@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
-  -e LOG_SQL_DSN='root:secret@tcp(mysql:3306)/oneapi_logs?charset=utf8mb4&parseTime=True&loc=Local' \
-  -e REDIS_CONN_STRING='redis://default:redispw@redis:6379/0' \
-  -e SESSION_SECRET='please-change-me' \
-  ghcr.io/modelbus/one-api-pro:latest
-```
-
-数据库需预先创建空库 `oneapi` 与 `oneapi_logs`，表由 `AutoMigrate` 自动建好。
-
-## 升级与回滚
+## 升级版本
 
 ```bash
-# 拉取新版本
 docker pull ghcr.io/modelbus/one-api-pro:latest
-# 重建容器（数据卷保持不变）
-docker stop one-api-pro && docker rm one-api-pro
-docker run -d --name one-api-pro \
-  -p 3000:3000 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
-  ghcr.io/modelbus/one-api-pro:latest
+docker stop one-api-pro
+docker rm one-api-pro
+# 用同样参数重新 run
 ```
 
-数据卷与配置卷复用即可保留 SQLite / `.env` 内容；详细流程见 [版本升级](/zh/install/upgrade)。
+数据在挂载的 `./data` 里，不会丢。详细流程参考 [版本升级](./upgrade)。
 
-下一步 / Next: [docker-compose 部署](/zh/install/docker-compose) · [反向代理](/zh/install/reverse-proxy)。
+## 常见问题
 
+- **忘记密码**：用 `docker exec -it one-api-pro one-api-pro reset-password root 新密码`（v0.0.20+）
+- **容器起不来**：看 `docker logs one-api-pro`，常见原因是 3000 端口被占用
+- **想用 MySQL 而非 SQLite**：加 `-e SQL_DSN='user:pass@tcp(host:3306)/db'` 切换
+
+## 相关文档
+
+- [系统要求](./requirements)
+- [docker-compose 部署](./docker-compose) — 适合生产
+- [配置项与环境变量](./config)
+- [备份与恢复](./backup-restore)
