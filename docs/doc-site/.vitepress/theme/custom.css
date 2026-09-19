@@ -596,3 +596,115 @@ div[class*='language-'] {
     order: 2;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Redirect page (/ -> quick start)                                        */
+/* ---------------------------------------------------------------------- */
+.op-redirect {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: min(72vh, 640px);
+  padding: 40px 24px;
+}
+
+.op-redirect-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 460px;
+  padding: 40px 36px 36px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 20px;
+  background: var(--vp-c-bg-elv);
+  box-shadow: 0 24px 60px -34px rgba(109, 94, 252, 0.5);
+  text-align: center;
+}
+
+.op-redirect-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.op-redirect-logo img {
+  height: 32px;
+  width: auto;
+  display: block;
+}
+
+.op-redirect-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--vp-c-text-2);
+}
+
+.op-redirect-spinner {
+  width: 34px;
+  height: 34px;
+  margin-top: 4px;
+  border-radius: 50%;
+  border: 3px solid var(--vp-c-brand-soft);
+  border-top-color: var(--vp-c-brand-1);
+  animation: op-redirect-spin 0.8s linear infinite;
+}
+
+@keyframes op-redirect-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.op-redirect-title {
+  margin: 0;
+  border-top: none;
+  padding-top: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vp-c-text-1);
+}
+
+.op-redirect-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+}
+
+.op-redirect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0 22px;
+  height: 44px;
+  border-radius: 999px;
+  background: linear-gradient(120deg, #6d5efc 0%, #a855f7 100%);
+  color: #ffffff !important;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none !important;
+  box-shadow: 0 10px 26px -12px rgba(109, 94, 252, 0.85);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.op-redirect-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px -14px rgba(109, 94, 252, 0.95);
+  filter: brightness(1.04);
+}
+
+.op-redirect-btn svg {
+  width: 16px;
+  height: 16px;
+}
