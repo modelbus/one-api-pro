@@ -1,108 +1,90 @@
 ---
 title: Cluster Overview
-description: "Design goals, constraints and suitable use cases of the decentralized multi-active cluster."
+description: What Cluster mode is, when to use it, and how it differs from multi-instance + shared DB.
 category: decentralization
 order: 1
 ---
 
 # Cluster Overview
 
-> Design goals, constraints and suitable use cases of the decentralized multi-active cluster.
+> What is One API Pro's multi-node decentralized deployment, when to use it, and how it differs from ordinary multi-replica.
 
-## Goals
+## What Cluster is
 
-One API Pro's **Cluster mode** provides a decentralized, multi-active multi-node deployment. Its core goals are:
+**Cluster mode = multiple One API Pro instances, each with its own MySQL + Redis, with HTTP-based push synchronization between nodes.**
 
-- **No shared database**: every node owns its own MySQL and Redis; nodes actively push sync events to each other over HTTP.
-- **Zero business intrusion**: data changes are captured via GORM callbacks — no business-code changes needed.
-- **Multi-active local access**: deploy across regions / data centers, serve users from the nearest node.
-- **Convergent conflicts**: last-writer-wins by `updated_at` ensures eventual consistency.
+No central node, no shared database. Every node is equal: whichever node you hit serves you.
 
-## When to use
+## vs. "Multi-instance + shared DB"
 
-| Scenario | Recommendation |
-| --- | --- |
-| Single-region, modest traffic | A single instance is enough — no Cluster needed |
-| Multi-region / multi-AZ / cross-region DR | ✅ Cluster mode |
-| Latency-sensitive, want local access | ✅ Cluster mode |
-| K8s multi-replica + shared DB | Use the multi-instance-shared-DB pattern (see `install/docker-compose`); no Cluster needed |
-| Strict consistency / distributed transactions | ❌ Not suitable; One API Pro does not implement cross-node transactions |
+| Dimension | Cluster | Multi-instance + shared DB (traditional) |
+|---|---|---|
+| Database | Each node owns its own MySQL | All instances share one MySQL |
+| Redis | Each node owns its own | Shared |
+| Consistency | Eventual (based on timestamp) | Strong |
+| Cross-region latency | Low (local node serves) | High (cross-region DB roundtrip) |
+| Offline tolerance | Changes during offline aren't backfilled | Nodes can go down freely |
+| Best for | Multi-region / cross-DC | Single-DC multi-replica |
 
-## Architecture at a glance
+In short: **Cluster = HA + multi-region**; **multi-replica = load sharing inside one DC**.
 
-```text
-              ┌─────────────┐
-              │  Nginx/LB   │   (single entry, ip_hash LB)
-              └──────┬──────┘
-                     │
-       ┌─────────────┼─────────────┐
-       │             │             │
- ┌─────┴─────┐ ┌─────┴─────┐ ┌─────┴─────┐
- │  Node A   │ │  Node B   │ │  Node C   │
- │ one-api   │ │ one-api   │ │ one-api   │
- │ + MySQL   │ │ + MySQL   │ │ + MySQL   │
- │ + Redis   │ │ + Redis   │ │ + Redis   │
- └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
-       │             │             │
-       └────── HTTP push of sync events ──────┘
+## When to use Cluster
+
+✅ **Use it when:**
+
+- Multi-DC / multi-region / cross-region DR
+- Latency-sensitive users; serve from the nearest node
+- Don't want all traffic backhauling to a central DC
+
+❌ **Don't use it when:**
+
+- Single-DC, small-medium traffic: single instance + docker-compose is enough
+- You already run K8s multi-replica with shared DB: that's a different pattern, don't mix
+- You need strong consistency / distributed transactions: One API Pro doesn't implement cross-node TX
+
+## What it does
+
+- **Decentralized**: nodes are equal, no central coordinator
+- **Auto-sync**: any record changed on one node is pushed to all others
+- **Conflict converges**: last-writer-wins by `updated_at`, eventual consistency
+- **Rate-limit aggregation**: per-channel concurrency / RPM counts are synchronized; global state lives across nodes
+- **Zero code change**: triggers capture changes automatically; no business-code edits
+
+## Known limitations
+
+- **Changes made while a node is offline aren't backfilled**: after recovery, restore that node's DB from a live peer (e.g. `mysqldump`).
+- **A new node only sees changes made after it joins**: pre-join data must be imported manually.
+- **Call logs grow fast — disable their sync**: set `CLUSTER_SYNC_LOGS=false` on each node.
+
+## What's synced
+
+Accounts, tokens, channels, plans, subscriptions, redemption codes, system settings, call logs (optional).
+
+Not synced: the cluster-node table itself (maintained by the discovery mechanism).
+
+## Architecture
+
+```
+                 ┌─────────────┐
+                 │  Nginx/LB   │  ← single entry, ip_hash
+                 └──────┬──────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+   ┌────┴────┐    ┌────┴────┐    ┌────┴────┐
+   │ Node A  │    │ Node B  │    │ Node C  │
+   │ one-api │    │ one-api │    │ one-api │
+   │ MySQL   │    │ MySQL   │    │ MySQL   │
+   │ Redis   │    │ Redis   │    │ Redis   │
+   └────┬────┘    └────┬────┘    └────┬────┘
+        │               │               │
+        └──────── HTTP push sync ────────┘
 ```
 
-Every node is equal: any data change on a node is actively pushed to all alive nodes.
+Every node's data changes are pushed to all live nodes.
 
-## Core characteristics
+## Next
 
-- **Decentralized** — peers, no central coordinator.
-- **Zero-invasion** — `INSERT` / `UPDATE` / `DELETE` are captured automatically by GORM callbacks.
-- **Async push** — sync runs in a background goroutine, never blocking the main flow.
-- **Conflict resolution** — the receiver compares `updated_at`; only the newer version is written (last-writer-wins).
-- **Rate-limit sync** — `channel_counters` (channel concurrency / RPM) sync per node, so global rate-limit state can be aggregated across nodes.
-- **Single-node compatible** — without `CLUSTER_*` env vars, the system runs in plain single-node mode with no side effects.
-
-## Sync scope
-
-| Table | Synced? | Notes |
-| --- | --- | --- |
-| `users` | ✅ | user accounts |
-| `tokens` | ✅ | API tokens |
-| `channels` | ✅ | provider channels |
-| `abilities` | ✅ | channel abilities |
-| `options` | ✅ | system settings |
-| `redemptions` | ✅ | redemption codes |
-| `plans` | ✅ | subscription plans |
-| `user_plans` | ✅ | user subscriptions |
-| `plan_usages` | ✅ | plan usage |
-| `channel_counters` | ✅ | channel rate-limit counters |
-| `cluster_nodes` | 🔄 | maintained by the discovery mechanism, not data sync |
-| `logs` | ⚠️ | controlled by `CLUSTER_SYNC_LOGS` |
-
-## Design trade-offs
-
-### Push-only, no active pull
-
-Data sync relies entirely on GORM callbacks + HTTP push; **active cross-node pull is not implemented**.
-
-Why:
-
-1. **Business intrusion** — pull would require knowing each table's business-unique field, polluting business code.
-2. **Primary-key conflicts** — auto-increment IDs differ across nodes (different `auto_increment_offset`); using the source's ID would break the offset design.
-3. **Complexity** — high maintenance cost for limited reliability gain.
-4. **Push is enough** — covers ~95% of normal scenarios (alive nodes, normal traffic).
-
-### Known limits
-
-- **Changes made while a node is offline are not back-filled**; the node must be re-seeded via `mysqldump` from a live node after coming back.
-- New nodes only see changes from the moment they join — no history.
-- Disable `logs` sync (`CLUSTER_SYNC_LOGS=false`) if the table grows too large.
-
-## Cluster vs shared-DB
-
-| Aspect | Cluster (decentralized) | Multi-instance shared DB (classic) |
-| --- | --- | --- |
-| Database | per-node independent MySQL | shared MySQL |
-| Redis | per-node | shared |
-| Consistency | eventual (`updated_at` LWW) | strong (shared DB) |
-| Cross-region latency | low (local node) | high (DB round-trip) |
-| Offline tolerance | data lost during offline, manual re-seed | any node may go down without loss |
-| Fit | cross-region / multi-AZ | single-AZ multi-replica |
-
-Next: [Node Management](/en/decentralization/node-management) · [Config Sync](/en/decentralization/config-sync) · [Node Health](/en/decentralization/node-health).
+- Enable Cluster → [Multi-node Deployment](./deployment)
+- Day-to-day node operations → [Node Management](./node-management)
+- Sync troubleshooting → [Node Health](./node-health)
