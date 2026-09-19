@@ -1,83 +1,72 @@
 ---
 title: 个人资料
-description: "修改密码、OAuth 绑定、通知偏好。"
+description: 修改密码、查看 Access Token、邀请链接、注销账号。
 category: user
 order: 3
 ---
 
 # 个人资料
 
-> 修改密码、OAuth 绑定、通知偏好。
+> 顶栏右上角头像 → 个人中心。
 
-入口：顶栏右上角头像 → 个人中心，路径 `/setting/personal`。代码 `web/default-pro/src/views/setting/PersonalSetting.vue`。
+## 在哪里
 
-## 功能区
+登录后点右上角头像 → **个人中心**。
 
-| 区| 字段| API | 备注|
-| --- | --- | --- | --- |
-| **资料** | 显示名 | `PUT /api/user/self` | 显示名可空；最多 32 字符 |
-| **修改密码** | 新密码 + 确认密码 | `PUT /api/user/self` | 二次输入必须一致；留空表示不改 |
-| **Access Token** | 生成 / 显示 / 复制 | `GET /api/user/token` | UUID 格式，只显示一次 |
-| **邀请链接** | `?aff=XXX` 链接 | `GET /api/user/aff` | 邀请人获得邀请奖励 |
-| **第三方绑定** | GitHub| `GET /api/oauth/github/bind`、`/api/oauth/lark/bind`、`GET /api/oauth/email/bind` | 见下 |
-| **危险区** | 注销账号 | `DELETE /api/user/self` | 二次确认；状态置为 `UserStatusDeleted (3)` |
+## 可以改什么
 
-> API Token（`sk-`）与 Access Token（UUID）不同：API Token 用于 `/v1/*` 调用，Access Token 用于 `/api/*` 管理接口。
+按页面上的标签：
 
-## 字段校验
+### 基本资料
 
-- **显示名** (`display_name`)：1–32 字符，前后 `strings.TrimSpace`。
-- **新密码**：6–32 字符，必须含字母 + 数字（前后端各校验一次）。
-- **确认密码**：必须与新密码一致；前端用 `===` 即时校验。
-- **邀请链接**：邀请人只能为自己生成一个 `aff` code；多次调用返回同一个。
+- **显示名**：留空也行，最多 32 字。仅展示用，不影响登录
+- **邮箱**：留空也行，但如果要接收密码重置 / 兑换码 / 订单通知邮件，需要填可用的邮箱
 
-## 第三方绑定流程
+### 修改密码
 
-```text
-GitHub:  window.location.href = `https://github.com/login/oauth/authorize?client_id=${id}&scope=user:email`
-         └─► 回调 /oauth/github → /api/oauth/github/callback → users.oauth_provider='github'
-Lark  :  window.location.href = `https://open.feishu.cn/open-apis/authen/v1/authorize?app_id=${id}&redirect_uri=…`
-         └─► 回调 /oauth/lark → /api/oauth/lark/callback → users.oauth_provider='lark'
-Email :  弹窗 input email + 验证码
-         └─► GET /api/verification?email=… 发送
-         └─► GET /api/oauth/email/bind?email=…&code=… 绑定
-```
+1. 输入新密码（两次，必须一致）
+2. 保存
+3. 当前会话保持有效；其他设备的登录会被强制失效
 
-只有当 `status.github_client_id` / `status.lark_client_id` 非空时，对应按钮才显示；绑定的具体开关在「系统设置」中。
+### Access Token
 
-## 注销账号
+专门用来调 `/api/*` 管理接口的 UUID。详见 [Access Token](./access-token)。
 
-- **不可恢复**：`DELETE /api/user/self` 把 `users.status` 置为 `UserStatusDeleted (3)`，从 `GET /api/user/search` 等列表接口中过滤掉；订单、订阅、日志保留以满足审计。
-- **退登**：删除成功后 `useAuthStore.logout()` 触发，跳回 `/`。
-- **管理员降级**：管理员不能删除自己（`auth_helper` 中 `RoleRootUser` 不允许自删），需要另一个 Root 协助。
+### 邀请链接
 
-## 密码策略
+形如 `https://your-host/?aff=<你的邀请码>`。把链接发给朋友：
 
-```text
-- 长度 6–32
-- 必须包含字母（a-zA-Z）
-- 必须包含数字（0-9）
-- 不允许纯空格
-- 与旧密码相同 → 拒绝
-```
+- 对方通过该链接注册后，你们双方都获得邀请奖励额度
+- 奖励额度由管理员在 [系统设置](../misc/system-settings) 里配
 
-后端校验失败返回 `{ success:false, message }`；前端在 `Message.error` 中展示。
+### 第三方绑定
 
-## i18n 键值
+把 GitHub / 飞书 / 邮箱绑到当前账号，下次登录可以直接用第三方账号登录（如果管理员启用了该登录方式）。
 
-| Key | zh | en |
-| --- | --- | --- |
-| `settingPage.personal.profile` | 资料 | Profile |
-| `settingPage.personal.displayName` | 显示名 | Display name |
-| `settingPage.personal.newPassword` | 新密码 | New password |
-| `settingPage.personal.confirmPassword` | 确认密码 | Confirm password |
-| `settingPage.personal.saveChanges` | 保存 | Save |
-| `settingPage.personal.accessToken` | Access Token | Access Token |
-| `settingPage.personal.affLink` | 邀请链接 | Invite link |
-| `settingPage.personal.thirdPartyBinding` | 第三方绑定 | Third-party binding |
-| `settingPage.personal.dangerZone` | 危险区 | Danger zone |
-| `settingPage.personal.deleteAccount` | 注销账号 | Delete account |
+### 注销账号（危险）
 
-新加字段 / 区块时，记得同步更新 `src/i18n/pages/setting.js` 的 `personal` 命名空间。
+页面底部「注销账号」按钮：
 
-下一步 / Next: [Access Token](/zh/user/access-token) · [Chat Playground](/zh/user/chat)。
+1. 二次确认后会停用当前账号（状态变为「已注销」）
+2. **无法登录、无法调用任何 API**
+3. 管理员可以恢复，但需要主动操作
+
+> 注销后你的 [订单](../schema/order)、[调用日志](../schema/log) 仍在系统中（出于合规需要），但账号无法再登录。
+
+## 安全实践
+
+- 密码至少 12 位，包含大小写 + 数字 + 符号
+- 启用第三方登录后，主密码还是要设的（万一第三方不可用）
+- Access Token 仅在脚本 / CI 中使用，不要贴到任何公开的地方
+
+## 常见问题
+
+- **改了邮箱后没收到重置邮件**：检查邮箱是否填错，或在垃圾邮件里找
+- **邀请链接没生效**：邀请人 / 被邀请人都得有 [启用状态](../admin/user-management)，且新用户不能用已注册的邮箱
+- **Access Token 误删**：重新生成即可（会立即撤销旧的）
+
+## 相关
+
+- [Access Token](./access-token)
+- [API Key（令牌）](../api/token)
+- [用户管理（管理员）](../user/user-management)
