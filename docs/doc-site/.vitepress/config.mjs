@@ -28,8 +28,8 @@ function footerActions(lang) {
 
 function footerCopyright(lang) {
   return lang === 'zh'
-    ? 'Copyright © 2024-present One API Pro · 基于 MIT 许可发布'
-    : 'Copyright © 2024-present One API Pro · Released under the MIT License'
+    ? 'Copyright © 2026 One API Pro · 企业级 AI 网关'
+    : 'Copyright © 2026 One API Pro · Enterprise AI Gateway'
 }
 
 // ---------------------------------------------------------------------------
