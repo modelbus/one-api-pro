@@ -20,14 +20,14 @@ order: 14
 
 | 设置项 | 含义 | 设置后影响 |
 |---|---|---|
-| 站点名 | 显示在浏览器标题、邮件、PDF | 立刻生效 |
-| Logo URL | 顶部 logo | 立刻生效 |
-| 默认新用户额度 | `QuotaForNewUser` | 新注册用户初始 `quota` |
-| 注册开关 | 允许新用户注册 | 关闭后注册页面返回 403 |
-| 邀请奖励 | 注册邀请双方各得多少 | 下一次新用户注册生效 |
-| Turnstile / Captcha | Cloudflare 验证码 key | 防止机器人注册；留空则禁用 |
-| 邮件签名 | SMTP 邮件结尾署名 | 下一次发邮件生效 |
-| 服务条款 / 隐私政策 URL | 文案链接 | 前台页面替换 |
+| `SiteName` | 站点名 | 显示在浏览器标题、邮件、PDF |
+| `LogoURL` | Logo URL | 顶部 logo |
+| `QuotaForNewUser` | 默认新用户额度 | 新注册用户初始 `quota` |
+| `RegisterEnabled` | 注册开关 | 允许新用户注册；关闭后注册页面返回 403 |
+| `QuotaForInviter` / `QuotaForInvitee` | 邀请奖励 | 注册邀请双方各得多少 |
+| `TurnstileSiteKey` / `TurnstileSecretKey` | Turnstile / Captcha | Cloudflare 验证码 key；防止机器人注册；留空则禁用 |
+| `MailSignature` | 邮件签名 | SMTP 邮件结尾署名 |
+| `PrivacyPolicy` / `TermsOfService` | 文案链接 | 前台页面替换 |
 
 ## 不在 Option 中存的内容
 
