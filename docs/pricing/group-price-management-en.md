@@ -1,76 +1,79 @@
 ---
-title: Group Price
-description: "Per (group × model) discount multipliers that compose with model_price."
+title: Group Price Management
+description: How admins set per-group model discounts in the admin console.
 category: pricing
 order: 4
 ---
 
-# Group Price
+# Group Price Management
 
-> Discount multiplier per `(group_name, model_name)` pair; combined with `model_price` to produce the final unit price for a user.
+> Admin → Group Prices. Set per-group model discounts.
 
-Route: Admin → **Setting → Pricing** (`/setting/pricing`) → **Group Price** tab. Served by `web/default-pro/src/views/setting/PricingSetting.vue`.
-Group-price management is Root-only.
+## Where
 
-## Data Model
+Admin → Group Prices.
 
-`model.GroupPrice` (table `group_price`):
+## List shows
 
-| Field | Type | Notes |
-|---|---|---|
-| `group_name` | `varchar(32)`, part of composite unique index with `model_name` | User group (`default`, `vip`, `svip`, …) |
-| `model_name` | `varchar(100)`, composite unique index | `""` means "all models for this group share one discount" |
-| `discount` | `decimal(10,4)` | Multiplier. `1.0` = no change; `< 1.0` = discount, `> 1.0` = surcharge |
+Per row:
 
-`InitDefaultPrices()` seeds three defaults (`default`, `vip`, `svip` with `discount=1.0`) on first run.
+- Group name (`default` / `vip` / `svip` etc.)
+- Model name (empty = the group's default for all models)
+- Discount multiplier (`0.8` = 20% off)
+- Action buttons
 
-## Endpoints
+## How to add
 
-| Endpoint | Method | Auth | Description |
+1. Top-right "Add"
+2. Fill:
+   - Group (required; dropdown from system-maintained list)
+   - Model name (required; dropdown from enabled [Model Prices](/en/pricing/model-price))
+   - Discount multiplier (`0.8` = 20% off, `1.2` = 20% markup; blank = `1.0`)
+3. Save
+
+## How to edit
+
+Row → "Edit" → change `discount` → Save. Takes effect immediately.
+
+## Match order
+
+1. Exact `(user_group, model)` match
+2. Otherwise `(user_group, "")` — the group's default
+3. Otherwise 1.0
+
+## Suggested setup
+
+| group | model | discount | Effect |
 |---|---|---|---|
-| `/api/group_price/` | `GET` | Root | Full table dump |
-| `/api/group_price/` | `POST` | Root | Insert; defaults `discount=1.0`; `Insert()` zeros the id defensively |
-| `/api/group_price/` | `PUT` | Root | Update `discount` for a given id |
-| `/api/group_price/:id` | `DELETE` | Root | Delete a row |
+| `vip` | _(empty)_ | `0.8` | VIP pays 80% across all models |
+| `vip` | `gpt-4o` | `0.5` | VIP pays 50% on gpt-4o (overrides the group's 0.8 for that model) |
+| `svip` | _(empty)_ | `0.7` | SVIP pays 70% across all models |
 
-Implementation: `controller/model_price.go` (shared file with model-price handlers).
+## Notes
 
-## Lookup Logic
+- The same `(group, model)` pair cannot be added twice (unique constraint)
+- Changing a group's discount affects every user in that group, immediately
+- Don't set every group to 1.0 (already the default)
 
-`model.GetGroupDiscount(groupName, modelName)` falls back in this order:
+## How to assign groups to users
 
-1. Exact match `(groupName, modelName)` → that row's `discount`.
-2. Fallback match `(groupName, "")` → the "all models in this group" discount.
-3. Neither found → `1.0` (no change).
+Groups are configured in [System Settings](../en/misc/system-settings); new users default to `default`. Admins change a user's group in [User Management](../en/user/user-management).
 
-`GetGroupNames()` returns the set of distinct `group_name`s currently in cache — used as the user-edit group's dropdown data source.
+## FAQ
 
-## Caching Behaviour
+- **Discount set but user says it didn't apply**: verify the user's actual `group` field (not username)
+- **Effective immediately?**: yes, next call uses the new discount
+- **Plan discount vs group discount?**: plan discount wins first. See [Billing Rules](/en/subscription/billing-rules)
 
-`GroupPriceCacheSeconds = 300` (default). Every Add/Update/Delete calls `model.InitGroupPriceCache()` to rebuild the in-memory `groupPriceMap`. The billing hot path uses `model.CacheGetGroupPrice(groupName, modelName)` — Redis-first with key `group_price:<group>:<model>`, DB fallback.
+## Related
 
-## How It Composes
+- [Group Price (concept)](/en/pricing/group-price)
+- [Group Price Schema](/en/schema/group-price)
+- [User Management (admin)](/en/user/user-management)
 
-Final unit price = `model_price.input_price` × `group_price.discount` (resolved per model per group).
-The discount also applies to `per_request` rows.
+## Related API
 
-## Frontend Guide
-
-- Columns: group_name / model_name / discount / actions.
-- **Add** opens a 520 px modal:
-  - `group_name` (required; dropdown from `GET /api/group/`).
-  - `model_name` (required; dropdown from `/api/model_price/options`).
-  - `discount` (precision 4, min 0; blank defaults to 1.0).
-- Row actions: edit, delete (with confirmation).
-- Changing a group's discount immediately affects every user in that group for the matching model; the periodic `SyncGroupPriceCache` background task is the safety net.
-
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| CRUD handler | `controller/model_price.go` (`AddGroupPrice` / `UpdateGroupPrice` / `DeleteGroupPrice`) |
-| Default group rows | `model/model_price.go::defaultGroupPrices` |
-| Cache init / sync | `model/model_price.go::InitGroupPriceCache` / `SyncGroupPriceCache` |
-| Billing hot path | `model/model_price.go::CacheGetGroupPrice` |
-| Group dropdown source | `controller/group.go::GetGroups` → `model.GetGroupNames` |
-| Routes | `router/api.go` |
+- `GET /api/group_price/` — list (Root)
+- `POST /api/group_price/` — add (Root)
+- `PUT /api/group_price/` — update (Root)
+- `DELETE /api/group_price/:id` — delete (Root)
