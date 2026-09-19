@@ -1,93 +1,89 @@
 ---
-title: Docker Deploy
-description: "Run a single instance via the official image."
+title: Docker Single-instance Deploy
+description: Run one One API Pro instance from the official image — fastest path.
 category: install
 order: 2
 ---
 
-# Docker Deploy
+# Docker Single-instance Deploy
 
-> Run a single instance via the official image.
+> For trial / personal / small team. About 5 minutes.
 
-## Pull the image
-
-```bash
-docker pull ghcr.io/modelbus/one-api-pro:latest
-```
-
-> The multi-arch image covers both `linux/amd64` and `linux/arm64`.
-
-## Start a container
+## One-command start
 
 ```bash
-docker run -d \
-  --name one-api-pro \
-  --restart unless-stopped \
+docker run -d --name one-api-pro --restart always \
   -p 3000:3000 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
+  -v $(pwd)/data:/app/data \
   -e TZ=Asia/Shanghai \
   ghcr.io/modelbus/one-api-pro:latest
 ```
 
-Volume notes:
+Open `http://localhost:3000`. Default admin:
 
-| Path inside container | Purpose |
-| --- | --- |
-| `/app/config` | `.env` directory; auto-loaded by `docker-entrypoint.sh` via `--env` |
-| `/app/data` | SQLite DB, logs, upload cache; `SQLITE_PATH` points here by default |
+- Username: `root`
+- Password: `123456`
 
-Entry-point behaviour:
+**First thing**: change the password after login (Personal Center).
 
-- Loads `$CONFIG_DIR/.env` (default `/app/config/.env`) via `--env` when present.
-- Pass-through CLI arguments are forwarded to the binary.
-- Healthcheck: `wget http://localhost:3000/api/status` (built-in `wget`; `HEALTHCHECK` declared in the image).
+## Key flags explained
 
-## Custom port
+| Flag | Meaning |
+|---|---|
+| `-d` | Run in background |
+| `--restart always` | Auto-restart on crash / Docker restart |
+| `-p 3000:3000` | Map host port 3000 → container 3000 |
+| `-v $(pwd)/data:/app/data` | Persist DB and uploads to host `./data` |
+| `-e TZ=Asia/Shanghai` | Time zone (affects log timestamps, cron) |
+
+## Next steps
+
+In order:
+
+1. **Change default password** — log in → Personal Center → change password.
+2. **Add a channel** — Admin → Channels → Add, see [Add a Channel](../channel/add-channel).
+3. **Configure model prices** — Admin → Model Prices, see [Model Price Management](../pricing/model-price-management).
+4. **(Optional) Reverse proxy** — exposing port 3000 directly is unsafe for production; use [Reverse Proxy](./reverse-proxy).
+5. **(Optional) Configure backups** — see [Backup & Restore](./backup-restore).
+
+## Where data lives
+
+Inside the container at `/app/data`:
+
+- `one-api.db` — main SQLite DB
+- `logs/` — exported call logs
+- `uploads/` — uploaded files
+
+Mounted to the host via `-v` — **restarts / image upgrades do NOT lose data**.
+
+## Tail logs
 
 ```bash
-docker run -d \
-  --name one-api-pro \
-  -p 8080:8080 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
-  -e PORT=8080 \
-  ghcr.io/modelbus/one-api-pro:latest
+docker logs -f one-api-pro
 ```
 
-The `PORT` variable is consumed by both the binary and the `HEALTHCHECK`.
+Add `-n 200` for the last 200 lines. Pair with Admin → Logs when troubleshooting.
 
-## External database
-
-```bash
-docker run -d \
-  --name one-api-pro \
-  -p 3000:3000 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
-  -e SQL_DSN='root:secret@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local' \
-  -e LOG_SQL_DSN='root:secret@tcp(mysql:3306)/oneapi_logs?charset=utf8mb4&parseTime=True&loc=Local' \
-  -e REDIS_CONN_STRING='redis://default:redispw@redis:6379/0' \
-  -e SESSION_SECRET='please-change-me' \
-  ghcr.io/modelbus/one-api-pro:latest
-```
-
-Pre-create the empty `oneapi` and `oneapi_logs` databases; tables are created by `AutoMigrate`.
-
-## Upgrade & rollback
+## Upgrade
 
 ```bash
-# Pull the new version
 docker pull ghcr.io/modelbus/one-api-pro:latest
-# Recreate the container (data volume is preserved)
-docker stop one-api-pro && docker rm one-api-pro
-docker run -d --name one-api-pro \
-  -p 3000:3000 \
-  -v /opt/one-api-pro/config:/app/config \
-  -v /opt/one-api-pro/data:/app/data \
-  ghcr.io/modelbus/one-api-pro:latest
+docker stop one-api-pro
+docker rm one-api-pro
+# re-run with the same flags
 ```
 
-Mounting the same volumes preserves SQLite and `.env`; see [Upgrade](/en/install/upgrade) for the full procedure.
+Data stays in the mounted `./data`. Full flow: [Upgrade](./upgrade).
 
-Next: [Docker Compose](/en/install/docker-compose) · [Reverse Proxy](/en/install/reverse-proxy).
+## FAQ
+
+- **Forgot password**: `docker exec -it one-api-pro one-api-pro reset-password root newpassword` (v0.0.20+)
+- **Container won't start**: `docker logs one-api-pro` — usually port 3000 already in use.
+- **Want MySQL instead of SQLite**: add `-e SQL_DSN='user:pass@tcp(host:3306)/db'`.
+
+## Related
+
+- [System Requirements](./requirements)
+- [Docker Compose](./docker-compose) — for production
+- [Configuration](./config)
+- [Backup & Restore](./backup-restore)
