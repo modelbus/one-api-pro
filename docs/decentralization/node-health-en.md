@@ -1,131 +1,83 @@
 ---
 title: Node Health
-description: "Heartbeat, ping and failover strategy."
+description: Heartbeat, mutual ping, dead-node detection, and recovery.
 category: decentralization
 order: 4
 ---
 
 # Node Health
 
-> Heartbeat, ping and failover strategy.
+> How nodes know "I'm still here", "you're still alive", and "you're dead".
 
-Node health is maintained by two independent mechanisms:
+## Node state
 
-1. **Local heartbeat**: every node refreshes its own `cluster_nodes.last_heartbeat` every cycle.
-2. **Mutual ping**: peers ping each other and update the remote row's `status` and `ping_failures` based on the response.
+Each node has two states:
 
-## Key tunables
+- **`status=1` alive**: responding to ping normally
+- **`status=2` dead**: failed consecutive pings beyond the threshold
 
-| Variable | Default | Effect |
-| --- | --- | --- |
-| `CLUSTER_DISCOVERY_INTERVAL` | `30` | `discoverOnce` interval (seconds) — heartbeat + mutual-ping period |
-| `CLUSTER_DEAD_PING_INTERVAL` | `120` | Ping interval for failed nodes (seconds) |
-| `CLUSTER_MAX_PING_FAILURES` | `3` | Consecutive failures before a node is marked `status=2` |
-| `CLUSTER_PUSH_INTERVAL` | `3` | Pusher notification throttle (seconds; actual internal throttle is 100 ms) |
+State changes are driven by **per-node heartbeat + mutual pinging**.
 
-> All parameters are loaded in `cluster/config.go::LoadConfig`; changes require a restart.
+## How it works
 
-## discoverOnce cycle
+### Local heartbeat
 
-`cluster/node.go::discoverOnce` is the core entry point for node health:
+Every node refreshes its own `last_heartbeat` every 30 seconds.
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│                      every 30 seconds                    │
-└─────────────────────────────────────────────────────────┘
-                           │
-              1) refresh local last_heartbeat = now
-                           │
-              2) iterate all non-self nodes:
-                 ┌────────────────┬───────────────────┐
-                 │  status=1 (alive)│  status=2 (dead) │
-                 ├────────────────┼───────────────────┤
-                 │ pingAliveNode  │ pingDeadNode       │
-                 └────────────────┴───────────────────┘
+### Mutual ping
+
+Every 30 seconds, each node iterates "the other nodes" and pings each:
+
+```
+Node A ──ping──> Node B
+       <──ok───
+
+Success: A receives response → mark B as alive
+Failure: increment B's ping_failures; when it hits the threshold → status = dead
 ```
 
-`StartDiscovery` is a simple `for { sleep; discoverOnce }` loop:
+A dead node isn't kicked out. It's probed at a slower rate (default 120 s) and auto-recovers when it comes back.
 
-```go
-func StartDiscovery(db *gorm.DB) {
-    for {
-        time.Sleep(time.Duration(DiscoveryInterval) * time.Second)
-        discoverOnce(db)
-    }
-}
-```
+## Key parameters
 
-## pingAliveNode: health check on alive nodes
+| Variable | Default | Meaning |
+|---|---|---|
+| `CLUSTER_DISCOVERY_INTERVAL` | 30 s | Heartbeat + ping cycle |
+| `CLUSTER_DEAD_PING_INTERVAL` | 120 s | How often to ping a dead node |
+| `CLUSTER_MAX_PING_FAILURES` | 3 | Failures before marking dead |
+| `CLUSTER_PUSH_INTERVAL` | 3 s | Pusher throttle (actual 100 ms internal) |
 
-```text
-HTTP POST {node.Address}/api/cluster/ping  (5-second timeout)
-            │
-   ┌────────┴─────────┐
-   │ success          │ failure / !Success
-   ├──────────────────┼──────────────────
-   │ status=1         │ ping_failures++
-   │ ping_failures=0  │
-   │ last_heartbeat=now│  ┌─ ≥ MaxPingFailures?
-   │ merge resp.Nodes │  │  ├ yes → status=2 + SysError log
-   └──────────────────┘  │  └ no  → bump failure counter
-                        └───────────────
-```
+Process-level changes to these require a restart.
 
-`mergeDiscoveredNodes` merges the node list carried by the ping response into the local DB — this is the core of **transitive discovery**: D may learn about A transitively through B.
+## What happens on a dead node
 
-## pingDeadNode: recovery probe on failed nodes
+- **Pusher skips it**: no events pushed to dead nodes
+- **Manual ping still works**: Admin → "Ping" button forces a probe
+- **Dead nodes still respond to ping**: so other nodes can detect recovery
+- **Catch-up on recovery**: events that piled up locally (`sync_events` with `pushed=0`) are auto-pushed after recovery
 
-To reduce wasted requests on failed nodes, dead nodes are pinged less often (default 120 seconds):
+## Troubleshooting a lost node
 
-```text
-now - node.last_ping_attempt < DeadPingInterval   → skip
-otherwise:
-   POST /api/cluster/ping
-        ├─ failure → only refresh last_ping_attempt
-        └─ success → status=1, ping_failures=0, last_heartbeat=now
-                     SysLogf("node %s recovered")
-```
+1. Admin → Cluster → Node Management: check `status` and `last_heartbeat`
+2. Click "Ping" for a manual probe — see the response
+3. Network: can the two nodes reach each other's `address`?
+4. Secret: do both sides' `secret_key` match?
+5. Backend logs: look for `[cluster] ping still failing` / `node X recovered`
 
-`last_ping_attempt` is maintained jointly by both ping handlers.
+## Failover
 
-## Status state machine
+A lost node doesn't break user requests: traffic goes through Nginx/LB and is served by remaining nodes.
 
-```text
-       ┌─────────────────────────────────────┐
-       │              status=1 (alive)       │
-       │   pingFailures=0..MaxPingFailures-1 │
-       └────────┬───────────────┬────────────┘
-                │ ping OK       │ ping fail × MaxPingFailures
-                ▼               ▼
-       last_heartbeat=now   status=2 (dead)
-                                ▲
-                                │ ping OK
-        ┌───────────────────────┘
-        │
-        │ admin: DELETE /api/cluster_node/:id
-        ▼
-   disabled=true, status=2
-        ▲
-        │ admin: POST /api/cluster_node/:id/enable
-        └───── disabled=false, status=1, ping_failures=0
-```
+Service only stops when **all** nodes are down. That's the natural HA property of Cluster mode.
 
-> Failed nodes are **not** auto-deleted — they only flip to `status=2` and auto-resurrect when the network is back.
+## FAQ
 
-## Behaviour toward failed nodes
+- **Node stuck at status=2**: check network and Secret; see backend startup logs
+- **New node never discovered**: confirm `CLUSTER_SEEDS` points to at least one reachable node; first start should ping the seed successfully
+- **Secret leaked**: edit it in Admin → Node Management; next ping auto-propagates
 
-- **Pusher skips**: `GetAliveNodesForSync` filters to `status=1 AND disabled=false`, so failed nodes don't receive events.
-- **Manual ping is always available**: admins can force a ping via `GET /api/cluster_node/ping/:id`.
-- **Failed nodes still respond to pings** so peers can detect recovery.
-- **Pusher queues events** for failed nodes (`pushed=0`); on recovery the Pusher resumes, and a startup catch-up handles rows queued while the node was down.
+## Related
 
-## Troubleshooting
-
-| Symptom | Check |
-| --- | --- |
-| Node stuck at `status=2` | Network + `X-Cluster-Secret` (ping uses the peer's secret); check startup logs for `[集群] ping 仍然失败` |
-| `ping_failures` keeps growing | Are `cluster_discover_interval` and `cluster_dead_ping_interval` reasonable? |
-| Newly added node never discovered | `CLUSTER_SEEDS` must point at one reachable node; verify first boot can reach the seed |
-| Secret leaked | Update via the admin UI `PUT /api/cluster_node/`; next ping auto-propagates |
-
-Next: [Multi-node Deployment](/en/decentralization/deployment) · [Config Sync](/en/decentralization/config-sync).
+- [Cluster Overview](./overview)
+- [Node Management](./node-management)
+- [Multi-node Deployment](./deployment)
