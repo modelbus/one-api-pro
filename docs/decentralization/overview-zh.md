@@ -1,110 +1,90 @@
 ---
 title: Cluster 概览
-description: "去中心化多活集群的设计目标、约束与适用场景。"
+description: 什么是 Cluster 模式、什么时候用、与多实例共享 DB 的区别。
 category: decentralization
 order: 1
 ---
 
 # Cluster 概览
 
-> 去中心化多活集群的设计目标、约束与适用场景。
+> One API Pro 的「多节点去中心化部署」是什么、什么时候用、跟普通多副本有什么区别。
 
-## 目标
+## Cluster 是什么
 
-One API Pro 的 **Cluster 模式** 提供去中心化的多节点多活部署，核心目标是：
+**Cluster 模式 = 多个 One API Pro 实例，每个实例自带 MySQL + Redis，节点间通过 HTTP 主动推送同步数据。**
 
-- **不共享数据库**：每个节点持有独立的 MySQL 与 Redis；节点间通过 HTTP 主动推送同步；
-- **零侵入业务**：通过 GORM 回调捕获业务表变更，无需改业务代码；
-- **多活就近接入**：跨地域 / 跨机房部署，本地节点就近服务，降低延迟；
-- **冲突可收敛**：基于 `updated_at` 的最后写入胜出，保证最终一致；
+没有中心节点、没有共享数据库。每个节点都是平等的：你访问哪个节点，就由那个节点服务。
 
-## 何时使用
+## 跟「多实例 + 共享 DB」的区别
 
-| 场景| 推荐|
-| --- | --- |
-| 单机房中小流量 | 单实例即可，无需 Cluster |
-| 多机房 / 多区域 / 跨地域容灾 | ✅ Cluster 模式 |
-| 业务对延迟敏感，希望就近接入 | ✅ Cluster 模式 |
-| 已有 K8s 多副本 + 共享 DB | 仍用多实例共享 DB 方案（参见 `install/docker-compose`），不需要 Cluster |
-| 强一致 / 分布式事务 | ❌ 不适合；One API Pro 不实现跨节点事务 |
+| 维度 | Cluster 模式 | 多实例 + 共享 DB（传统） |
+|---|---|---|
+| 数据库 | 每个节点独立 MySQL | 所有实例共享一个 MySQL |
+| Redis | 每个节点独立 | 共享 |
+| 数据一致性 | 最终一致（基于时间戳） | 强一致 |
+| 跨地域部署 | ✅ 友好（本地节点就近服务） | 跨地域延迟高 |
+| 节点离线容忍 | 离线期间变更不补传 | 节点随时可下线 |
+| 适合场景 | 多机房 / 跨地域 / 边缘节点 | 单机房多副本 |
 
-## 架构一览
+简而言之：**Cluster = 高可用 + 跨地域**；**多副本 = 单机房内负载分担**。
 
-```text
-              ┌─────────────┐
-              │  Nginx/LB   │   (单一入口, ip_hash 负载均衡 / single entry, ip_hash LB)
-              └──────┬──────┘
-                     │
-       ┌─────────────┼─────────────┐
-       │             │             │
- ┌─────┴─────┐ ┌─────┴─────┐ ─────┴─────┐
- │  Node A   │ │  Node B   │ │  Node C   │
- │ one-api   │ │ one-api   │ │ one-api   │
- │ + MySQL   │ │ + MySQL   │ │ + MySQL   │
- │ + Redis   │ │ + Redis   │ │ + Redis   │
- └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
-       │             │             │
-       └────── HTTP push of sync events ──────┘
+## 什么时候该用 Cluster
+
+✅ **建议用：**
+
+- 多机房 / 多区域 / 跨地域容灾
+- 业务对延迟敏感，希望就近接入
+- 不想让所有流量都回中心机房
+
+❌ **不需要用：**
+
+- 单机房、中小流量：单实例 + docker-compose 就够了
+- 已经有 K8s 多副本 + 共享 DB：那是另一个方案，不要混用
+- 强一致 / 分布式事务：One API Pro 不实现跨节点事务
+
+## 它能做什么
+
+- **去中心化**：节点对等，无中心协调器
+- **自动同步**：任一节点改一条记录，自动推到所有其他节点
+- **冲突可收敛**：基于 `updated_at` 的最后写入胜出，最终一致
+- **限流聚合**：渠道的并发 / RPM 计数按节点同步，全局状态可跨节点聚合
+- **零侵入**：通过数据库触发器自动捕获变更，业务代码不用改
+
+## 它不能做什么 / 已知限制
+
+- **节点离线期间产生的变更不会回填**：节点恢复后需要从存活节点手工 `mysqldump` 同步一次
+- **新节点只能看到加入之后的变更历史**：加入前的数据需要手工导入
+- **日志表很大时建议关掉同步**：在节点环境变量设 `CLUSTER_SYNC_LOGS=false`
+
+## 同步哪些数据
+
+账号、Token、渠道、套餐、订阅、兑换码、系统设置、调用日志（可选）等。
+
+不同步：节点注册表本身（由发现机制维护）。
+
+## 架构示意
+
+```
+                 ┌─────────────┐
+                 │  Nginx/LB   │  ← 入口，ip_hash 负载均衡
+                 └──────┬──────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+   ┌────┴────┐    ┌────┴────┐    ┌────┴────┐
+   │ Node A  │    │ Node B  │    │ Node C  │
+   │ one-api │    │ one-api │    │ one-api │
+   │ MySQL   │    │ MySQL   │    │ MySQL   │
+   │ Redis   │    │ Redis   │    │ Redis   │
+   └────┬────┘    └────┬────┘    └────┬────┘
+        │               │               │
+        └──────── HTTP push 同步 ────────┘
 ```
 
-每个节点都是平等的：任何节点的数据变更都会被主动推送到所有存活节点。
-Every node is equal: any data change on a node is actively pushed to all alive nodes.
+任一节点的数据变更都会主动推送到所有存活节点。
 
-## 核心特性
+## 下一步
 
-- **去中心化 / Decentralized** — 节点间对等，无中心协调器；no central coordinator.
-- **零侵入 / Zero-invasion** — 通过 GORM callbacks 自动捕获 `INSERT` / `UPDATE` / `DELETE`。
-- **异步推送 / Async push** — 同步发生在后台 goroutine，不阻塞主流程；不会拖累请求路径。
-- **冲突解决 / Conflict resolution** — 接收方比较 `updated_at`，仅写入更新的版本；最后写入胜出。
-- **限流同步 / Rate-limit sync** — `channel_counters`（渠道并发 / RPM）按节点维度同步，全局限流状态可跨节点聚合。
-- **单节点兼容 / Single-node compatible** — 不配置 `CLUSTER_*` 时以单节点模式运行，无副作用。
-
-## 同步范围
-
-| 表| 是否同步| 备注|
-| --- | --- | --- |
-| `users` | ✅ | 用户账号|
-| `tokens` | ✅ | API tokens |
-| `channels` | ✅ | 渠道|
-| `abilities` | ✅ | 渠道能力|
-| `options` | ✅ | 系统设置|
-| `redemptions` | ✅ | 兑换码|
-| `plans` | ✅ | 套餐|
-| `user_plans` | ✅ | 用户订阅|
-| `plan_usages` | ✅ | 套餐用量|
-| `channel_counters` | ✅ | 渠道限流计数|
-| `cluster_nodes` | 🔄 由发现机制维护 | maintained by the discovery mechanism, not data sync |
-| `logs` | ⚠️ 受 `CLUSTER_SYNC_LOGS` 控制 | controlled by `CLUSTER_SYNC_LOGS` |
-
-## 设计取舍
-
-### 主动推送，不做主动拉取
-
-数据同步完全依赖 GORM 回调 + HTTP 主动推送，**不实现跨节点主动拉取**。
-
-原因 / Why:
-
-1. **业务侵入**：拉取需知道每张表的业务唯一字段，会污染业务代码；
-2. **主键冲突**：跨节点 `auto_increment` 不同（不同 `auto_increment_offset`），用源 ID 会破坏 offset 设计；
-3. **复杂度**：维护成本高，可靠性收益有限；
-4. **推送足够**：覆盖约 95% 的正常场景（节点在线、流量正常）；
-
-### 已知限制
-
-- **节点离线期间产生的变更不会被回填**；节点恢复后需要从存活节点 `mysqldump` 同步一次。
-- 新加入节点只能看到加入之后的变更历史；
-- `logs` 表数据量较大时建议关闭（`CLUSTER_SYNC_LOGS=false`）；
-
-## 与多实例共享 DB 方案的区别
-
-| 维度| Cluster（去中心化） | 多实例共享 DB（传统） |
-| --- | --- | --- |
-| 数据库| 每节点独立 MySQL | 共享 MySQL |
-| Redis | 每节点独立 | 共享 |
-| 一致性| 最终一致（基于 `updated_at`） | 强一致（共享 DB） |
-| 跨地域延迟 | 低（本地节点服务） | 高（跨地域往返 DB） |
-| 节点离线容忍 | 离线期间数据丢失，需手动补回 | 节点随时可下线，数据不丢 |
-| 适合规模| 跨地域、多机房 | 单机房多副本 |
-
-下一步 / Next: [节点管理](/zh/decentralization/node-management) · [配置同步](/zh/decentralization/config-sync) · [节点健康](/zh/decentralization/node-health)。
-
+- 想启用 Cluster → [多节点部署](./deployment)
+- 节点日常管理 → [节点管理](./node-management)
+- 排查同步问题 → [节点健康](./node-health)
