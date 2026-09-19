@@ -66,5 +66,5 @@ order: 5
 
 - [套餐订阅](../subscription/overview)
 - [套餐升降级](../subscription/upgrade-downgrade)
-- [充值](../pricing/topup)
+- [充值](../pricing/topup-settings)
 - [支付配置（管理员）](../pricing/payment-settings)
