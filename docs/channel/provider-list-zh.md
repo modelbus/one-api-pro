@@ -1,97 +1,91 @@
 ---
-title: Provider 一览
-description: "前端常量中的全部 Provider、tag 分类与 OpenAI 兼容协议覆盖。"
+title: Provider 全清单
+description: One API Pro 已适配的 LLM Provider 列表与适配说明。
 category: channel
 order: 6
 ---
 
-# Provider 一览
+# Provider 全清单
 
-> 数据源：`web/default-pro/src/constants/providers.js`。该文件同时是前端的展示色板与渠道类型选项的真相源。
-
-## 数据结构
-
-```js
-{
-  name: 'DeepSeek',
-  slug: 'deepseek',
-  color: '#4D6BFE',
-  tag: '国产'
-}
-```
-
-- `name` — 显示名
-- `slug` — 与后端 `relay/adaptor/provider/<slug>` 子包一一对应，可作渠道 `type` 候选
-- `color` — 列表徽标颜色
-- `tag` — 「国产」/「海外」分组
-
-## 国产
-
-| slug | name |
-|---|---|
-| `deepseek` | DeepSeek |
-| `qwen` | 阿里通义千问 |
-| `wenxin` | 百度文心一言 |
-| `chatglm` | 智谱 ChatGLM |
-| `doubao` | 字节豆包 |
-| `hunyuan` | 腾讯混元 |
-| `spark` | 讯飞星火 |
-| `moonshot` | 月之暗面 Moonshot |
-| `baichuan` | 百川智能 |
-| `stepfun` | 阶跃星辰 |
-| `zeroone` | 零一万物 |
-| `minimax` | 商汤日日新 |
-| `internlm` | InternLM |
-| `siliconcloud` | 硅基流动 |
-| `aihubmix` | AIHubMix 推理时代 |
+> 这里列出全部内置适配的 Provider 类型。新建渠道时从下拉里选对应类型即可。
+>
+> 如果你的上游是 **OpenAI 兼容** 的中转站，统一选 `OpenAI`，然后填 `base_url` + `models` 即可。
 
 ## 海外
 
-| slug | name |
-|---|---|
-| `openai` | OpenAI |
-| `claude` | Anthropic Claude |
-| `gemini` | Google Gemini |
-| `mistral` | Mistral AI |
-| `palm` | Meta LLaMA |
-| `gemma` | Google Gemma |
-| `grok` | xAI Grok |
-| `cohere` | Cohere |
-| `groq` | Groq |
-| `ollama` | Ollama |
-| `openrouter` | OpenRouter |
-| `together` | Together AI |
-| `novita` | Novita AI |
-| `cloudflare` | Cloudflare |
-| `ai21` | AI21 Labs |
-| `stability` | Stability AI |
-| `midjourney` | Midjourney |
-| `dalle` | DALL·E |
-| `replicate` | Replicate |
-| `runway` | Runway |
-| `suno` | Suno |
-| `perplexity` | Perplexity |
-| `phind` | Phind |
-| `devin` | Devin |
-| `huggingface` | Hugging Face |
+| Provider 类型 | 适用 | 备注 |
+|---|---|---|
+| `openai` | OpenAI / 任意 OpenAI 兼容中转 | 默认类型；填 `base_url` 即可 |
+| `anthropic` | Anthropic Claude | Messages API |
+| `azure` | Azure OpenAI | 需填部署名 / API Key |
+| `gemini` | Google Gemini | 原生协议 |
+| `openrouter` | OpenRouter（聚合多个模型） | 走 OpenAI 协议 |
+| `groq` | Groq | 走 OpenAI 协议 |
+| `mistral` | Mistral AI | 走 OpenAI 协议 |
+| `cohere` | Cohere | 走 OpenAI 协议 |
+| `togetherai` | Together AI | 走 OpenAI 协议 |
+| `replicate` | Replicate | 自定义协议 |
+| `aws` | AWS Bedrock | 自定义协议 |
+| `vertexai` | Google Vertex AI | 需 GCP 凭证 |
+| `palm` | Google PaLM（旧） | 即将停用 |
+| `xai` | x.AI (Grok) | 走 OpenAI 协议 |
 
-## OpenAI 兼容协议
+## 国内
 
-任意 OpenAI 兼容的中转站 / 自部署网关不必新增 Provider；只需在新增渠道时把 `type` 设为 `openai=1`，填好 `base_url` 与 `models`，再通过 `model_mapping` 校正上游模型名即可走通所有路由与计费。`updateChannelBalance` 在 type 为 `openai` / `custom` 时同样使用该 `base_url` 拉取余额。
+| Provider 类型 | 适用 | 备注 |
+|---|---|---|
+| `deepseek` | DeepSeek | 走 OpenAI 协议 |
+| `moonshot` | 月之暗面 Kimi | 走 OpenAI 协议 |
+| `zhipu` | 智谱 GLM | 自定义协议 |
+| `qwen` / `ali` / `alibailian` | 阿里通义千问 / 百炼 | 多端点适配 |
+| `doubao` | 字节豆包 | 自定义协议 |
+| `baichuan` | 百川 | 自定义协议 |
+| `baidu` / `baiduv2` | 文心一言 | 多版本适配 |
+| `tencent` | 腾讯混元 | 自定义协议 |
+| `lingyiwanwu` | 智谱零一万物 | 自定义协议 |
+| `stepfun` | 阶跃星辰 | 自定义协议 |
+| `minimax` | MiniMax | 自定义协议 |
+| `novita` | Novita AI（GPU 推理聚合） | 自定义协议 |
 
-## 渠道类型映射
+## 本地 / 自托管
 
-前端导出 `CHANNEL_TYPE_MAP` 给新增渠道弹窗使用：
+| Provider 类型 | 适用 | 备注 |
+|---|---|---|
+| `ollama` | Ollama（本地推理） | 走 OpenAI 协议 |
+| `proxy` | 通用 HTTP 代理 | 当作纯透传 |
 
+## 通用 OpenAI 兼容中转站
+
+任何走 OpenAI 兼容协议的第三方聚合 / 中转 / 转发服务，都选 `openai` 类型，配置项：
+
+- `Base URL`：服务商提供的接入地址
+- `API Key`：服务商给的密钥
+- `Models`：服务商支持的模型列表
+- `Model Mapping`（可选）：把官方模型名映射成服务商内部的模型名
+
+例如：
+
+```json
+{ "gpt-4o": "openai-gpt-4o-vip", "claude-sonnet-4": "anthropic-claude-3.5" }
 ```
 
-后端 `relay.GetAdaptorByChannel(channel.Type)` 通过该数值路由到 `relay/adaptor/provider/<slug>` 包；OpenAI 兼容中转复用 `openai` adaptor 并覆盖 `base_url`。
+## 怎么确认我的 Provider 在不在
 
-## 实现位置
+- 直接看 [新增渠道] 的 Provider 下拉列表
+- 也可以用 [渠道连通性测试](./channel-test) 实测
 
-| 关注点 | 位置 |
-|---|---|
-| Provider 常量 | `web/default-pro/src/constants/providers.js` |
-| 后端 adaptor | `relay/adaptor/provider/<slug>/` |
-| Adaptor 注册 | `relay/adaptor/openai` 等 |
+## 适配新 Provider
 
+如果你的 Provider 不在清单里，且协议非 OpenAI 兼容，需要做适配：
+
+- 写一个 `relay/adaptor/provider/<name>/` 子包
+- 实现 `Adaptor` 接口 + `init()` 注册
+- 在 [新增渠道] 的下拉里自动出现
+
+详见 [新增 Provider](/contribute/add-provider)。
+
+## 相关文档
+
+- [渠道概览](./overview)
+- [新增渠道](./add-channel)
+- [渠道路由策略](./channel-routing)
