@@ -1,80 +1,63 @@
 ---
-title: 渠道测试
-description: "单渠道测试与批量测试、测试请求体构造、自动禁用联动。"
+title: 渠道连通性测试
+description: 上线前、配置变更后、用户报「调不通」时，怎么验证渠道是否健康。
 category: channel
 order: 4
 ---
 
-# 渠道测试
+# 渠道连通性测试
 
-> 测试入口：`GET /api/channel/test/:id?model=`（单渠道）、`POST /api/channel/test?scope=all`（批量）。实现：`controller/channel-test.go`。
+> 什么时候用、点哪个按钮、怎么看结果。
 
-## 单渠道测试
+## 什么时候用
 
-请求：
+- 新建一条渠道**保存后**：先测，测通了再启用
+- 渠道被「自动禁用」后：跑一次测试，如果通过会自动恢复「启用」
+- 用户报「这个模型调不通」：定位是渠道问题还是别的问题
+- 改了 [新增渠道](./add-channel) 里的字段（Base URL、模型列表）后
 
-| 项 | 值 |
-|---|---|
-| Method | `GET` |
-| Path | `/api/channel/test/:id` |
-| Query | `model`（可选；不传时取该渠道 `models` 列表的第一个） |
-| Auth | Admin |
+## 两种测试
 
-服务端行为（`controller/channel-test.go::TestChannel`）：
+### 单渠道测试
 
-1. `model.GetChannelById(id, true)` 拉取完整渠道（含 `key`）
-2. `buildTestRequest(model)` 构造 OpenAI ChatCompletion 请求体，仅含 `model` + 一条 `user` 消息（`config.TestPrompt`，默认 `Output only your specific model name with no additional text.`）
-3. 若请求模型不在渠道 `models` 列表里，回退到列表第一个；然后用 `model_mapping` 改写到上游实际模型名
-4. `relay.GetAdaptorByChannel(channel.Type)` 拿到 Provider adaptor，调 `ConvertRequest` → `DoRequest` → `DoResponse`
-5. 解析响应取首条 `choices[0].content`；测试成功后写一条 `Log`（`RecordTestLog`）
-6. 把耗时（毫秒）写回 `channels.response_time`
+后台 → 渠道 → 某条渠道详情页 → 点「测试」按钮。
 
-返回结构：
+- **会做什么**：用这条渠道的实际凭证 + 一个最常用的模型，发一条最小化测试请求
+- **耗时**：通常 < 5 秒
+- **结果**：
+  - ✅ 通过：渠道可用；若处于「自动禁用」会恢复到「启用」
+  - ❌ 失败：显示具体错误（401 / 404 / 500 等），按错误信息排查
 
-```
+### 批量测试
 
-失败时 `success=false`，`message` 携带上游 HTTP 状态码与错误内容。
+后台 → 渠道列表顶部「批量测试」按钮。
 
-## 批量测试
+- **会做什么**：对所有启用的渠道各发一次测试请求
+- **耗时**：取决于渠道数量；50 条大约 1~2 分钟
+- **用途**：定时跑（如每周一次），快速发现哪些渠道突然不可用
+- **结果**：在「测试日志」页可看完整结果
 
-请求：
+## 测试模型怎么选
 
-| 项 | 值 |
-|---|---|
-| Method | `POST` |
-| Path | `/api/channel/test` |
-| Query | `scope`：`all`（默认）/ `disabled` |
-| Auth | Admin |
+测试用的模型必须是该渠道模型白名单里有的。最稳的选法：
 
-实现 `testChannels` 用 `testAllChannelsLock` 保证全进程内只有一个测试在跑。流程：
+- OpenAI：`gpt-4o-mini`（便宜、几乎都通）
+- Anthropic：`claude-haiku-4-5`
+- 其他：参考 Provider 文档找一个「基础模型」
 
-1. 拉取全部渠道（`scope=all` 时含已禁用）；按顺序、间隔 `config.RequestInterval` 测试
-2. 每个渠道测试结束后：
-   - 若本已启用且响应时间 > `config.ChannelDisableThreshold * 1000` ms（默认 5 s），按 `AutomaticDisableChannelEnabled` 选择自动禁用或仅发通知
-   - 若本已启用且 `monitor.ShouldDisableChannel(openaiErr, -1)` 判定为应禁用，调 `monitor.DisableChannel`
-   - 若本已禁用但本轮成功，调 `monitor.EnableChannel` 重新启用
-3. 全部结束后若 `notify=true`，向 root 发邮件 / 消息「渠道测试完成」
+## 错误排查
 
-返回 `success=true` 表示测试已启动（实际结果异步落到 `channels.response_time` 与 `channels.last_error`）。
+| 错误 | 含义 | 怎么排查 |
+|---|---|---|
+| 401 Unauthorized | 凭证错或失效 | 去上游 Provider 控制台重新生成 API Key，回到 [新增渠道](./add-channel) 更新 |
+| 404 Not Found | Base URL 错或路径不对 | 核对 Provider 文档的接入地址 |
+| 400 Bad Request | 请求格式不匹配 Provider | 检查 Provider 类型是否选对（OpenAI vs Anthropic） |
+| 429 Too Many Requests | 上游限流 | 调低「并发上限」或换时间再试 |
+| 500 Server Error | 上游故障 | 稍后重试；持续失败则暂停该渠道 |
+| 超时 | 网络问题 | 检查 Base URL 是否国内可访问；调高「超时秒数」 |
 
-## 周期自动测试
+## 相关文档
 
-`main.go:88` 在环境变量 `CHANNEL_TEST_FREQUENCY`（分钟）非空时启动 `controller.AutomaticallyTestChannels`，每 N 分钟跑一次 `testChannels(ctx, false, "all")`。
-
-## 测试 Prompt
-
-全局可配：`config.TestPrompt`（环境变量 `TEST_PROMPT`）。生产环境建议改成能稳定区分模型的短句，例如：
-
-```
-
-## 实现位置
-
-| 关注点 | 位置 |
-|---|---|
-| 单渠道测试 | `controller/channel-test.go::TestChannel` |
-| 批量测试 | `controller/channel-test.go::testChannels` |
-| 周期任务 | `controller/channel-test.go::AutomaticallyTestChannels` |
-| 启用 / 禁用判定 | `monitor/manage.go::ShouldDisableChannel` / `ShouldEnableChannel` |
-| 测试请求构造 | `controller/channel-test.go::buildTestRequest` |
-| 测试日志 | `model.RecordTestLog` |
-
+- [渠道概览](./overview)
+- [新增渠道](./add-channel)
+- [渠道路由策略](./channel-routing)
