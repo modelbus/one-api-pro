@@ -512,48 +512,87 @@ div[class*='language-'] {
 /* Footer                                                                  */
 /* ---------------------------------------------------------------------- */
 /* VitePress hides the footer whenever a sidebar is present; docs pages all
-   have a sidebar, so force it back on and offset it past the sidebar. */
+   have a sidebar, so force it back on. The footer spans the full viewport
+   width (including under the sidebar) with a single row: copyright left,
+   action links (with icons) right. */
+.VPFooter,
 .VPFooter.has-sidebar {
   display: block !important;
-  padding-left: 24px;
+  /* Sit above the fixed sidebar so the bar truly spans the whole page and
+     the left-hand copyright is not hidden behind the sidebar. */
+  position: relative;
+  z-index: 65;
+  background-color: var(--vp-c-bg);
+  padding: 20px 32px !important;
+  border-top: 1px solid var(--vp-c-divider);
 }
 
-@media (min-width: 960px) {
-  .VPFooter.has-sidebar {
-    padding-left: calc(var(--vp-sidebar-width) + 32px);
-  }
+.VPFooter .container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: none;
+  text-align: left;
+}
+
+/* DOM order is message (actions) then copyright; put copyright first. */
+.VPFooter .copyright {
+  order: 1;
+  color: var(--vp-c-text-3);
+  font-size: 13.5px;
+  line-height: 1.4;
 }
 
 .VPFooter .message {
+  order: 2;
+  margin: 0;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-end;
 }
 
-.VPFooter .op-footer-links {
+.VPFooter .op-footer-actions {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px 2px;
+  gap: 18px;
+  white-space: nowrap;
 }
 
-.VPFooter .op-footer-links a {
+.VPFooter .op-footer-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--vp-c-text-2);
+  font-size: 13.5px;
   font-weight: 500;
-  text-decoration: none;
+  text-decoration: none !important;
   transition: color 0.2s ease;
 }
 
-.VPFooter .op-footer-links a:hover {
+.VPFooter .op-footer-link:hover {
   color: var(--vp-c-brand-1);
 }
 
-.VPFooter .op-footer-sep {
-  margin: 0 8px;
-  color: var(--vp-c-text-3);
+.VPFooter .op-footer-icon {
+  flex-shrink: 0;
+  display: block;
 }
 
-.VPFooter .copyright {
-  color: var(--vp-c-text-3);
+/* Below the sidebar breakpoint, stack to avoid overflowing. */
+@media (max-width: 767px) {
+  .VPFooter .container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .VPFooter .message {
+    order: 1;
+    justify-content: flex-start;
+  }
+
+  .VPFooter .copyright {
+    order: 2;
+  }
 }
