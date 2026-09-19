@@ -1,86 +1,73 @@
 ---
-title: 渠道路由
-description: "路由链 Filter、冷却、并发、RPM、Sticky Session、fallback 与自动禁用。"
+title: 渠道路由路由
+description: 当一个用户请求到来时，One API Pro 如何在多条渠道之间挑选一条。
 category: channel
 order: 3
 ---
 
-# 渠道路由
+# 渠道路由策略
 
-> 路由层把"可用渠道"按 Filter 链收缩成候选集，再由 Selector 选出一条最终渠道。实现见 `channelrouter/`。
+> 当用户调用 `POST /v1/chat/completions` 时，系统需要在多条「能调这个模型」的渠道里选一条。
+> 这一页解释它按什么规则选、为什么有些渠道永远不会被选中、怎么调试。
 
-## 路由链
+## 选路四步走
 
-`channelrouter.ChannelRouter`（`channelrouter/router.go`）持有四类状态对象和一组 `ChannelFilter`，按以下顺序对候选集逐步收缩：
+系统按以下顺序决定用哪条渠道：
 
-```
-candidates
-  → StatusFilter          // 仅 status=Enabled
-  → FallbackFilter        // 排除 is_fallback=true
-  → CooldownFilter        // 排除处于冷却中的渠道
-  → ConcurrencyFilter     // 排除已达 max_concurrency 的渠道
-  → RPMFilter             // 排除已达 rpm 的渠道
-  → StickySessionFilter   // 若同 token 之前用过某渠道且仍可用，直接锁定
-  → PriorityFilter        // IgnoreFirstPriority 时切除优先级最高的桶
-```
+1. **过滤**：只保留「启用中 + 模型在白名单 + 用户组在白名单」的渠道
+2. **健康检查**：剔除自动禁用 / 冷却中 / 并发已满 / RPM 已满的渠道
+3. **打分**：根据权重 + 优先级 + 优先级 / fallback 偏好综合打分
+4. **决定**：选最高分；若分数相同则随机挑
 
-通过全部 Filter 后，`PriorityRandomSelector`（`channelrouter/selector.go`）在剩下的桶内随机挑一条。
+## 过滤规则的含义
 
-## 字段含义
-
-| 字段 | Filter | 行为 |
+| 过滤条件 | 在哪里设置 | 不通过会发生什么 |
 |---|---|---|
-| `status` | `StatusFilter` | 仅 `ChannelStatusEnabled=1` 通过；其它状态被剔除 |
-| `is_fallback` | `FallbackFilter` | 设为 true 后只在 fallback 路径中被选中；正常请求看不到 |
-| `fallback_priority` | Fallback 路径 | 同为 fallback 时按升序选 |
-| `priority` | `PriorityFilter` + Selector | 越大越靠前；同优先级桶内随机抽一条 |
-| `weight` | — | 保留字段，当前以 `priority` 为主 |
-| `max_concurrency` | `ConcurrencyFilter` | `<=0` 不限制；非集群模式下是节点内 in-memory 计数，集群模式下累加 `channel_counters` 表 |
-| `rpm` | `RPMFilter` | `<=0` 不限制；按 60 秒滑窗计数（`channelrouter/rpm.go`） |
-| `cooldown_seconds` | 触发冷却后的秒数 | 上游错误拦截器 `relay/interceptor/channel_action.go` 写入 `CooldownManager`，冷却时长被 `ChannelMaxCooldownSeconds`（默认 600）截断 |
+| 状态必须为「启用」 | 渠道详情页开关 | 该渠道直接被跳过 |
+| 用户请求的模型在 `models` 白名单 | 渠道详情页 | 不勾的模型永远不会被路由到该渠道 |
+| 用户的用户组在 `group` 白名单 | 渠道详情页 | 该渠道对该用户隐藏 |
+| 渠道未处于「自动禁用 / 冷却中」 | 自动状态 | 系统层面自动跳过 |
 
-## 冷却
+## 权重 / 优先级 / fallback
 
-`channelrouter/cooldown.go::CooldownManager` 是 `sync.Map` 形态的冷却字典：
+这三者共同决定打分：
 
-- `SetCooldown(channelId, seconds, reason, statusCode)` 写入条目；过期清理由后台 goroutine 每 30 秒跑一次
-- `IsInCooldown(channelId)` 在 Filter 中查询；过期条目 lazy 删除
-- 触发点：`relay/interceptor/channel_action.go::ChannelActionHandler`，根据上游 HTTP 状态码与错误类型（`insufficient_quota` / `authentication_error` / `permission_error` / `invalid_api_key` / 关键字 `credit`、`balance`、`已欠费` 等）写入冷却或触发自动禁用
+- **权重** `weight`：越大越容易被选中。建议便宜快稳的渠道设高
+- **优先级** `priority`：等级越大越优先（如 10 优先于 5）
+- **是否纯 fallback** `is_fallback`：勾上后该渠道**只在所有非 fallback 渠道都失败时**才被选中
 
-`CooldownFilter` 不会剔除回包时还没到期的渠道，因此对 429 / 5xx / 鉴权失败有自然的退避效果。
+调权重 / 优先级即可在不打乱其他渠道的前提下微调路由偏好。
 
-## 自动禁用
+## 健康检查（自动状态）
 
-`monitor.DisableChannel` 把状态置为 `ChannelStatusAutoDisabled=3`，并向 root 邮箱 / 消息推送发送通知。触发源：
+系统会自动维护每条渠道的健康状态：
 
-1. **指标守护** — `monitor/metric.go` 维护每个渠道最近 `MetricQueueSize`（默认 10）次请求的成功率；累计满 10 次后若成功率 < `MetricSuccessRateThreshold`（默认 0.8）则调用 `MetricDisableChannel`。开关：`config.EnableMetric`。
-2. **余额归零** — `controller/channel-billing.go::updateAllChannelsBalance` 在刷新余额时，若余额 `<= 0` 自动禁用。
-3. **超时** — 批量测试时若响应时间 > `ChannelDisableThreshold`（默认 5s）且 `AutomaticDisableChannelEnabled=true` 则禁用。
-4. **错误策略** — `ChannelActionHandler` 根据上游错误内容（如 401 / 403）触发禁用，受 `AutomaticDisableChannelEnabled` 控制。
+- **并发**：当前并发数 >= `max_concurrency` 时拒绝新请求
+- **RPM**：最近 60s 请求数 >= `rpm` 时拒绝
+- **冷却**：某条渠道连续失败 N 次后进入冷却，几分钟后再尝试
+- **自动禁用**：连续严重失败后整条渠道被自动禁用
 
-被自动禁用的渠道只有管理员手动启用，或下一次批量测试通过后才会回到 `Enabled`。
+这些都**不需要你手动配**。如果你发现某渠道被频繁自动禁用，去后台「渠道」详情看 [日志](./schema/logs/?id=调用日志) 的 `error` 字段。
 
-## Fallback 路径
+## 调试：为什么这条渠道没被选中？
 
-主路径在所有正常渠道都返回失败后才进入 fallback：仅 `is_fallback=true` 的渠道参与，按 `fallback_priority` 升序、`priority` 次序依次重试。`FallbackFilter` 保证正常请求不会把 fallback 渠道选走。
+1. **检查过滤**：在 [渠道测试](./channel-test) 用同一个模型 + 用户组测试，能通就说明过滤 OK
+2. **检查权重**：把候选渠道的权重都列出来，高的应该被选中
+3. **看自动状态**：渠道详情页有「自动禁用 / 冷却 / 并发满」的红字
+4. **看路由日志**：调用日志里 `channel` 字段就是最终命中的渠道 ID
 
-## Sticky Session
+## 高级：模型名映射
 
-`channelrouter/sticky.go` 以 `MakeSessionKey(userId, model)` 作为键，缓存"用户 → 上次渠道"。请求时 `StickySessionFilter` 把候选集收缩成该渠道一条（若仍可用），否则回退到随机选择。请求完成后由路由上层调用 `SetStickySession(sessionKey, channelId)` 写入。
+有的中转站不支持原生的模型名（比如 `gpt-4o` → 中转站叫 `gpt-4o-2024`）。在渠道详情页填 `model_mapping`：
 
-启用开关：`ChannelStickySessionEnabled`（默认 `false`）。启动时若开启，会从 `logs` 表加载近 24 小时 type=2 的会话记录重建映射（`LoadFromLogDB`）。
+```json
+{ "gpt-4o": "gpt-4o-2024" }
+```
 
-## 实现位置
+调用方发 `gpt-4o` 时，系统会转发为 `gpt-4o-2024` 给该渠道。
 
-| 关注点 | 位置 |
-|---|---|
-| 路由管线 | `channelrouter/router.go` |
-| Filter 实现 | `channelrouter/filter.go` |
-| 冷却管理 | `channelrouter/cooldown.go` |
-| 并发计数 | `channelrouter/concurrency.go` |
-| RPM 计数 | `channelrouter/rpm.go` |
-| Sticky Session | `channelrouter/sticky.go` |
-| 上游错误拦截 | `relay/interceptor/channel_action.go` |
-| 自动禁用通知 | `monitor/channel.go` |
-| 成功率指标 | `monitor/metric.go` |
+## 相关文档
 
+- [渠道概览](./overview)
+- [新增渠道](./add-channel)
+- [渠道测试](./channel-test)
