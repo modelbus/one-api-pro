@@ -1,61 +1,53 @@
 ---
-title: Redemption Quota Rules
-description: "How `redemptions.quota` is defined, its relation to plan grants, expiry, and units."
+title: Redemption Quota Calculation
+description: How redemption codes credit quota and how plans are activated.
 category: redemption
 order: 4
 ---
 
-# Redemption Quota Rules
+# Redemption Quota Calculation
 
-> The credited amount comes from `redemptions.quota` alone; unlike top-up orders there is no "amount × rate" semantic — codes carry only an integer quota.
+> How much balance does a code add? Depends on its type.
 
-## Field
+## Two types, different math
 
-`model.Redemption.Quota` (`quota`, `bigint`, default 100):
+### Quota codes
 
-- Type `int64`; the same unit as `users.quota`
-- On successful redeem: `users.quota = users.quota + redemption.quota` (inside the `Redeem` transaction)
+- The code stores an integer
+- Balance credited = integer × `QuotaPerUnit` (configured in System Settings)
+- Default: 1 quota unit = ¥1
 
-The row never stores a money amount or exchange rate — codes are currency-agnostic.
+Example:
+- Code quota value = 100,000
+- `QuotaPerUnit` = 500,000 (default)
+- 100,000 quota units credited (per the system's current rate)
 
-## Conversion
+Changing `QuotaPerUnit` in [System Settings](../misc/system-settings) affects how all future codes are credited.
 
-There is no `amount × rate` path for redemption codes. Admins write the integer `quota` at generation time.
+### Plan codes
 
-If the operator wants to distribute "X RMB worth of quota", the frontend can convert amount → quota using the same `exchange_rate` from `model.GetTopupSettings()`, but **the persisted value is still the integer quota**.
+- The code stores a plan id
+- Redeeming creates a Subscription with `expire_at = now + plan.duration_days`
+- Discount multiplier uses the plan's current setting
 
-## Plan binding
-
-Codes are orthogonal to plans: redeeming never creates, extends, or touches `user_plans`. If the operator needs plan-bound distribution, the frontend can group codes by `plan.name` for display, but every individual code remains general-purpose.
+Example:
+- Code points to Plan A (¥30/month, 30 days, multiplier 0.8)
+- Redeeming → 30 days of subscription with calls charged at 0.8×
 
 ## Expiry
 
-`redemptions` has no `expire_time` column. Lifecycle is controlled solely through `status`:
+Each code has `expire_at` (Unix seconds). Past that time the code is invalid regardless of redemption status.
 
-- `Enabled=1` → redeemable at any time
-- `Disabled=2` → `Redeem` rejects
-- `Used=3` → `Redeem` rejects
+Admin sets expiry when generating (default 30 days).
 
-For "30-day expiry" semantics, batch-update `status` to `2` at the appropriate cutoff (`PUT ?status_only=true {status:2}`) or run a one-shot cron that flips the column.
+## FAQ
 
-## Quota vs balance
+- **Want to give a user ¥5 balance**: create 5 quota codes, each 100,000 (= ¥5 worth at default rate)
+- **Want to give a monthly plan instead**: pick the plan when generating the code; a quota code can't activate a plan
+- **Code credit doesn't match the plan price**: the code credit is integer × `QuotaPerUnit`; it doesn't depend on plan prices
 
-`users.quota` is the balance consumed by pay-as-you-go traffic. Redeem credits add to this column; subscription window traffic does not draw on it.
+## Related
 
-When a user holds both an active subscription and redeemed quota:
-
-- Requests inside the plan window take the subscription path (`meta.PlanId > 0`) and do not spend `users.quota`
-- After the plan is exhausted, requests take the pay-as-you-go path and consume `users.quota` — that is where redeemed quota gets spent
-
-## Plan-bundled grants
-
-Plans do not auto-grant quota: `Plan` carries no quota field, and `UserPlan` does not consume quota. To grant quota alongside a plan, chain an `OrderTypeTopup=2` order after the admin grant, or call `IncreaseUserQuota` directly outside `ActivatePackageByOrder`.
-
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| Field definition | `model/redemption.go::Redemption.Quota` |
-| Adding quota | `model/redemption.go::Redeem` (`UPDATE users SET quota = quota + ?`) |
-| Top-up rate | `model/topup.go::GetTopupSettings` / `SystemSettingKeyTopupExchangeRate` |
-| Plan grant | `controller/subscription.go::AddSubscription` |
+- [Redemption Overview](./overview)
+- [Redemption Schema](../schema/redemption)
+- [System Settings (admin)](../misc/system-settings)
