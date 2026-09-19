@@ -1,108 +1,110 @@
 ---
 title: Node Management
-description: "Register, query, enable and remove nodes."
+description: Cluster node registration, query, enable, and removal.
 category: decentralization
 order: 2
 ---
 
 # Node Management
 
-> Register, query, enable and remove nodes.
+> How to register, view, enable, and disable cluster nodes.
 
-The `cluster_nodes` table is the single source of truth for node info and runtime state. A node writes its own record on startup, and admins can also add remote nodes manually from the admin UI.
+## Where
 
-## Node fields
+Admin → Cluster → Node Management.
 
-The model lives in `model/cluster_node.go`:
+## List shows
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `node_id` | int | Node ID `1-49`; matches `CLUSTER_NODE_ID` and MySQL `auto_increment_offset` |
-| `node_name` | string | Display name |
-| `address` | string | Public URL (with scheme) |
-| `secret_key` | string | Per-node secret other nodes use to authenticate (see Per-node Secret below) |
-| `status` | int | `1` = alive, `2` = failed (consecutive ping failures), `3` = disabled by admin |
-| `disabled` | bool | `true` when disabled by an admin (soft-delete marker) |
-| `last_heartbeat` | int64 | Last heartbeat timestamp |
-| `ping_failures` | int | Consecutive ping failures |
-| `last_ping_attempt` | int64 | Last ping attempt timestamp |
+Per row:
 
-> The model exposes both `status=3` ("disabled by admin") and a `disabled` boolean. `status` reflects runtime state; `disabled` reflects admin intent. The delete handler sets `disabled=true` and `status=2` (see `controller/cluster_node.go::DeleteClusterNode`).
+- Node ID / Name
+- Address (`https://node-b.example.com`)
+- Status (Enabled / Failed / Disabled)
+- Last heartbeat
+- Consecutive ping failures
+- Action buttons
 
-## Self-registration
+A red "Lost" tag means repeated ping failures.
 
-Every node calls `SaveLocalNode` on first boot:
+## Fields
 
-- If a record for `node_id == CLUSTER_NODE_ID` already exists locally, only `address`, `node_name`, `status`, `last_heartbeat` and `ping_failures=0` are refreshed.
-- Otherwise a record is created with `secret_key = CLUSTER_SECRET`.
+| Field | Meaning |
+|---|---|
+| `node_id` | Node number 1–49; must match `CLUSTER_NODE_ID` and MySQL `auto_increment_offset` |
+| `node_name` | Display name |
+| `address` | Public URL (with scheme) |
+| `secret_key` | This node's authentication secret for inbound requests |
+| `status` | `1`=enabled / `2`=failed / `3`=admin-disabled |
+| `disabled` | Soft-delete flag |
+| `last_heartbeat` | Latest heartbeat timestamp |
+| `ping_failures` | Consecutive ping failures |
 
-Why this is intentional:
+## Self-registration (recommended)
 
-1. **Admin visibility** — Settings → Node Management shows the local node's address, status and heartbeat for troubleshooting.
-2. **Transitive discovery** — the ping response includes the sender's full node list, which the receiver merges locally. So C can learn about A through B.
-3. **Liveness signal** — local `last_heartbeat` is refreshed every cycle by `discoverOnce`, reflecting this node's own health.
+Each node **auto-registers on first startup**. No manual entry needed:
 
-> Five layers of guards prevent loops: SQL filters in `GetAllRemoteNodes` / `GetAliveNodesForSync`, self-ping rejection in `handlePing`, self-skip in `mergeDiscoveredNodes`, and self-skip in `ApplyEvents`. See the repo README for the full diagram.
+- Node starts → writes its own row into `cluster_nodes`
+- A periodic task refreshes heartbeat and address
+- Other nodes discover it via ping
 
-## Adding remote nodes
+This is the recommended path. Each node only needs to know its own `CLUSTER_NODE_ID` and `CLUSTER_NODE_SECRET`.
 
-The admin UI **Settings → Node Management** (`web/default-pro/src/views/setting/ClusterSetting.vue`) calls `/api/cluster_node/`:
+## Manual add (rare)
 
-| Action | Method | Path | Notes |
-| --- | --- | --- | --- |
-| List | `GET` | `/api/cluster_node/` | All non-disabled nodes; local node carries `is_self=true` |
-| Detail | `GET` | `/api/cluster_node/:id` | Single node detail |
-| Add | `POST` | `/api/cluster_node/` | `node_id` in `1-49`; `secret` is required (the peer's secret) |
-| Update | `PUT` | `/api/cluster_node/` | Update name / address / secret; changing secret auto-recovers `status=1` |
-| Disable (soft delete) | `DELETE` | `/api/cluster_node/:id` | Sets `disabled=true` |
-| Re-enable | `POST` | `/api/cluster_node/:id/enable` | Resets `disabled=false` and refreshes the heartbeat |
-| Manual ping | `GET` | `/api/cluster_node/ping/:id` | One-shot ping for troubleshooting |
+For debugging or transient setups:
 
-All endpoints require **Root privileges** (`middleware.RootAuth`).
+1. Admin → Node Management → "Add"
+2. Fill:
+   - Node ID (1–49)
+   - Name (any)
+   - Address (peer public URL, e.g. `https://node-b.example.com`)
+   - Secret (peer's `CLUSTER_SECRET`)
+3. Save
 
-## Per-node Secret
+> Self-registration covers almost everything; manual add is for niche cases.
 
-Each node carries **its own** secret, persisted in `cluster_nodes.secret_key`, replacing the earlier global-shared-secret design:
+## Enable / Disable / Delete
 
-- **Security** — one node's secret leaking does not affect others.
-- **Flexibility** — every node can rotate its own secret independently.
-- **Auto-discovery** — the ping response includes every node's secret, so peers learn each other's secrets.
+| Action | Where | Effect |
+|---|---|---|
+| Enable | Row → "Enable" | `disabled=false` + reset failure counter |
+| Disable (soft) | Row → "Disable" | `disabled=true`; no events pushed, still responds to ping |
+| Hard delete | Manual SQL | `DELETE FROM cluster_nodes WHERE node_id = ?` |
 
-Lifecycle:
+"Disable" is usually enough (reversible). Hard delete only when a node is permanently retired.
 
-1. **First boot** — uses the `CLUSTER_SECRET` env var as the initial `secret_key`.
-2. **Subsequent boots** — read from `cluster_nodes.secret_key`; the env var is no longer consulted.
-3. **Rotation** — change the `secret` field via the admin UI; the next ping propagates the new value to peers.
-4. **Verification** — the `X-Cluster-Secret` header equals the **target node's** secret (looked up locally).
+## What Secret is for
 
-Adding a new node:
+Each node requires the request header `X-Cluster-Secret` to equal the **target node's** secret. A secret leak is contained to one node.
 
-1. Add Node B's record on Node A (input B's `CLUSTER_SECRET`).
-2. Add Node A's record on Node B (input A's `CLUSTER_SECRET`).
-3. A → B ping uses B's secret, which B verifies with its own secret.
-4. B's response carries both A's and B's secrets; A updates its local copy.
+### First start
 
-## Soft delete
+Uses `CLUSTER_SECRET` env var as initial `secret_key`.
 
-`DELETE /api/cluster_node/:id` does **not** hard-delete — it sets `disabled = true`:
+### Later starts
 
-- Prevents a deleted node from "regrowing" via ping-driven re-registration.
-- Disabled nodes still respond to pings (so peers know they're online) but won't fetch this node's info.
-- Hard delete requires manual SQL: `DELETE FROM cluster_nodes WHERE node_id = ?;`
+Reads from `cluster_nodes.secret_key`, no longer needs the env var.
 
-Re-enable via `POST /api/cluster_node/:id/enable`; this also resets `ping_failures=0` and refreshes `last_heartbeat`.
+### Rotation
 
-## API cheatsheet
+Change via admin UI → next ping propagates the new value to other nodes.
 
-| Path | Method | Purpose |
-| --- | --- | --- |
-| `/api/cluster/ping` | `POST` | Inter-node heartbeat (internal) |
-| `/api/cluster/sync` | `POST` | Inter-node event push (internal) |
-| `/api/cluster_node/` | `GET` / `POST` / `PUT` | List / add / update nodes |
-| `/api/cluster_node/:id` | `GET` / `DELETE` | Detail / disable |
-| `/api/cluster_node/:id/enable` | `POST` | Re-enable |
-| `/api/cluster_node/ping/:id` | `GET` | Manual ping (admin) |
+## How to debug a lost node
 
-The full contract lives in [Cluster API](/en/api/cluster).
+1. Check "Last heartbeat" — is it stale?
+2. Click "Ping" for a manual ping — see the response
+3. Check network — can the two nodes reach each other's `address`?
+4. Check Secret — are the `secret_key` values identical on both sides?
+5. Read [Node Health](./node-health) for failover troubleshooting
 
-Next: [Config Sync](/en/decentralization/config-sync) · [Node Health](/en/decentralization/node-health).
+## FAQ
+
+- **My own node doesn't show in the list**: ensure `CLUSTER_NODE_ID` is set; check backend logs for `cluster_nodes` write errors.
+- **Two nodes don't see each other**: verify both `address` values are reachable; verify `secret_key` matches.
+- **Re-enable didn't help**: restart the node so it rewrites its heartbeat.
+
+## Related
+
+- [Cluster Overview](./overview)
+- [Node Health](./node-health)
+- [Multi-node Deployment](./deployment)
