@@ -1,112 +1,90 @@
 ---
-title: Users Admin
-description: "User CRUD, status toggle, quota adjustment and role management."
+title: User Management
+description: How admins create, enable, disable, top-up, and delete users.
 category: user
 order: 2
 ---
 
-# Users Admin
+# User Management
 
-> Create / list / edit / disable users, adjust quota, promote or demote roles, plus batch operations by username.
+> Admin → Users. Visible only when logged in as an admin.
 
-Route: `/user`, served by `web/default-pro/src/views/user/User.vue`. All endpoints live under `/api/user` and the admin-prefixed routes are guarded by `AdminAuth`.
+## What you can do
 
-## Endpoints
-
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/user/` | `GET` | Admin | Paginated list (page size = `config.ItemsPerPage`). `?p=` page, `?order=quota\|used_quota` |
-| `/api/user/search?keyword=` | `GET` | Admin | Search by `username` / `display_name` / `email` |
-| `/api/user/:id` | `GET` | Admin | Single-user detail |
-| `/api/user/` | `POST` | Admin | Create a user; the target role must be `<` the caller's role |
-| `/api/user/manage` | `POST` | Admin | Single-action manage (see below) |
-| `/api/user/manage` | `POST` | **Root only** | Batch action: `{ action: "batch-delete"\|"batch-disable", usernames: [...] }` |
-| `/api/user/` | `PUT` | Admin | Edit `display_name` / `password` / `group` / `quota`; role cannot be raised to `>=` the caller |
-| `/api/user/:id` | `DELETE` | Admin | Delete user (cannot delete peers or higher) |
-| `/api/user/topup` | `POST` | Admin | Manually grant quota to a user (legacy entrypoint) |
-
-Implementation: `controller/user.go`; the frontend calls `api` module directly.
-
-## Role & Status Constants
-
-| Constant | Value | Meaning |
+| Action | Where | Effect |
 |---|---|---|
-| `RoleCommonUser` | `1` | Regular user |
-| `RoleAdminUser` | `10` | Admin |
-| `RoleRootUser` | `100` | Super-admin (cannot be disabled / deleted / demoted) |
-| `UserStatusEnabled` | `1` | Enabled |
-| `UserStatusDisabled` | `2` | Disabled |
-| `UserStatusDeleted` | `3` | Soft-deleted (lists filter on `status != UserStatusDeleted`) |
+| **List** | List page | All users; search, paginate, sort by quota |
+| **Add** | Top-right "Add" | Create a normal user; can't create one with higher privilege than yourself |
+| **Edit** | Row action | Change display name / password / group / quota |
+| **Enable / Disable** | Row action | Disabled users can't log in or call APIs |
+| **Promote / Demote** | Row action | Promote to admin / demote to user; Root can't be demoted |
+| **Top up** | Row action | Add quota directly to the user (with a remark) |
+| **Delete** | Row action | Soft delete; status becomes "Deleted" |
 
-The router guard checks `user.role >= 10` for admin pages; rows with `role >= 100` have all action buttons disabled in the UI.
+> Some actions (Disable, Delete, Promote) are visible only to Root; regular admins can only Edit and Top up.
 
-## POST `/api/user/manage` — Single Action
+## What each row shows
 
-Body: `{ username, action }`. Supported actions:
+- Username (hover for email)
+- Display name
+- Group
+- Current active subscription (with expiry)
+- Quota remaining / used / requests
+- Role chip (User / Admin / Root)
+- Status chip (Enabled / Disabled / Deleted)
+- Registration date
 
-| Action | Effect | Who | Audit |
-|---|---|---|---|
-| `enable` | `user.status = 1` | Admin (cannot target a user with `role >=` self; root bypass) | – |
-| `disable` | `user.status = 2` | **Root** only | `LogTypeManage`: "管理员禁用用户" |
-| `delete` | Soft delete | **Root** only | `LogTypeManage`: "管理员删除用户" |
-| `promote` | `user.role = 10` | **Root** only; errors out if already an admin | – |
-| `demote` | `user.role = 1`; root excluded | Admin | – |
+Top search: fuzzy match on `username` / `display_name` / `email`.
 
-Response: `{ success, message, data: { role, status } }`.
+## Top up a user
 
-## POST `/api/user/manage` — Batch
+Most common action. Click "Top up" on a row:
 
-Body: `{ action: "batch-delete" | "batch-disable", usernames: [...] }`.
+- Amount (in internal quota units)
+- Remark (recorded in the audit log)
+- Confirm
 
-Response:
+The quota arrives instantly; a top-up log entry is written.
 
-```jsonc
-{
-  "success": true,
-  "data": {
-    "succeeded": ["alice"],
-    "failed": { "bob": "无法操作超级管理员用户" },
-    "total": 2,
-    "succeeded_count": 1,
-    "failed_count": 1
-  }
-}
-```
+## Disable vs Delete
 
-Per-row failures are returned as `name: reason`; the frontend surfaces partial failures as `Message.warning` and keeps the partial-success toast. When **every** row fails the response is `success: false` but the `failed` map is still populated.
+| | Disable | Delete |
+|---|---|---|
+| Can user log in? | No | No |
+| User data kept? | All | All (soft delete) |
+| Visible in list? | Yes (marked "Disabled") | No (filtered out) |
+| When to use | Temporary ban (may recover) | Permanently retired |
 
-## Side Effects of `PUT /api/user/`
+> Soft delete ≠ physical delete. Orders / call logs are preserved. Root can restore.
 
-- When `origin.quota != updated.quota` an audit log of type `LogTypeManage` is written, and the Redis `user_quota` cache for the user is invalidated (`model.CacheUpdateUserQuota`) so the next request sees the new balance.
-- A blank `password` is treated as "no change"; the sentinel string `$I_LOVE_U` is used to pass `common.Validate.Struct` and rolled back afterwards.
-- Role promotion is gated twice: the original user's role must be `<` the caller, and the target role must also be `<` the caller — both relaxed for `RoleRootUser`.
+## Roles
 
-## Manual Top-Up
+| Role | Value | Can do |
+|---|---|---|
+| User | `RoleCommonUser` (=1) | Use API, see own data |
+| Admin | `RoleAdminUser` (=10) | + admin Users / Orders / Logs |
+| Root | `RoleRootUser` (=100) | + System Settings, delete users, configure payments |
 
-`POST /api/user/topup` (legacy endpoint in `controller/user.go::AdminTopUp`):
+Root accounts can't be disabled / deleted / demoted.
 
-```json
-{ "user_id": 42, "quota": 100000, "remark": "support compensation" }
-```
+## Bulk actions
 
-`model.IncreaseUserQuota` adds to the user's balance; a `LogTypeTopup` entry is written (default remark: `通过 API 充值 <LogQuota(quota)>`).
+Select multiple rows → "Bulk actions" dropdown appears at the bottom:
 
-## Frontend Guide
+- Bulk delete
+- Bulk disable
 
-- The search box performs a fuzzy search; switching to search mode replaces the list (no append, pagination resets).
-- Sort dropdown: `default` / `quota` / `used_quota` — handled server-side by `model.GetAllUsers(order)`.
-- Row actions: **Edit** (display_name / password / group / quota), **Enable / Disable**, **Promote / Demote**, **Delete**, each with a confirmation popover. All buttons are disabled for root users.
-- Batch select: a checkbox column appears once any row is checked. The bottom toolbar shows a count and a "批量操作" dropdown with `批量删除` and `批量禁用`. Batch delete is a soft delete, matching the single-row action.
-- Row columns: ID, username (tooltip = email), display name, group, current active plan (chip with name · billing · expiry), remaining / used / request counts, role chip, status chip, registered date, actions.
+A toast tells you which succeeded and which failed (e.g. "can't operate on Root").
 
-## Implementation Pointers
+## FAQ
 
-| Concern | Location |
-|---|---|
-| CRUD + manage handler | `controller/user.go` |
-| Batch helper | `controller/user.go::manageUserBatch` |
-| Role/status constants | `model/user.go` |
-| Soft-delete behavior | `model/user.go::GetAllUsers` |
-| Manual quota grant | `controller/user.go::AdminTopUp` → `model.IncreaseUserQuota` |
-| Quota cache invalidation | `model.CacheUpdateUserQuota` (called inside `UpdateUser`) |
-| Route table | `router/api.go` |
+- **Adjusted quota but user says it didn't arrive**: the change flushes Redis immediately, the next request should see the new value; if not, check Admin → Logs → User Operations.
+- **New user didn't get a verification email**: admin sets the password directly, no email needed unless you require first-login change.
+- **Can't delete a user**: probably a Root, or registered on another cluster node. Ask a Root to handle it.
+
+## Related
+
+- [User Schema](../schema/user)
+- [Roles & Status](../schema/user)
+- [Access Token](./access-token)
+- [System Settings (admin)](../misc/system-settings)
