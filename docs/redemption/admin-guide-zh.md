@@ -1,84 +1,64 @@
 ---
 title: 兑换码管理（管理员）
-description: "批量生成、状态切换、编辑、删除与查询。"
+description: 批量生成、状态切换、复制与查询兑换码。
 category: redemption
 order: 2
 ---
 
 # 兑换码管理（管理员）
 
-> 路径：`/redemption`（`web/default-pro/src/views/redemption/Redemption.vue`）。CRUD 实现在 `controller/redemption.go`。
+> 后台 → 兑换码管理。管理员可配。
 
-## 接口
+## 怎么生成
 
-| Endpoint | Method | Auth | 说明 |
-|---|---|---|---|
-| `/api/redemption/` | `GET` | Admin | 分页（`config.ItemsPerPage`） |
-| `/api/redemption/search?keyword=` | `GET` | Admin | `id=?` 或 `name LIKE kw%` |
-| `/api/redemption/:id` | `GET` | Admin | 单条详情 |
-| `/api/redemption/` | `POST` | Admin | 批量生成（详见下文） |
-| `/api/redemption/` | `PUT` | Admin | 编辑；带 `?status_only=true` 时仅改状态 |
-| `/api/redemption/:id` | `DELETE` | Admin | 硬删除 |
+1. 后台 → 兑换码管理 → 「批量生成」
+2. 选类型（额度 / 套餐）
+3. 填值（额度数额 / 套餐下拉）
+4. 填可兑换次数（默认 1）
+5. 选过期时间（默认 30 天 / 可自定义）
+6. 填生成数量（如 100）
+7. 「生成」
 
-## 批量生成
+生成的码会立即出现在列表里，**码值仅在生成时显示一次**（CSV / TXT 导出可拿全）。
 
-请求体：
+## 怎么导出
 
-```json
-{
-  "name": "2026-Q1 推广",
-  "count": 50,
-  "quota": 10000
-}
-```
+列表右上角「导出」：
 
-服务端约束（`controller/redemption.go::AddRedemption`）：
+- CSV：每行 `key,type,value,expires_at`
+- TXT：一行一个码
 
-- `name` 长度 1–20 字符；不合法返回 `兑换码名称长度必须在1-20之间`
-- `count ∈ [1, 100]`；超出返回 `一次兑换码批量生成的个数不能大于 100`
-- 每条生成 UUID 作为 `key`，逐行 `Insert`；失败时整批返回错误
+把导出的文件发给社群 / 客服系统 / 合作方即可。
 
-响应 `data` 是 `string[]`（即生成的 `key` 列表），前端用于"批量导出"对话框。
+## 怎么查询
 
-## 编辑
+顶部搜索框支持：
 
-```json
-{ "id": 88, "name": "新名字", "quota": 20000 }
-```
+- 按码值精确搜
+- 按类型筛选（额度 / 套餐）
+- 按状态筛选（启用 / 禁用 / 已用完 / 已过期）
 
-服务端先 `GetRedemptionById`，再覆盖 `Name` 与 `Quota`。`gorm.Select("name", "status", "quota", "redeemed_time")` 保证只更新白名单字段。
+## 怎么禁用某张码
 
-## 状态切换
+1. 列表行 → 「禁用」
+2. 二次确认 → 立即失效，未兑换的用户再输入会被拒
 
-```json
-{ "id": 88, "status": 2 }   // 2 = Disabled
-```
+常用于：发现码泄漏后紧急封禁。
 
-仅改 `status`；`status=3 (Used)` 不可手动设置——只能由 `Redeem` 事务在兑换成功后翻转。
+## 怎么删除
 
-## 删除
+1. 列表行 → 「删除」
 
-硬删除 `redemptions` 行。已使用 (`status=3`) 的兑换码也可以删除；删除不影响 `users.quota`（已经发放的额度不会回退）。
+> 删除是不可逆操作，且会丢失审计记录。建议优先用「禁用」。
 
-## 前端操作指南
+## 常见问题
 
-页面：`/redemption`。
+- **生成后没保存码值**：批量生成的码值只在生成时显示一次；务必立即导出 CSV / TXT
+- **用户说码无效**：检查是否过期 / 已被禁用 / 已用完；可在后台查码状态
+- **批量生成了 100 张但只用了 30 张**：剩余 70 张仍可兑换；想全部作废需逐张禁用（建议用脚本或 SQL）
 
-- 顶部搜索栏：按 id 精确匹配或 `name LIKE kw%`
-- 列表行：ID / name / status chip / quota / 创建时间 / 兑换时间（未兑换显示 `-`）/ 操作
-- 行内操作：
-  - **复制**：把 `key` 写入剪贴板，便于发码
-  - **启用 / 禁用**：popconfirm 后调 `PUT ?status_only=true`
-  - **编辑**：弹窗修改 `name` / `quota`
-  - **删除**：二次确认
-- 「生成」按钮打开弹窗，填 `name` / `count` / `quota`；提交后弹出"批量导出"对话框展示 `data.key[]`
+## 相关
 
-## 实现位置
-
-| 关注点 | 位置 |
-|---|---|
-| CRUD | `controller/redemption.go` |
-| 数据模型 | `model/redemption.go::Redemption` |
-| 状态常量 | `model/redemption.go` (`RedemptionCodeStatusEnabled/Disabled/Used`) |
-| 用户侧兑换 | `controller/user.go::TopUp` → `model.Redeem` |
-
+- [兑换码概览](./overview)
+- [兑换码（数据结构）](../schema/redemption)
+- [兑换码使用（用户）](./user-guide)
