@@ -1,92 +1,91 @@
 ---
-title: Orders Admin
-description: "Order center from the admin view: filter, mark paid / refunded and delete."
+title: Order Management (Admin)
+description: How admins query, mark paid/refund, and delete orders.
 category: pricing
 order: 7
 ---
 
-# Orders Admin
+# Order Management (Admin)
 
-> Site-wide order center on top of `/api/order`: list, filter, mark paid / refunded, delete. UI: `web/default-pro/src/views/admin/AdminOrders.vue`.
+> Admin → Orders. Site-wide orders from the admin's perspective.
 
-## Endpoints
+## Where
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/order/` | `GET` | Admin | Paginated list (`config.ItemsPerPage`) |
-| `/api/order/search?keyword=` | `GET` | Admin | Matches `order_no` / `pay_trade_no` prefix |
-| `/api/order/:id` | `GET` | Admin | Order detail (with embedded `User` brief) |
-| `/api/order/:id` | `PUT` | Admin | **Mark paid / refunded** (see below) |
-| `/api/order/:id` | `DELETE` | **Root** | Hard-delete an order |
+Admin → Orders.
 
-Implementation: `controller/order.go`.
+## List shows
 
-## Common Filter Query
+Per row:
 
-`OrderAdminFilter` (`model/order.go`):
+- Order number
+- Type chip (Plan / Top-up)
+- User summary
+- Amount / Plan name
+- Payment method
+- Status chip (Unpaid / Paid / Canceled / Refunded)
+- Source (User / Admin)
+- Created at
 
-| Param | Type | Meaning of `0` / `""` | Notes |
-|---|---|---|---|
-| `type` | `int` | no filter | `1=plan` / `2=topup` |
-| `status` | `int` | no filter | `0=pending` / `1=paid` / `2=canceled` / `3=refunded` |
-| `source` | `int` | no filter | `1=user self-service` / `2=admin` |
-| `user_id` | `int` | no filter | exact match |
-| `plan_id` | `int` | no filter | exact match |
-| `keyword` | `string` | no filter | fuzzy match on `order_no` or `pay_trade_no` (`LIKE 'kw%'`) |
+Top dropdowns: filter by type / status / source. Search box: prefix match on order number / pay-trade-no.
 
-`status` uses an empty string for "all" instead of `0` because `0` overlaps with `OrderStatusPending`.
+## Filters
 
-## Mark Paid — `PUT /api/order/:id`
-
-Body:
-
-```json
-{
-  "status": 1,
-  "pay_method": "offline",      // optional override
-  "pay_trade_no": "TX-2026..."  // optional, admin-entered reference
-}
-```
-
-Server behaviour branches on `req.Status`:
-
-- `status=1`: persist `pay_method` / `pay_trade_no`, then call `model.ActivatePackageByOrder(o, OrderUpgradeModeStack)`.
-  - Admin activation **always uses `stack`** (additive), never price-diff.
-  - `pay_method` of `offline` / `bank` / `wechat` / `alipay` / `free` all activate immediately.
-  - For topup orders (`OrderTypeTopup=2`), `model.ActivateTopupByOrder` is called (idempotent).
-- `status=3`: call `model.MarkOrderRefunded(o)` — only flips the status bit. **Does NOT revoke quota that was already granted** (planned TODO).
-- Other values: rejected.
-
-Success messages: "订单已支付，套餐已激活" or "订单已标记为退款".
-
-## Mark Refunded — `PUT /api/order/:id` (status=3)
-
-Status flip only. Does not roll back the active subscription nor claw back quota. The order row stays as `status=3` for audit. The UI shows the **Refund** button only when `o.status === 1`.
-
-## Delete — `DELETE /api/order/:id`
-
-Visible only to Root; `o.Delete()` performs a hard row delete. There is no cascade to `user_plans`, but `user_plans.order_id` is a soft reference.
-
-## Frontend Guide
-
-- Welcome bar + search field, with three filter dropdowns on the left: order type (plan / topup), status, source.
-- Top-right actions: reset filters, refresh.
-- List row columns: ID / `order_no` (truncated with tooltip) / type chip / user summary (display_name + `#user_id`) / plan-or-amount (plan name parsed from `plan_info` for `type=1`) / amount / pay method / status chip / source / created-at / actions.
-- Row actions:
-  - **View**: opens a 560 px detail modal with all fields (`pay_time`, `pay_trade_no`, embedded `User`).
-  - **Mark paid** (visible when `status=0`): modal asks for `pay_method` and optional `pay_trade_no`; submitting reloads the list.
-  - **Refund** (visible when `status=1`): popconfirm → `PUT { status: 3 }`.
-  - **Delete** (Root only, visible when `status !== 1`): popconfirm → `DELETE`.
-- Pagination options `[10, 20, 50]`; the front-end pads `items.length + pageSize` to keep "next page" reachable.
-
-## Implementation Pointers
-
-| Concern | Location |
+| Dropdown | Options |
 |---|---|
-| Order CRUD | `controller/order.go` |
-| Admin mark paid / refund | `controller/order.go::MarkOrderPaid` |
-| Filter + user brief | `model/order.go::OrderAdminFilter` / `enrichOrdersWithUserBrief` |
-| Activate plan | `model/order_payment.go::ActivatePackageByOrder` |
-| Activate topup | `model/topup.go::ActivateTopupByOrder` |
-| Mark refunded (status only) | `model/order_payment.go::MarkOrderRefunded` |
-| Routes | `router/api.go` |
+| Order type | All / Plan / Top-up |
+| Status | All / Unpaid / Paid / Canceled / Refunded |
+| Source | All / User / Admin |
+| Search | Order number / pay-trade-no prefix |
+
+## Mark paid
+
+Use when: callback failed, bank transfer reconciled, testing.
+
+1. Find the order → "Mark paid"
+2. Pick `pay_method` (default `offline`)
+3. Fill `pay_trade_no` (optional, external flow number)
+4. Submit → order becomes Paid + activates plan / credits quota
+
+> Admin "Mark paid" always uses **stack mode**; it won't overwrite an existing subscription.
+
+## Mark refunded
+
+Use when: customer requested refund, dispute resolved.
+
+1. Only `status=1` (Paid) orders can be refunded
+2. Row → "Refund" → double-confirm
+3. Submit → order becomes Refunded
+
+> **Refund does NOT auto-reverse already-credited quota or cancel subscriptions.** You'll need to:
+> - Cancel the user's [subscription](../en/subscription/subscription-management)
+> - Adjust the user's [balance](../en/schema/user)
+
+## Delete (Root only)
+
+Use when: test-order cleanup, accidental order creation.
+
+1. Only `status !== 1` (not Paid) orders can be deleted
+2. Root row → "Delete" → double-confirm
+3. The order row is physically removed
+
+> Hard delete is **irreversible**. Prefer "Refund" or canceling the subscription.
+
+## FAQ
+
+- **User says payment succeeded but the order stays "Unpaid"**: the async callback failed. Check `pay_time` / `pay_trade_no` in the order detail; mark paid manually.
+- **Refund doesn't remove the user's balance**: correct — the system doesn't auto-reverse. Adjust manually in [User Management](../en/user/user-management).
+- **Where to find the bank's flow number for reconciliation**: the `pay_trade_no` field in the order detail page.
+
+## Related
+
+- [My Orders (public)](../en/user/orders)
+- [Order Schema](/en/schema/order)
+- [Payment Channels](./payment)
+
+## Related API
+
+- `GET /api/order/` — list (Admin)
+- `GET /api/order/search?keyword=` — keyword search (Admin)
+- `GET /api/order/:id` — detail (Admin)
+- `PUT /api/order/:id` — mark paid / refund (Admin)
+- `DELETE /api/order/:id` — delete (Root)
