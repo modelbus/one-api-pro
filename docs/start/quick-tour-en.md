@@ -101,4 +101,4 @@ From the "Logs" page or `curl /api/log/self -b cookies.txt`:
 
 进入「日志」或运行 `curl http://localhost:3000/api/log/self -b cookies.txt` 查看本次调用。
 
-Next: [Architecture](/en/start/architecture) · [Subscriptions](/en/subscription/overview) · [Top-up](/en/pricing/topup).
+Next: [Architecture](/en/start/architecture) · [Subscriptions](/en/subscription/overview) · [Top-up](/en/pricing/topup-settings).
