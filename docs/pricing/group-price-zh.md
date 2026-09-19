@@ -1,91 +1,99 @@
 ---
 title: 分组折扣
-description: "`group_price` 表、折扣倍率、模型级覆盖与默认分组。"
+description: 让某个用户组对某些模型有折扣。
 category: pricing
 order: 2
 ---
 
 # 分组折扣
 
-> 用户组（`users.group`）对模型计费的乘数；`group_price` 表定义"某用户组对某模型"的折扣倍率，默认 `1.0`（不折扣）。实现：`model/model_price.go::GroupPrice`。
+> 给 VIP 打个八折、给 SVIP 某些模型五折 —— 看这里。
 
-## 数据模型
+## 这是什么
 
-`model.GroupPrice`（`group_price` 表）：
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `group_name` | `varchar(32)` | 用户组名（与 `users.group` 对应），联合唯一索引第一列 |
-| `model_name` | `varchar(100)` | 模型名；空字符串表示"该用户组的所有模型默认倍率"，联合唯一索引第二列 |
-| `discount` | `decimal(10,4)` | 倍率：`1.0` 不折扣；`0.8` 即 80% 收费（vip 八折） |
-| `created_at` / `updated_at` | `bigint` | unix 秒 |
-
-`(group_name, model_name)` 联合唯一，因此同一组合不能重复插入。
-
-## 接口
-
-| Endpoint | Method | Auth | 说明 |
-|---|---|---|---|
-| `/api/group_price/` | `GET` | Admin | 全量，按 `group_name, model_name` 升序 |
-| `/api/group_price/` | `POST` | Admin | 新建；`group_name` 必填；`discount=0` 自动回退 `1.0` |
-| `/api/group_price/` | `PUT` | Admin | 更新 |
-| `/api/group_price/:id` | `DELETE` | Admin | 删除（写后重建 `groupPriceMap`） |
-
-## 查找顺序
-
-`model.GetGroupDiscount(groupName, modelName)`：
-
-1. `groupPriceMap[groupName][modelName]` → 命中返回
-2. 否则 `groupPriceMap[groupName][""]` → 该用户组的全局倍率
-3. 都没有 → `1.0`
-
-`relay/billing/ratio/model.go::GetGroupDiscount(groupName, modelName, fallbackNames...)` 在 (1) 失败时按顺序尝试 `fallbackNames`（例如 `claude-3.5-sonnet-internet` → `claude-3.5-sonnet`），与 `GetModelPrice` 的 fallback 链对齐。
-
-## 默认分组
-
-`model_price.go::defaultGroupPrices` 初始化三种默认组：
+`GroupPrice` 让「某个用户组」对「某些模型」有折扣倍率。配合 [ModelPrice](/pricing/model-price) 使用：
 
 ```
+最终扣费 = 调用消耗 × ModelPrice × GroupPrice(group, model)
+```
 
-启动时若表为空则写入。`Discount=1.0` 是占位，管理员按需在 UI 上调小。
+`GroupPrice` 默认 1.0（无折扣）。用户在某个用户组，且该用户组对当前模型有折扣时生效。
 
-## 缓存
+## 在哪里看到
 
-- 启动：`InitGroupPriceCache` 把全表读入 `groupPriceMap map[string]map[string]float64`
-- 写后：每个 CRUD 都调 `InitGroupPriceCache` 重建
-- 周期：`SyncGroupPriceCache(frequency)` 与 `SyncModelPriceCache` 共用频率
-- Redis：`CacheGetGroupPrice(group, model)` 二级缓存（`ModelPriceCacheSeconds=300`），未命中走 DB
+后台 → 分组折扣。
 
-## 与模型覆盖的关系
+## 需要设置什么
 
-- 一个 group 的 `(model_name="")` 行是该用户组所有模型的默认倍率
-- 单模型覆盖（`model_name="gpt-4o"`）只在 `GetGroupDiscount(group, "gpt-4o")` 时优先命中；其它模型仍走 `""` 行
+每条填：
 
-例如：
+| 项 | 含义 | 设置后影响 |
+|---|---|---|
+| `group_name` | 用户组名 | 与用户的 `group` 字段匹配才生效 |
+| `model_name` | 模型名 | 空 = 该用户组**所有模型**的默认折扣；填具体模型 = 只针对该模型 |
+| `discount` | 折扣倍率 | `1.0`=无折扣；`0.8`=八折；`1.2`=加价 20% |
 
-| group | model | discount | 含义 |
-|---|---|---|---|
-| `vip` | `""` | `0.8` | vip 用户对所有模型 80% 收费 |
-| `vip` | `gpt-4o` | `0.5` | vip 用户对 gpt-4o 50% 收费 |
-| `svip` | `""` | `1.0` | svip 不打折（占位） |
+## 命中规则
 
-## 前端操作指南
+1. 先查「(user_group, model) 完全匹配」
+2. 没有则查「(user_group, 空模型)」 = 该用户组的默认折扣
+3. 都没有 → 1.0
 
-页面：`/setting/pricing` → "分组折扣" Tab（`web/default-pro/src/views/setting/PricingSetting.vue`）。
+## 常见用法
 
-- 列表：group_name / model_name / discount
-- 编辑弹窗：三个字段；`discount` 默认 `1.0`
-- 「新增」按相同表单
+### VIP 群体整体八折
 
-## 实现位置
+| group | model | discount |
+|---|---|---|
+| `vip` | _(空)_ | `0.8` |
 
-| 关注点 | 位置 |
-|---|---|
-| 数据模型 | `model/model_price.go::GroupPrice` |
-| 缓存初始化 | `model/model_price.go::InitGroupPriceCache` |
-| 查找（含 fallback） | `model/model_price.go::GetGroupDiscount` |
-| Redis 缓存 | `model/model_price.go::CacheGetGroupPrice` |
-| CRUD | `controller/model_price.go` |
-| 默认分组 | `model/model_price.go::defaultGroupPrices` |
-| 计费结算 | `relay/handler/helper.go::postConsumeQuota` |
+### VIP 对高级模型额外优惠
 
+| group | model | discount |
+|---|---|---|
+| `vip` | _(空)_ | `0.8` |
+| `vip` | `gpt-4o` | `0.5` |
+
+### 多个用户组
+
+系统启动时会种入 `default` / `vip` / `svip` 三个组，每个 `discount=1.0`。按需在 UI 上调。
+
+## 怎么改
+
+后台 → 分组折扣 → 新增：
+
+1. 选 `group_name`（如 `vip`）
+2. 填 `model_name`（空 = 该组所有模型的默认折扣）
+3. 填 `discount`（如 `0.8` = 八折）
+4. 保存
+
+## 不要
+
+- 把所有组都设成 1.0（默认就是 1.0）
+- 同一对 `(group, model)` 创建多条记录（会报唯一键冲突）
+
+## 与套餐的关系
+
+[订阅套餐](/subscription/overview) 的折扣是另一条独立的折扣路径（`subscription.discount`）。两条折扣同时存在：
+
+- 调用命中订阅 → 用 `subscription.discount`（套餐折扣）
+- 调用未命中订阅 → 用 `GroupPrice`（用户组折扣）
+
+## 常见问题
+
+- **设了 VIP 八折但用户反映没生效**：检查用户当前是否在 `vip` 组（个人中心或后台查看）
+- **改了折扣立即生效吗**：是。下次调用按新折扣计算
+- **一个用户能享受多个折扣吗**：VIP 用户组折扣 × 套餐折扣（如果有）= 实际扣费
+
+## 相关页面
+
+- [分组折扣管理（后台）](./group-price-management)
+- [分组折扣（数据结构）](/schema/group-price)
+- [ModelPrice](/pricing/model-price)
+
+## 相关 API
+
+- `GET /api/group_price/` — 列表
+- `POST /api/group_price/` — 新增
+- `PUT /api/group_price/` — 更新
+- `DELETE /api/group_price/:id` — 删除
