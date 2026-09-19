@@ -65,13 +65,18 @@ body {
 /* ---------------------------------------------------------------------- */
 /* Navbar                                                                  */
 /* ---------------------------------------------------------------------- */
+/* Row 1 carries no distinct background: the bar blends with the page bg
+   and only row 2 draws a border. No white rectangle behind the logo. */
 .VPNavBar {
+  background-color: var(--vp-c-bg) !important;
   backdrop-filter: saturate(180%) blur(12px);
 }
 
-.VPNavBar:not(.has-sidebar):not(.home.top) {
-  background-color: color-mix(in srgb, var(--vp-c-bg) 82%, transparent);
-  border-bottom: 1px solid var(--vp-c-divider);
+.VPNavBar .title,
+.VPNavBar .content-body,
+.VPNavBarTitle,
+.VPNavBarTitle .title {
+  background-color: transparent !important;
 }
 
 /* Enlarged logo, native aspect ratio (logo.png is 1248x480, ratio ~ 13:5) */
@@ -81,6 +86,28 @@ body {
   width: auto;
   max-width: none;
   margin-right: 0;
+}
+
+/* "Docs" pill next to the logo (mirrors docs.openclaw.ai) */
+.VPNavBarTitle .op-docs-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 10px;
+  padding: 3px 9px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--vp-c-text-2);
+  background-color: transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.VPNavBarTitle .op-docs-badge:hover {
+  color: var(--vp-c-brand-1);
+  border-color: var(--vp-c-brand-1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -128,22 +155,24 @@ body {
     display: none !important;
   }
 
-  /* Row 2: category menu, full width, centered under row 1. */
+  /* Row 2: category menu. Left-aligned, no top border, no top shadow,
+     and a low z-index so dropdowns from row 1 (language) float above it. */
   .VPNavBarMenu.menu {
     position: absolute !important;
     top: var(--op-nav-row-1) !important;
     left: 0 !important;
     right: 0 !important;
-    z-index: 1;
+    z-index: 0;
     display: flex !important;
-    justify-content: center;
+    justify-content: flex-start;
     align-items: center;
     height: var(--op-nav-row-2) !important;
-    margin: 0 !important;
-    padding: 0 16px;
-    border-top: 1px solid var(--vp-c-divider);
+    max-width: calc(var(--vp-layout-max-width) - 64px);
+    margin: 0 auto !important;
+    padding: 0 32px;
+    border-top: none !important;
     border-bottom: 1px solid var(--vp-c-divider);
-    background-color: var(--vp-nav-bg-color);
+    background-color: var(--vp-c-bg);
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none; /* Firefox */
@@ -153,15 +182,61 @@ body {
     display: none; /* Chromium / Safari */
   }
 
-  /* Keep language switcher + light/dark toggle visible on the top row
-     (VitePress hides them below 1280px and shows a "..." menu instead). */
+  /* Keep language switcher + light/dark toggle + GitHub visible on the top
+     row (VitePress hides them below 1280px and shows a "..." menu instead). */
+  .VPNavBar .social-links,
   .VPNavBar .translations,
   .VPNavBar .appearance {
     display: flex !important;
+    align-items: center;
   }
 
   .VPNavBar .extra {
     display: none !important;
+  }
+
+  /* Order the top-right controls: GitHub · language · light/dark. */
+  .VPNavBar .social-links {
+    order: 1;
+    margin-right: 0;
+  }
+
+  .VPNavBar .translations {
+    order: 2;
+  }
+
+  .VPNavBar .appearance {
+    order: 3;
+    margin-left: 8px;
+  }
+
+  /* Replace the theme's hairline separators with plain spacing. */
+  .VPNavBar .content-body > *::before {
+    display: none !important;
+  }
+
+  .VPNavBar .content-body {
+    gap: 6px;
+  }
+
+  /* Language dropdown must float above the row-2 category bar. */
+  .VPNavBarTranslations,
+  .VPNavBarExtra {
+    position: relative;
+    z-index: 3;
+  }
+
+  /* Centered, longer search box on row 1. */
+  .VPNavBarSearch.search {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%);
+    width: min(560px, 42vw) !important;
+    z-index: 1;
+  }
+
+  .VPNavBarSearch.search .DocSearch-Button {
+    width: 100%;
   }
 
   /* Compact menu links so all 13 categories fit on one line. */
@@ -421,4 +496,5 @@ div[class*='language-'] {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-1);
 }
+
 
