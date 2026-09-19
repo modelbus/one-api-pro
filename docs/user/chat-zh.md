@@ -1,75 +1,68 @@
 ---
 title: Chat Playground
-description: "内置的对话调试与多模型对比。"
+description: 在 One API Pro 里直接对话，调试模型与提示词。
 category: user
 order: 6
 ---
 
 # Chat Playground
 
-> 内置的对话调试与多模型对比。
+> 想直接在 One API Pro 里对话、对比几个模型？Chat Playground 就是这个。
 
-入口：`/chat`（`web/default-pro/src/views/chat/Chat.vue`）。Chat Playground 是一个 **嵌入式 iframe**，由系统选项 `ChatLink` 配置指向：
+## 这是什么
 
-```text
-ChatLink (环境变量 CHAT_LINK) ─► iframe src
-```
+One API Pro 自带的网页聊天界面，地址是 `/chat`。你可以：
 
-## 适用场景
+- 在同一个对话里切换不同模型，看谁的回复更好
+- 调提示词不用每次改 CLI
+- 给团队 / 客户演示 LLM 行为
 
-- **多模型对比**：在一个 UI 里同时跑 GPT-4o / Claude / DeepSeek / Qwen 比拼回复。
-- **调试提示词**：长 prompt 反复试错，不用每次都改 CLI。
-- **教学 / Demo**：给团队 / 客户演示 LLM 行为。
+## 怎么开
 
-## 配置
+不需要额外配置 —— 登录后访问 `/chat` 就行。如果显示空白页，说明管理员没设置 [ChatLink](../misc/system-settings)（默认是空的）。
 
-环境变量 / Env var：
+## 用法
 
-```
+跟用 ChatGPT / Claude 一样：
 
-或 / or
+1. 选择模型（下拉框列出了你能用的所有模型）
+2. 输入提示词
+3. 看回复
 
-```
+提示：可以同时开两个 tab，分别选不同模型，对比同一个 prompt 的回复。
 
-前端获取 `status.chat_link` 后直接渲染：
+## 它和「用第三方 Chat UI」是什么关系
 
-```js
-chatLink.value = statusStore.status?.chat_link || ''
-```
+Chat Playground 只是 One API Pro 内置的一个简易聊天页。如果你需要更完整的聊天体验（多会话、文件上传、插件等），建议用第三方 Chat UI，通过 [API Key](./access-token) 或 [令牌](../api/token) 接 One API Pro。
 
-留空则 `/chat` 页显示空状态（提示管理员配置 `ChatLink`）。
+详见下方的「接入第三方 Chat UI」一节。
 
-## 鉴权
+## 接入第三方 Chat UI
 
-推荐配合第三方 Chat UI：
+更推荐的做法：用 Lobe Chat / NextChat / Open WebUI 等社区 UI，通过 One API Pro 的 `sk-` Key 接入。
 
-| UI | 推荐配置| 备注|
-| --- | --- | --- |
-| **Lobe Chat** | `CHAT_LINK=https://chat-oneapi.lobehub.com/` | 直接用 One API Pro 当模型网关 |
-| **NextChat (ChatGPT-Next-Web)** | 自部署 NextChat，`API_BASE_URL` 指向 One API Pro | 注意 `/v1/*` 跨域（CORS） |
-| **Open WebUI** | 同上 | 支持流式、tools、多模态 |
+| 第三方 UI | 推荐配置 |
+|---|---|
+| **Lobe Chat** | 在「模型服务」选 OpenAI 兼容；Base URL 填 `http://<your-host>:3000`；API Key 填 `sk-…` |
+| **NextChat** | 同上 |
+| **Open WebUI** | 同上；支持流式、tools、多模态 |
 
-> 第三方 UI 调用的是 One API Pro 的 `sk-` Key（不是 Access Token），需要在它们的「自定义 Base URL」处填 `http://<your-host>:3000`。
+具体步骤：
 
-## 排错
+1. 在 One API Pro 个人中心 → 令牌 → 新建一个 API Key（建议「永不过期 + 不限模型」）
+2. 在第三方 UI 设置里选 OpenAI 兼容，Base URL 指向 One API Pro（如 `http://localhost:3000` 或你的域名）
+3. API Key 填上一步新建的 `sk-…`
+4. 在第三方 UI 模型列表里应能看到所有已配置 [模型定价](../schema/model-price) 的模型
 
-| 现象| 排查|
-| --- | --- |
-| `/chat` 显示空状态 | `CHAT_LINK` 是否设置；`/api/status` 返回的 `chat_link` 是否非空 |
-| iframe 加载但「无模型」 | 第三方 UI 侧的 `API Base URL` / `API Key` 是否正确指向 One API Pro |
-| iframe 报 CORS | 反代处加 `Access-Control-Allow-Origin: <origin>`；或把三方 UI 与 One API Pro 同源部署 |
-| 调用返回 401 | 在 One API Pro 个人中心新建「永不过期 + 不限模型」的 API Key 写入第三方 UI |
+## 常见问题
 
-## 自托管第三方 UI
+- **`/chat` 页面空白**：管理员没设置 `ChatLink`，联系管理员在 [系统设置](../misc/system-settings) 配一下，或者直接用第三方 Chat UI
+- **调用返回 401**：新建一个「永不过期 + 不限模型」的 API Key 试试
+- **第三方 UI 显示「无模型」**：检查它的 Base URL 是否正确指向了 One API Pro，且 API Key 在 One API Pro 这边有效
+- **CORS 报错**：把第三方 UI 和 One API Pro 用同源部署（同一域名反向代理），或反代处加 `Access-Control-Allow-Origin`
 
-如果 `ChatLink` 指向自托管的 Lobe / NextChat / Open WebUI：
+## 相关
 
-1. 给 One API Pro 起一个稳定的域名（避免 IP 直连 + 反代 443）。
-2. 在第三方 UI 「模型提供方」处选择 OpenAI 兼容，Base URL 填 `https://<one-api-domain>`，API Key 填 `sk-…`。
-3. 在 One API Pro 的「令牌」处允许第三方 UI 调用所需的模型（不限模型可省去此步）。
-
-## 不实现内嵌聊天 UI 的原因
-
-保持 One API Pro 的前端「重在网关 / 计费 / 管理」三块，聊天 UI 由社区更专业的项目承担（更新更快、协议支持更广）。这种「网关 + 可插拔 UI」的拆分也是 One API Pro 与上游 One-API 在产品定位上的主要差异之一。
-
-下一步 / Next: [接入第三方 Chat UI](https://github.com/lobehub/lobe-chat) · [新增 Provider](/zh/contribute/add-provider)。
+- [Access Token](./access-token)
+- [API Key（令牌）](../api/token)
+- [模型定价](../schema/model-price)
