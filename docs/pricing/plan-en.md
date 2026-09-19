@@ -1,104 +1,130 @@
 ---
 title: Plan Pricing
-description: "Plan data model, validity, model coverage, group bindings, and upgrade semantics."
+description: What a plan is, how to set it up, and how users buy it.
 category: pricing
 order: 3
 ---
 
 # Plan Pricing
 
-> A Plan carries the subscription price, validity, model quotas, and sort key for upgrade decisions. Implementation: `model/plan.go::Plan`, `controller/plan.go`, `web/default-pro/src/views/setting/PlanSetting.vue`.
+> What defines the "subscription plan" users see on the public subscribe page.
 
-## Data model
+## What it is
 
-`model.Plan` (`plans` table):
+A `Plan` is a "product" template. It defines:
 
-| Field | Type | Notes |
+- Name / price / validity
+- Which models it covers and their quotas
+- Whether it's the recommended option
+
+Users see Plans on the public subscribe page.
+
+## Where to find it
+
+- **Admin → Plans**: add, publish, unpublish
+- **Public → Subscribe**: only published Plans
+
+## What to set when creating
+
+| Field | Meaning | Effect |
 |---|---|---|
-| `name` | `varchar(100)` | Plan name (required; `Insert` errors if empty) |
-| `description` | `text` | Plan description |
-| `price` | `decimal(10,2)` | Price in yuan |
-| `duration_days` | `int` | Validity in days (default 30); `end_time = start_time + duration_days * 86400` |
-| `duration_text` | `varchar(50)` | Display text (e.g. `30 天`, `季度`) |
-| `status` | `int` | `PlanStatusEnabled=1` / `PlanStatusDisabled=0`; `/api/plan/public` returns only `Enabled` |
-| `recommended` | `bool` | Frontend "recommended" tag |
-| `sort` | `int` | Upgrade / downgrade comparison key; higher is higher-tier |
-| `features` | `StringSlice` (text JSON) | Feature list |
-| `model_limits` | `text` JSON | Per-model window quotas (see below) |
-| `default_model` | `varchar(100)` | Requests for models not in `model_limits` are routed here; `ValidateDefaultModel` requires it to exist in `model_limits` |
+| Name | Display name | Updates everywhere |
+| Price | ¥ | What the user pays |
+| Validity | Days | After expiry, status flips to "expired" — calls still work until quota is exhausted |
+| Discount multiplier | Number | Discount applied during the subscription (default 1.0 = no discount) |
+| Model quotas | JSON | Per-model window quotas (below) |
+| Default model | Model name | Requests for non-listed models get rewritten to this; empty → 422 |
+| Description | Rich text | Shown publicly |
+| Recommended | Toggle | Shows "★ Recommended" badge |
+| Status | Published / Unpublished | Unpublished blocks new subscriptions; existing ones are unaffected |
 
-## `model_limits` shape
+## Model quotas (`model_limits`) JSON
 
-`model/model_plan.go::ModelLimitRule`:
+Each plan can set per-model three-window quotas:
 
 ```json
 {
-  "gpt-4o":            { "period_h": 5, "request_period": 100, "request_week": 500, "request_month": 2000, "token_period": 50000,  "token_week": 250000, "token_month": 1000000 },
-  "claude-3.5-sonnet": { "period_h": 5, "request_period": 50,  "request_week": 200, "request_month": 800,  "token_period": 30000,  "token_week": 120000, "token_month": 480000 }
+  "gpt-4o": {
+    "period_h": 5,
+    "request_period": 100,
+    "request_week": 500,
+    "request_month": 2000,
+    "token_period": 50000,
+    "token_week": 250000,
+    "token_month": 1000000
+  }
 }
 ```
 
-- `period_h` — period window length in hours (default 5)
-- `request_*` / `token_*` — request / token caps per window; `0` means unlimited
-- When `model_limits` is null, `CheckPlanQuota` treats the plan as usable (no window limit)
-
-See [Billing Rules](../subscription/billing-rules).
-
-## features
-
-`StringSlice` is a custom JSON/text bridge in `plan.go`:
-
-- Writes: `MarshalJSON` outputs a JSON array; `Value()` serializes to a JSON string
-- Reads: `Scan` first tries JSON array parsing, then `\n` fallback (legacy plain-text)
-- nil marshals to `[]` instead of `null`
-
-## Endpoints
-
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/plan/` | `GET` | Admin | Paginated |
-| `/api/plan/search?keyword=` | `GET` | Admin | `name LIKE kw%` |
-| `/api/plan/:id` | `GET` | Admin | Detail |
-| `/api/plan/` | `POST` | Admin | Create (name required; `ValidateDefaultModel` runs) |
-| `/api/plan/` | `PUT` | Admin | Update (same validation) |
-| `/api/plan/:id` | `DELETE` | Admin | Delete |
-| `/api/plan/public` | `GET` | Public | Only `status=Enabled`; user-side plan list |
-| `/api/plan/public/:id` | `GET` | Public | Public detail |
-
-## Group binding
-
-Plans do not bind directly to user groups; group routing is driven by `channel.group`. The "tier" feel of a plan comes from:
-
-- `recommended=true` — flagged as recommended in the list
-- `sort` — upgrade/downgrade comparison (same `sort` is rejected; lower `sort` cannot upgrade to higher `sort` beyond)
-- `default_model` — if the user requests a model not in `model_limits`, the request is rewritten to it; empty + non-listed model → 422 (`PlanQuotaCheck`)
-
-## Plan ↔ Order ↔ Subscription
-
-- User self-service: `POST /api/order/plan` → `model.CreatePlanOrder` → `buildPayInfo` returns pre-pay params → payment notify → `ActivatePackageByOrder(order, mode)`
-- Admin grant: `POST /api/subscription/` → immediately `ActivatePackageByOrder(order, OrderUpgradeModeStack)`
-- Mode is read from the system setting `plan.upgrade_mode` (default `price_diff`)
-
-See [Upgrade and Downgrade](../subscription/upgrade-downgrade) and [Subscription Admin](../subscription/admin-guide).
-
-## Frontend Guide
-
-Route: `/setting/pricing` → **Plans** tab (`web/default-pro/src/views/setting/PlanSetting.vue`).
-
-- Columns: name / price / duration_days / duration_text / sort / status / recommended
-- Edit modal: name / description / price / duration_days / duration_text / sort / status / recommended / features[] / model_limits JSON / default_model
-- Recommended star (★): `recommended=true`
-- **Enable / Disable** toggle changes `status`
-- Delete is a secondary confirmation; deleting a plan does not roll back existing `user_plans` (they keep the snapshotted limits at activation time)
-
-## Implementation Pointers
-
-| Concern | Location |
+| Field | Meaning |
 |---|---|
-| Data model | `model/plan.go::Plan` / `ModelLimitRule` |
-| Validation | `model/plan.go::ValidateDefaultModel` |
-| CRUD | `controller/plan.go` |
-| Public endpoints | `controller/plan.go::GetPublicPlans` / `GetPublicPlanDetail` |
-| Order creation | `model/order_payment.go::CreatePlanOrder` |
-| Activation | `model/order_payment.go::ActivatePackageByOrder` |
-| Upgrade math | `model/order_payment.go::CalculateUpgradePrice` |
+| `period_h` | Period window in hours (default 5) |
+| `request_period` / `request_week` / `request_month` | Call-count cap per window (`0` = unlimited) |
+| `token_period` / `token_week` / `token_month` | Token cap per window |
+
+`model_limits = null` means the plan doesn't restrict that model (pay-as-you-go path).
+
+See [Billing Rules](../en/subscription/billing-rules).
+
+## User purchase flow
+
+```
+User picks a plan at /pricing
+    ↓
+POST /api/order/plan (order number prefix TB / UP)
+    ↓
+Payment → callback → ActivatePackageByOrder
+    ↓
+Subscription created (end_time = now + duration_days)
+```
+
+Admins can also "grant" manually to bypass payment (common for support compensation).
+
+## Upgrade / Downgrade
+
+Switching plans:
+
+- **Price-diff (default)**: pay only the difference; remaining quota is pro-rated
+- **Stack**: pay full price for a new subscription; old one keeps running
+
+Admin picks the mode in [Plan Settings](../en/subscription/plan-settings).
+
+## How to publish a new plan
+
+1. Admin → Plans → Add
+2. Name, price, validity, discount
+3. Fill `model_limits` for every model the plan should cover
+4. Pick a `default_model` (suggested: the plan's flagship model)
+5. Set Status to Published
+6. Save
+
+Tip: test before publishing. Open a test subscription and verify calls, quotas, upgrade, downgrade.
+
+## vs. user groups
+
+A plan **isn't tied to a user group**. A VIP user buying a basic plan is billed by:
+
+```
+consumption × ModelPrice × plan.discount × (group.discount / group.default)
+```
+
+## FAQ
+
+- **Changed model_limits — does it affect old subscriptions?** No. Old subscriptions use the snapshot at purchase time.
+- **Is default_model required?** Required if you want to limit models; leave empty if the plan is unrestricted.
+- **Plan deleted — old subscriptions still work?** Yes. Delete only blocks new subscriptions.
+
+## Related
+
+- [Plan Schema](/en/schema/plan)
+- [Plan Management (admin)](../en/subscription/plan-management)
+- [Upgrade & Downgrade](../en/subscription/upgrade-downgrade)
+- [My Orders (user)](../en/user/orders)
+
+## Related API
+
+- `GET /api/plan/` — list (admin)
+- `GET /api/plan/public` — list (public)
+- `POST /api/plan/` — add (Root)
+- `PUT /api/plan/` — update (Root)
+- `DELETE /api/plan/:id` — delete (Root)
