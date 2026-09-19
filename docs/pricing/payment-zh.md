@@ -1,139 +1,147 @@
 ---
 title: 支付通道
-description: "微信 Native、支付宝当面付、银行转账、线下、免费通道；证书上传与回调地址配置。"
+description: 微信 / 支付宝 / 银行转账的接入方式与后台配置。
 category: pricing
 order: 5
 ---
 
 # 支付通道
 
-> 支付通道抽象为 `common/payment.Channel` 接口，按 `pay_method` 注册到全局 `registry`。每个通道从 `system_settings` 读自己的 `enabled` / `config` JSON，调用方通过 `payment.New(pay_method)` 拿到实例。
+> 用户付款走哪个通道？怎么配置？怎么处理回调？
 
-## 注册的通道
+## 支持的通道
 
-`common/payment/payment.go::AnyChannelEnabled` 列举 `wechat` / `alipay` / `bank` 三个候选（`offline` / `free` 始终视为可用）；启动时由各文件 `init()` 注册：
+| 通道 | pay_method | 适用场景 |
+|---|---|---|
+| **微信 Native** | `wechat` | 用户用微信扫一扫付款 |
+| **支付宝 当面付** | `alipay` | 用户用支付宝扫一扫付款 |
+| **银行转账** | `bank` | 用户用银行 / 公司网银转账，管理员手工确认 |
+| **线下支付** | `offline` | 不走线上系统，管理员手工 |
+| **免费 / 赠送** | `free` | 仅用于管理员手动开通订阅 |
 
-| 通道 | pay_method | 实现 | 主要凭证 |
-|---|---|---|---|
-| 微信 Native | `OrderPayMethodWechat="wechat"` | `common/payment/wechat.go` | `app_id` / `mch_id` / `api_key` / `notify_url`；可选 `cert_file` / `key_file`（退款用） |
-| 支付宝 当面付 | `OrderPayMethodAlipay="alipay"` | `common/payment/alipay.go` | `app_id` / `private_key` / `public_key` / `private_key_file` / `public_key_file` / `notify_url` / `gateway` |
-| 银行转账 | `OrderPayMethodBank="bank"` | `common/payment/bank.go::bankChannel` | `account_name` / `account_no` / `bank_name` / `branch` / `notes`（`PrePay` 不可用，等管理员标记收款） |
-| 线下支付 | `OrderPayMethodOffline="offline"` | `common/payment/bank.go::offlineChannel` | 同上；`IsEnabled()` 始终返回 true |
-| 免费 / 管理员赠送 | `OrderPayMethodFree="free"` | `common/payment/bank.go::freeChannel` | 始终视为启用；`PrePay` 返回空对象 |
+默认开启前三种里至少一种，否则用户在结算页看不到支付按钮。
 
-## 系统设置
+## 在哪里看到
 
-支付配置存 `system_settings` 表 `payment.*` 键（`model/system_setting.go`）：
+- **后台 → 支付设置**：管理员配置每个通道
+- **用户侧**：套餐下单、充值页面的「支付方式」下拉
 
-| Key | 含义 |
+## 微信 Native（推荐 C 端）
+
+### 申请
+
+1. 微信支付商户平台 → 产品中心 → 申请「Native 支付」
+2. 拿到 `app_id` / `mch_id` / `api_key`（v2）或「商户 API 证书」（v3）
+3. 配置回调地址：`https://your-domain.com/api/payment/wechat/notify`
+
+### 后台配置
+
+后台 → 支付设置 → 微信：
+
+| 项 | 填什么 |
 |---|---|
-| `payment.wechat.enabled` / `payment.wechat.config` | 微信总开关 / 凭证 JSON |
-| `payment.alipay.enabled` / `payment.alipay.config` | 支付宝总开关 / 凭证 JSON |
-| `payment.bank.enabled` / `payment.bank.config` | 银行转账总开关 / 凭证 JSON |
+| 启用 | 开关 |
+| `app_id` | 商户平台 → 账号中心 |
+| `mch_id` | 商户平台 → 账号中心 |
+| `api_key` | 商户平台 → API 安全 → v2 密钥 |
+| `notify_url` | `https://your-domain.com/api/payment/wechat/notify` |
+| 证书 / 私钥（PEM） | 退款用；选填 |
 
-`IsEnabled()` 调 `payment.SettingsBool(key)` 读 `{"enabled": true|false}` 解析。
+## 支付宝 当面付（推荐 C 端）
 
-## 微信 Native
+### 申请
 
-`wechatChannel.PrePay`：
+1. 支付宝开放平台 → 创建应用 → 签约「当面付」
+2. 拿到 `app_id` / 应用公钥 / 应用私钥
+3. 配置回调地址：`https://your-domain.com/api/payment/alipay/notify`
 
-1. `IsEnabled()` 拒绝未启用
-2. 加载 `wechatConfig`：`app_id` / `mch_id` / `api_key` 必填，缺一返回 `微信支付参数不完整`
-3. `UnifiedOrder(ctx, BodyMap{body, out_trade_no, total_fee, spbill_create_ip, notify_url, trade_type=Native})`
-4. `total_fee` = 元 × 100（`int64(amount*100 + 0.5)`）
-5. 返回 `PrePayResult{PayURL=CodeURL, QRCode=CodeURL, ExpireAt=0, TradeNo=PrepayId}`
+### 后台配置
 
-`VerifyNotify`：
+后台 → 支付设置 → 支付宝：
 
-- 解析 XML 为 `wechatNotifyXML`（`return_code` / `result_code` / `out_trade_no` / `transaction_id` / `total_fee` / `sign`）
-- 按 ASCII 升序拼接非空字段 + `&key=<API_KEY>` 做 MD5 → 比对 `sign`
-- 校验 `return_code == SUCCESS` 且 `result_code == SUCCESS`
-- 回调金额 = `TotalFee / 100`（元）
+| 项 | 填什么 |
+|---|---|
+| 启用 | 开关 |
+| `app_id` | 开放平台 → 我的应用 |
+| `private_key` / `public_key` | 应用公钥 / 私钥（PEM 内容） |
+| 或 `private_key_file` / `public_key_file` | 文件路径 |
+| `gateway` | 默认 `https://openapi.alipay.com/gateway.do`（生产） |
+| `notify_url` | `https://your-domain.com/api/payment/alipay/notify` |
 
-`WechatNotify` 端点（`POST /api/payment/wechat/notify`，免鉴权）：
+## 银行转账（B 端 / 公司用户）
 
-- 成功 → 返回 `<xml><return_code>SUCCESS</return_code>...</xml>`
-- 失败 → 返回 `<xml><return_code>FAIL</return_code><return_msg>...</return_msg></xml>`（让微信重试）
+适合：金额大、对账要求高、不适合线上扫码的公司客户。
 
-## 支付宝 当面付
+### 流程
 
-`alipayChannel.PrePay`：
+1. 用户下单 → 订单状态 = 待支付
+2. 用户用银行 / 公司网银转账到你提供的账户
+3. 管理员在后台「订单」详情页手动「标记已支付」
+4. 系统激活套餐 / 充值
 
-- `app_id` 必填；优先使用 `private_key_file` / `public_key_file`，否则读 inline `private_key` / `public_key`
-- `gateway` 默认 `https://openapi.alipay.com/gateway.do`（生产），可填沙箱
-- `TradePrecreate(ctx, "当面付", out_trade_no, total_amount)` 生成二维码字符串
+### 后台配置
 
-`VerifyNotify` 用 `alipay.VerifySign`（RSA2 + alipay public key）校验 POST 字段后返回 `NotifyResult{OutTradeNo, TradeNo, Amount, Paid}`。
+后台 → 支付设置 → 银行转账：
 
-`AlipayNotify` 端点（`POST /api/payment/alipay/notify`，免鉴权）成功返回字面量 `success`，失败返回 `fail`。
+| 项 | 填什么 |
+|---|---|
+| 启用 | 开关 |
+| `account_name` | 收款账户名（公司名） |
+| `account_no` | 银行账号 |
+| `bank_name` | 开户行 |
+| `branch` | 支行 |
+| `notes` | 备注（让用户备注订单号） |
 
-## 银行
+## 用户侧支付流程
 
-- `bankChannel`：`PrePay` 返回错误 `bank 支付未实现：等待管理员在后台标记收款`；无回调；订单保持 `pending`，由管理员通过 `PUT /api/order/:id` 手动标记收款
-- `offlineChannel`：与 bank 类似，但 `IsEnabled()` 始终返回 true（默认开放）
-- `freeChannel`：`PrePay` 返回空对象；`VerifyNotify` 直接返回 `Paid: true`。仅用于管理员 grant（`controller/subscription.go::AddSubscription`）
-
-## 用户侧流程
-
-`payment.AnyChannelEnabled()` 决定 `CreatePlanOrder` / `CreateTopupOrder` / `PayMyOrder` 是否允许下单；返回 false 时统一返回 `系统尚未开通任何支付通道，请设置后开启支付`，且不落订单。
-
-`buildPayInfo(pay_method, order_no, amount, "TBUS-"+package_name)` 返回给前端的对象：
-
-```json
-{
-  "status": "success",          // or "warning"
-  "pay_url": "weixin://wxpay/bizpayurl?pr=...",
-  "qr_code": "weixin://wxpay/bizpayurl?pr=...",
-  "expire_at": 0,
-  "trade_no": "prepay_id_xxx",
-  "note": "..."                 // 仅 bank
-  "warning": "..."              // 仅 warning
-}
+```
+用户在套餐页下单
+    ↓
+弹窗显示可用支付方式（已启用的）
+    ↓
+用户选微信 → 显示二维码 → 扫码支付
+或选银行 → 显示账号 + 备注订单号 → 用户转账
+    ↓
+微信/支付宝自动回调 → 订单状态 = 已支付 → 激活套餐
+银行转账 → 管理员后台手动标记已支付 → 激活套餐
 ```
 
-`status=warning` 时表示通道未注册 / 未启用 / SDK 调用失败；订单仍然落库，管理员可手动处理。
+## 异步回调
 
-## 异步回调分发
+第三方支付完成后会异步通知 One API Pro，验证签名 → 更新订单 → 激活套餐：
 
-`controller/payment.go::processNotify`：
+- `POST /api/payment/wechat/notify`（微信）
+- `POST /api/payment/alipay/notify`（支付宝）
 
-1. `payment.New(pay_method).VerifyNotify(body)` 校验签名
-2. `model.GetOrderByOrderNo(notif.OutTradeNo)` 拉订单
-3. `order.Amount > 0 && notif.Amount > 0 && notif.Amount != order.Amount` → `amount mismatch`
-4. 按 `order.Type` 分发：
-   - `OrderTypeTopup=2` → `model.ActivateTopupByOrder` 加 quota
-   - 其它（套餐订单） → `model.ActivatePackageByOrder(order, OrderUpgradeModeStack)` 激活订阅
+这两个端点**免鉴权**，由支付平台直接调用。要确保能从公网访问。
 
-## 手动激活
+## 手动激活（调试 / 对账）
 
-`POST /api/payment/mock/notify`（Root，请求体 `{order_no, status}`）：
+`POST /api/payment/mock/notify`（Root）：传 `{order_no, status}`：
 
-- `status=1` → 按订单类型调 `ActivateTopupByOrder` 或 `ActivatePackageByOrder`
-- `status=3` → `model.MarkOrderRefunded`（状态翻转；不修改 `users.quota` / `user_plans`）
+- `status=1` → 强制激活（按订单类型加 quota 或开订阅）
+- `status=3` → 标记为已退款
 
-用于测试或对账后手动激活。
+用于：测试、对账修正、回调失败补救。
 
-## 前端操作指南
+## 常见问题
 
-页面：`/setting/payment`（`web/default-pro/src/views/setting/PaymentSetting.vue`）。
+- **支付方式按钮不显示**：检查后台是否至少启用了一种通道
+- **回调一直不来**：检查 `notify_url` 是否能从公网访问；检查防火墙 / 反代是否拦截
+- **金额校验失败**：检查订单的 `amount` 与 `pay_method` 返回的金额是否一致（避免汇率 / 优惠造成的不一致）
+- **银行转账收款后怎么操作**：管理员去「订单」详情页手动点「标记已支付」
 
-- 每个通道一个开关 + 配置表单：
-  - **微信**：`app_id` / `mch_id` / `api_key` / `notify_url` + 证书 / 私钥 PEM 上传按钮
-  - **支付宝**：`app_id` / `gateway` / `notify_url` + 公钥 / 私钥 PEM 上传按钮
-  - **银行**：`account_name` / `account_no` / `bank_name` / `notes`
-- 切换开关即时调 `PUT /api/setting/payment/:method`；表单字段通过同一端点的 `config` 字段一并保存
-- 用户侧 `/pricing` 或 `/topup` 弹窗：`GET /api/payment/status` 决定渲染哪些支付按钮（已启用的）
+## 相关页面
 
-## 实现位置
+- [支付配置（后台）](./payment-settings)
+- [订单管理（后台）](./order-management)
+- [我的订单（用户）](../user/orders)
 
-| 关注点 | 位置 |
-|---|---|
-| 接口定义 | `common/payment/payment.go::Channel` |
-| 微信实现 | `common/payment/wechat.go` |
-| 支付宝实现 | `common/payment/alipay.go` |
-| Bank| `common/payment/bank.go` |
-| 系统设置 key | `model/system_setting.go::SystemSettingKeyWechat*|
-| 设置接口 | `controller/setting_payment.go`（参考前端字段） |
-| 回调分发 | `controller/payment.go::processNotify` |
-| 手动激活 | `controller/payment.go::MockPay` |
+## 相关 API
 
+- `GET /api/payment/status` — 当前已启用的支付方式（Public）
+- `POST /api/payment/wechat/notify` — 微信回调
+- `POST /api/payment/alipay/notify` — 支付宝回调
+- `POST /api/payment/mock/notify` — 手动激活（Root）
+- `GET /api/setting/payment` — 读取支付配置（Root）
+- `PUT /api/setting/payment/:method` — 更新单个通道配置（Root）
