@@ -1,75 +1,54 @@
 ---
 title: 个人仪表盘
-description: "消费统计、订阅状态、订单概览。"
+description: 看自己的消费、订阅状态和最近的订单。
 category: user
 order: 2
 ---
 
 # 个人仪表盘
 
-> 消费统计、订阅状态、订单概览。
+> 登录后看到的第一个页面，看自己的消费情况。
 
-路径 / Path：`/dashboard`（`web/default-pro/src/views/dashboard/Dashboard.vue`）。
+## 在哪里
 
-## 页面分区
+登录后自动跳转到 `/dashboard`。
 
-| 区域| 字段| 数据来源| 说明|
-| --- | --- | --- | --- |
-| 顶部欢迎条 | 用户名 / 角色 / 版本 | `useAuthStore` + `/api/status` | 角色 chip：用户 / 管理员|
-| 核心指标（4 卡） | 总 Tokens / 总请求 / 总 Quota / 当前套餐 | `/api/log/self` 聚合 + `/api/user/self` + `/api/subscription/self` | 卡颜色：蓝 / 绿 / 橙 / 紫 |
-| 用量进度 | 当日 / 当周（按设定阈值） | `/api/log/self` + `model.SumUsedQuota(LogTypeConsume, ...)` | 超过 80% 转红 |
-| 趋势图 | 请求| `/api/log/self` | 默认显示最近 7 天 |
-| 模型分布 Top-N | 调用量前 N 模型柱状图 | `/api/log/self` 聚合 | `n=10` |
-| 使用明细 | 时间 / 模型 / 请求数| `/api/log/self` 分页 | 默认 `pageSize=8` |
-| API Key 概览 | 最近一个令牌的脱敏 key + 创建时间 | `/api/token/self` | 点击复制 |
-| 快捷入口 | 管理 Token / 兑换码 / 用量日志 | 路由跳转 | 管理员视角下额外显示「运营仪表盘」按钮 |
+## 上面能看到什么
 
-> 用量统计基于 `logs.type = LogTypeConsume` 过滤；充值（`LogTypeTopup`）、管理员加额（`LogTypeManage`）等不计入消费。
+按从上到下：
 
-## 数据获取
+1. **顶部欢迎条**：你的用户名 + 角色（用户 / 管理员）+ 系统版本
+2. **核心指标（4 张卡）**：
+   - 总 Tokens（最近消耗的 token 数）
+   - 总请求（你发起的调用次数）
+   - 总 Quota（你的剩余余额）
+   - 当前套餐（你订阅的套餐名称，到期时间）
+3. **用量进度条**：今天 / 本周用了多少，对比每日上限。超 80% 转红
+4. **趋势图**：最近 7 天的请求次数
+5. **模型分布 Top-N**：你用得最多的几个模型
+6. **使用明细**：最近的调用记录（时间 / 模型 / token）
+7. **API Key 概览**：你的最近一个 API Key（脱敏）
+8. **快捷入口**：跳到 Token 管理 / 兑换码 / 日志 等
 
-```text
-onMounted ──► Promise.all([
-  api.get('/api/user/self'),                       // 用户信息
-  api.get('/api/log/self', { params: { p: 0 } }),  // 日志（首屏 8 条）
-  api.get('/api/log/self', { params: { p: 0, page_size: 50, type: 1 } }),  // 用于趋势/分布
-  api.get('/api/token/self'),                      // 令牌概览
-  api.get('/api/subscription/self'),               // 当前订阅
-  api.get('/api/order/self', { params: { type: 2 } }),  // 最近充值订单（用于下次访问跳转）
-])
-```
+管理员账号还会多一个「运营仪表盘」按钮。
 
-并发请求避免瀑布流；`Promise.all` 全部 resolve 后再渲染，loading 由 `a-spin :loading="loading" style="width:100%"` 控制。
+## 数据怎么看
 
-Concurrent fetch avoids waterfalls; gated by `a-spin :loading="loading" style="width:100%"`. (`arco-spin` 踩坑：`AGENTS.md` §10.4)
+- **总 Tokens / 总 Quota**：你账号里还有多少资源
+- **用量进度条**：今天的用量占每日上限的百分比；如果没开套餐就没有进度条
+- **当前套餐**：你订阅的套餐名 + 到期时间；过期了这里会显示「已过期，去续费」
 
-## 关键计算
-
-| 名称| 公式| 说明|
-| --- | --- | --- |
-| `todayTokens` | `SUM(tokens_used)` 当日 `/ < 0, now>` | 每日 0 点重置（受 `TZ` 影响） |
-| `sevendayTokens` | `SUM(tokens_used)` 最近 7 天 | 滚动 7 天窗口 |
-| `todayPercent` | `todayTokens| `dailyQuota = plan.daily_quota`，未订阅为 0 |
-| `planFoot` | 已订阅：到期日；已过期：「已过期，去续费」；未订阅：空 | 见 `statItems` 计算 |
-| `quota` 格式 | `< 10000` 原样；`>= 10000` → `xxx.xx w` | 显示在「总 Quota」卡 |
-| `tokens` 格式 | `< 1000` 原样；`>= 1000` → `xx.x K`；`>= 1e6` → `xx.x M` | 显示在用量明细 |
-
-> `daily_quota` 是 `plans.daily_quota` 字段；若套餐未设置每日上限，`dailyPercent` 为 0，不展示进度条。
-
-## 时间与时区
-
-- 服务端 `helper.GetTimestamp()` 使用 `time.Now().Unix()`，未配置 `TZ` 时按 UTC；推荐设置 `TZ=Asia/Shanghai`。
-- 仪表盘当天范围由前端按本地时区计算（`new Date()`），跨时区切换会有 ±1h 偏差。
-
-## 自定义
-
-- **隐藏/显示快捷入口**：编辑 `Dashboard.vue` 的 `quickActions` 计算属性。
-- **调整 Top-N**：修改 `barOption` 中的 `slice(0, N)`。
-- **修改卡片顺序**：编辑 `statItems` 数组；保持 `value / foot / icon` 一一对应。
+如果数字对不上账（实际消费比显示多），先看 [常见问题](#常见问题)。
 
 ## 常见问题
 
-- **数据延迟几分钟**：日志写入是异步的（`middleware/logger.go`），但 v0.0.21 之后 `IncreaseUserQuota` 等关键加额链路已同步刷 Redis，不会有分钟级延迟。
-- **显示「已过期」但还能用**：检查 `/api/subscription/self` 的 `expire_at` 与客户端时间；服务器 `TZ` 配置错误会触发此问题。
+- **数据有几分钟延迟**：日志写入是异步的，一般不超过 1 分钟
+- **显示「套餐已过期」但还能调用**：套餐过期只是不再享受折扣，调用本身不受影响
+- **管理员显示的「总 Quota」不对**：可能是用户维度的额度被管理员从后台调整了；查后台「用户管理」详情页
 
-下一步 / Next: [Access Token](/zh/user/access-token) · [个人资料](/zh/user/profile) · [我的订单](/zh/user/orders)。
+## 相关
+
+- [Access Token](./access-token)
+- [个人资料](./profile)
+- [我的订单](./orders)
+- [套餐（Token Plan）](../subscription/overview)
