@@ -1,76 +1,80 @@
 ---
 title: Top-up Settings
-description: "Top-up enable switch, presets, allow_custom flag, exchange rate and currency."
+description: Enable / disable online top-up, configure presets and exchange rate.
 category: pricing
-order: 14
+order: 9
 ---
 
 # Top-up Settings
 
-> Global toggle, preset chips, allow-custom flag and exchange rate for the online top-up flow. UI: `web/default-pro/src/views/setting/TopupSetting.vue`.
+> Admin → Top-up Settings. Visible only to Root.
 
-## Endpoints
+## Configurable fields
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/setting/topup` | `GET` | Root | Returns `{ enabled, allow_custom, exchange_rate, presets }` in one shot |
-| `/api/setting/topup` | `PUT` | Root | Whole-bundle save (same shape) |
-
-Implementation: `controller/topup.go::GetTopupSettings` / `PutTopupSettings`.
-
-## Fields
-
-| Field | Type | Notes |
+| Field | Meaning | Effect |
 |---|---|---|
-| `enabled` | `bool` | Master switch; `false` blocks `/api/topup/order` with "充值功能未开启" |
-| `allow_custom` | `bool` | Allow users to type their own amount; otherwise they must pick a preset |
-| `exchange_rate` | `int` | `1 CNY = X quota`; must be `> 0`; defaults to `1` (1:1) |
-| `presets` | `[{ amount, bonus_quota }]` | Quick-amount chip list; every `amount` must be `> 0` and unique |
+| `enabled` | Master switch | Off hides the public top-up entry |
+| `allow_custom` | Allow custom amount | Off forces users to pick a preset |
+| `exchange_rate` | ¥1 = X quota | Drives custom-amount conversion; must be > 0 |
+| `presets` | Preset amounts | Each entry is `{amount, bonus_quota}` |
 
-Validation lives in `model/topup.go::SaveTopupSettings`:
-- `amount <= 0` → "第 N 项金额必须大于 0".
-- `bonus_quota < 0` → "第 N 项额度不能为负数".
-- Duplicate `amount` → "快捷金额重复：X.XX 元已存在".
-- `exchange_rate <= 0` → "兑换比例必须大于 0".
+## Recommended setup
 
-## Persistence
+Enable + allow custom + a few presets:
 
-Four independent rows in `system_settings` (category = `topup`):
-
-| key | value shape |
+| amount | bonus_quota |
 |---|---|
-| `topup.enabled` | `"true"` / `"false"` |
-| `topup.allow_custom` | `"true"` / `"false"` |
-| `topup.exchange_rate` | integer string |
-| `topup.presets` | JSON array: `[{"amount":10,"bonus_quota":10000}, ...]` |
+| 10 | 100000 |
+| 50 | 500000 |
+| 100 | 1000000 |
+| 500 | 5000000 |
 
-PUT is full-overwrite. Missing fields are not preserved — the frontend always sends all four.
+`exchange_rate = 100000` (¥1 = 100k quota, matches default `QuotaPerUnit=500000`).
 
-## User-side Order Resolution
+## How to change
 
-`POST /api/topup/order` (`controller/topup.go::CreateTopupOrder`) delegates to `model/topup.go::ResolveTopupAmount`:
+Admin → Top-up Settings → edit fields → Save.
 
-1. If `preset_amount > 0`, look up `presets` for a matching `amount`; hit returns `{ amount, bonus_quota }`; miss → "快捷金额未配置".
-2. Otherwise compute `bonus_quota = amount * exchange_rate`.
-3. When `allow_custom=false`, the custom path is rejected.
+Validation:
 
-## Preset Chips
+- Each preset `amount > 0`, `bonus_quota >= 0`
+- No duplicate amounts
+- `exchange_rate > 0`
 
-The user-facing `PaymentTopupModal.vue` renders `presets` as chips. When `allow_custom=true`, a trailing "自定义" chip is appended and `-1` is the sentinel index for "custom" (see `web/default-pro/src/utils/topup.js::validateTopupPresets`).
+## User-facing impact
 
-## Frontend Guide
-
-- Top section: three vertical `<a-form-item>` rows for `enabled`, `allow_custom`, and `exchange_rate` (precision 0, min 1).
-- Below: a bordered `<a-table>` for the presets. Add / remove rows; edit `amount` (precision 2, min 0.01) and `bonus_quota` (precision 0, min 0, step 1000) inline.
-- Submit triggers a frontend `validateTopupPresets` check, then `PUT /api/setting/topup`.
-
-## Implementation Pointers
-
-| Concern | Location |
+| Field | What users see |
 |---|---|
-| Handler | `controller/topup.go` |
-| Settings read/write | `model/topup.go::GetTopupSettings` / `SaveTopupSettings` |
-| Amount resolution | `model/topup.go::ResolveTopupAmount` |
-| Order creation | `model/topup.go::CreateTopupOrder` |
-| Frontend validator | `web/default-pro/src/utils/topup.js` |
-| Routes | `router/api.go` |
+| `enabled = false` | Top-up entry gone |
+| `allow_custom = false` | Only preset chips visible; input field hidden |
+| `presets` | Number and order of chips |
+| `exchange_rate` | Custom-amount quota credit |
+
+## How to test
+
+1. After enabling, log in as a test account and visit the top-up page
+2. Click a preset → credited quota = `bonus_quota`
+3. Enter a custom amount → credited quota = `amount × exchange_rate`
+
+## Notes
+
+- Exchange rate changes only affect **new orders**; existing orders keep their snapshotted rate
+- Preset changes only affect **new orders**
+- Preset amounts must be unique (constraint)
+
+## FAQ
+
+- **All settings saved but user still can't see top-up**: verify `enabled=true` and at least one payment channel enabled
+- **Changed exchange rate but no effect**: takes effect for new orders only
+- **Can preset amounts be decimals?**: yes — `amount` supports two decimals (e.g. `9.99` ¥)
+
+## Related
+
+- [Top-up (concept)](./topup)
+- [Top-up Management (admin)](./topup-management)
+- [Payment Channels](./payment)
+
+## Related API
+
+- `GET /api/setting/topup` — read settings (Root)
+- `PUT /api/setting/topup` — update settings (Root, **full replacement**)
