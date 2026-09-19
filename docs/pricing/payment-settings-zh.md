@@ -1,76 +1,140 @@
 ---
 title: 支付通道设置
-description: "微信 / 支付宝 / 银行转账三个通道的证书上传、回调地址与启用开关。"
+description: 在后台启用 / 配置各支付通道（微信 / 支付宝 / 银行转账）。
 category: pricing
-order: 12
+order: 10
 ---
 
 # 支付通道设置
 
-> 在 `system_settings` 表上维护三种支付通道（微信、支付宝、银行转账）的启用开关、参数配置和证书文件路径。前端组件：`web/default-pro/src/views/setting/PaymentSetting.vue`。
+> 后台 → 支付设置。Root 可见。
 
-## 接口一览
+## 三个通道
 
-| Endpoint | Method | 鉴权 | 说明 |
-|---|---|---|---|
-| `/api/setting/payment` | `GET` | Root | 一次性返回三种通道的 `{ enabled, config, description, updated_at }` |
-| `/api/setting/payment/:method` | `PUT` | Root | 保存单个通道；支持 `multipart/form-data` 上传证书 |
+每种通道配置独立的开关与凭证。**至少启用一种**，否则用户无法付款。
 
-`:method` 取值 `wechat` / `alipay` / `bank`。
+### 微信支付
 
-实现：`controller/setting_payment.go`。
+| 字段 | 填什么 | 哪里取 |
+|---|---|---|
+| `app_id` | 商户平台 AppID | 微信支付商户平台 → 账号中心 |
+| `mch_id` | 商户号 | 同上 |
+| `api_key` | v2 密钥 | 商户平台 → API 安全 → APIv2 密钥 |
+| `notify_url` | 回调地址 | `https://your-domain.com/api/payment/wechat/notify` |
+| 证书 / 私钥 | PEM 文件（退款用） | 商户平台 → API 安全 → API 证书 |
 
-## 请求体格式
+### 支付宝 当面付
 
-PUT 请求采用 `multipart/form-data`：
+| 字段 | 填什么 | 哪里取 |
+|---|---|---|
+| `app_id` | 应用 AppID | 支付宝开放平台 → 我的应用 |
+| `private_key` / `public_key` | 应用私钥 / 支付宝公钥 | 同上 |
+| 或 `private_key_file` / `public_key_file` | 上面两个的 PEM 文件路径 | 上传后系统自动保存路径 |
+| `gateway` | 网关 | 默认 `https://openapi.alipay.com/gateway.do`（生产） |
+| `notify_url` | 回调地址 | `https://your-domain.com/api/payment/alipay/notify` |
 
-| Form 字段 | 说明 |
+### 银行转账
+
+| 字段 | 填什么 |
 |---|---|
-| `config` | JSON 字符串：`{ "enabled": bool, "config": { ... } }` |
-| `cert_file` | 仅 wechat：商户证书（`.pem`） |
-| `key_file` | 仅 wechat：商户私钥（`.pem`） |
-| `private_key_file` | 仅 alipay：应用私钥 |
-| `public_key_file` | 仅 alipay：支付宝公钥 |
+| `account_name` | 收款账户名（公司名） |
+| `account_no` | 银行账号 |
+| `bank_name` | 开户行 |
+| `branch` | 支行 |
+| `notes` | 让用户在转账备注里填订单号的提示文本 |
 
-文件会被保存到 `data/payment/<method>/<basename>`，路径会被写回 `config.<field>` 键内。
-注意：上传文件**不**会在 response 中返回路径，需要再次 GET 才能确认保存成功。
+## 怎么启用 / 配置
 
-## 数据库
+后台 → 支付设置：
 
-每种通道使用两条 `system_settings` 行：
+1. 选一个通道 → 打开「启用」开关
+2. 表单字段展开 → 填各项
+3. 微信 / 支付宝可上传证书（PEM 文件）
+4. 点「保存」
 
-| key | 用途 |
-|---|---|
-| `payment.<method>.enabled` | 仅 `{"enabled": bool}` 的最小 JSON |
-| `payment.<method>.config` | 完整配置 JSON（含 `enabled` 与所有键） |
+切换开关即时生效。
 
-`category` 字段统一为 `payment`。GET 端点把两条行合并回 `enabled` + `config` 对象。
+## 证书 / 文件上传
 
-## 字段约定
+微信和支付宝的 PEM 文件：
 
-| 方法 | 推荐字段 |
-|---|---|
-| `wechat` | `app_id` / `mch_id` / `api_key` / `notify_url` / `cert_file` / `key_file` |
-| `alipay` | `app_id` / `gateway` / `notify_url` / `private_key` / `public_key` / `private_key_file` / `public_key_file` |
-| `bank` | `account_name` / `account_no` / `bank_name` / `branch` / `notes` |
+- 上传后系统存到 `data/payment/<method>/<basename>`
+- 路径写回 `config` 字段（如 `cert_file: /app/data/payment/wechat/apiclient_cert.pem`）
+- **不返回**在 response 里，需要重新 GET 才能确认
 
-`app_id` / `mch_id` / `api_key` / `cert_file` / `key_file` 等键名由支付 SDK 直接读取；前后端字段名需严格一致。
+## 配置示例
 
-## 前端操作指南
+### 微信生产
 
-- 顶部三段式：「微信支付」/「支付宝」/「银行转账」；
-- 每段顶部都是「启用开关」`a-switch`，切换时立即 PUT 仅 `enabled` 标志（其余 config 也一起带上，保证幂等）；
-- 启用后才展开表单字段（按上面的字段约定）；
-- 「上传证书」按钮（仅 wechat/alipay）以 `<a-upload custom-request>` 自定义请求方式直接 PUT 当前表单 + 文件；
-- 「保存」按钮提交整张表单；银行通道没有证书，所以「保存」即可。
+```json
+{
+  "enabled": true,
+  "config": {
+    "app_id": "wx0123456789abcdef",
+    "mch_id": "1900000001",
+    "api_key": "your-strong-api-key",
+    "notify_url": "https://api.example.com/api/payment/wechat/notify"
+  }
+}
+```
 
-## 接口实现
+### 支付宝生产
 
-| 关注点 | 位置 |
-|---|---|
-| Handler | `controller/setting_payment.go` |
-| 设置读写 | `model/system_setting.go::GetSystemSetting` / `UpsertSystemSetting` |
-| 证书落盘 | `controller/setting_payment.go::PutPaymentMethod`（`data/payment/<method>/`） |
-| 支付通道实现 | `common/payment/`（`wechat.go` / `alipay.go` / `bank.go`） |
-| 公开通道状态 | `controller/payment.go::GetPaymentStatus` |
-| 路由 | `router/api.go` |
+```json
+{
+  "enabled": true,
+  "config": {
+    "app_id": "2021000123456789",
+    "gateway": "https://openapi.alipay.com/gateway.do",
+    "notify_url": "https://api.example.com/api/payment/alipay/notify"
+  }
+}
+```
+
+私钥建议上传 PEM 文件而不是粘贴。
+
+### 银行转账
+
+```json
+{
+  "enabled": true,
+  "config": {
+    "account_name": "XX 科技有限公司",
+    "account_no": "6225 1234 5678 9012",
+    "bank_name": "招商银行",
+    "branch": "上海分行",
+    "notes": "请在备注里填写订单号便于对账"
+  }
+}
+```
+
+## 怎么验证配置成功
+
+1. 后台 → 支付设置 → 看「启用」开关是打开状态
+2. 公开接口 `/api/payment/status` 应返回已启用的通道列表（无需登录）
+3. 创建测试订单 → 用户能选到该通道 → 模拟支付验证完整链路
+
+## 注意事项
+
+- 修改后立即生效，但已下单的订单不受影响
+- 凭证是**敏感数据**：避免提交到 git / 泄露给无关人员
+- 切换支付通道时，新订单走新通道；老订单走原通道
+
+## 常见问题
+
+- **用户看不到任何支付方式**：三个通道都没启用，或全部未正确配置
+- **支付成功但订单一直待支付**：检查 `notify_url` 是否能被公网访问；查后端日志
+- **证书上传后提示错误**：检查 PEM 格式；私钥不要带密码（passphrase）
+- **切换通道后老订单怎么办**：老订单走原通道；新订单走新通道
+
+## 相关页面
+
+- [支付通道](./payment)
+- [充值业务配置](./topup-settings)
+- [订单管理](./order-management)
+
+## 相关 API
+
+- `GET /api/setting/payment` — 读取所有通道配置（Root）
+- `PUT /api/setting/payment/:method` — 保存单个通道（Root，支持文件上传）
+- `GET /api/payment/status` — 公开查询已启用通道（无需登录）
