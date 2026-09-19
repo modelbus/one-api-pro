@@ -1,112 +1,72 @@
 ---
 title: 订阅管理（管理员）
-description: "套餐 CRUD、强制开通订阅、调整 / 撤销订阅。"
+description: 管理员如何创建套餐、强制开通订阅、调整或撤销订阅。
 category: subscription
 order: 3
 ---
 
 # 订阅管理（管理员）
 
-> 管理员对套餐（plan）和用户订阅（user_plan）的全部操作。实现：`controller/plan.go`、`controller/subscription.go`。
+> 后台 → 订阅管理。管理员账号可见。
 
-## 套餐
+## 套餐（Plan）管理
 
-数据模型：`model.Plan`。字段见 [套餐定价](./plan) 与 `model/plan.go`。
+后台 → 套餐管理。可以：
 
-### 接口
+- **新增套餐**：填名称、价格、额度（按 token 或按次）、有效期、折扣倍率、描述
+- **上下架**：上架后用户可在订阅页看到；下架后用户新订阅不了（已有订阅不受影响）
+- **编辑**：改任意字段
+- **删除**：先下架，再删除（推荐流程，避免误删）
 
-| Endpoint | Method | Auth | 说明 |
-|---|---|---|---|
-| `/api/plan/` | `GET` | Admin | 分页拉取（`config.ItemsPerPage`） |
-| `/api/plan/search?keyword=` | `GET` | Admin | `name LIKE keyword%` |
-| `/api/plan/:id` | `GET` | Admin | 单条详情 |
-| `/api/plan/` | `POST` | Admin | 新建 |
-| `/api/plan/` | `PUT` | Admin | 更新 |
-| `/api/plan/:id` | `DELETE` | Admin | 删除 |
-| `/api/plan/public` | `GET` | Public | 仅返回 `status=PlanStatusEnabled` 的套餐列表（用户下单页用） |
-| `/api/plan/public/:id` | `GET` | Public | 公开详情 |
+详见 [套餐管理（后台）](./plan-management)。
 
-### 校验
+## 用户订阅（Subscription）管理
 
-`plan.Insert` / `plan.Update` 之前服务端会调 `ValidateDefaultModel`：当 `default_model` 非空时，必须能在 `model_limits` 找到对应键；否则报错：
+后台 → 订阅管理。列表展示所有用户的活跃订阅。
 
-- `default_model 'xxx' is set but model_limits is empty`
-- `default_model 'xxx' is not found in model_limits`
+### 给某个用户开订阅（强制开通 / 客服补偿）
 
-### `model_limits` 格式
+1. 找到目标用户
+2. 点「手动开通」
+3. 选套餐
+4. 选生效时间（立即 / 延后 N 天）
+5. 确认
 
-存 `text` 列，值为 JSON 对象：
+用户立即获得该套餐，不需要走支付。
 
-```
+### 撤销某用户的订阅
 
-- `period_h` 用于计算 period 窗口索引（`CalcWindowIndex`）；缺省回退为 5
-- `request_*` / `token_*` 三种窗口各一对上限；任一为 0 表示该窗口对该维度不限
+1. 找到对应订阅行
+2. 点「撤销」
+3. 二次确认
 
-### features
+订阅立即失效。已用额度不退还。
 
-`Features StringSlice` 字段（`model/plan.go`）：JSON 数组 `["...", "..."]`，前端展示为权益列表。
+### 调整订阅到期时间
 
-## 用户订阅
+1. 找到对应订阅行
+2. 点「调整到期」
+3. 修改到期日
+4. 确认
 
-### 强制开通（绕过支付）
+常用于：客服补偿延长、试用期延长。
 
-`POST /api/subscription/`（`controller/subscription.go::AddSubscription`）请求体：
+## 套餐业务规则
 
-```json
-{
-  "user_id": 42,
-  "plan_id": 7,
-  "billing_type": "token",
-  "duration_days": 0,
-  "notes": "商务合作赠送",
-  "pay_method": "free"
-}
-```
+[套餐业务配置](./plan-settings) 控制：
 
-流程：
+- **升级模式**：差价 vs 叠加（默认差价）
+- 后续会扩展更多全局规则
 
-1. 校验 `user_id` / `plan_id` 非空；`pay_method` 默认 `free`；白名单：`wechat` / `alipay` / `bank` / `offline` / `free`
-2. 校验 plan 存在且 `status=PlanStatusEnabled`；校验用户存在
-3. 调 `model.CreatePlanOrder` 写入 `Order`（`source=admin`，作为审计行），notes 默认为 "管理员开通"
-4. **立刻** 调 `model.ActivatePackageByOrder(order, OrderUpgradeModeStack)` 激活订阅；管理员 grant 无论 pay_method 是什么都立即生效
-5. 返回新 `user_plan`（含 `Plan`）+ 订单行
+## 常见问题
 
-### 调整
+- **手动开通的订阅，用户能看到吗？** 能。立即出现在用户的「我的订阅」里
+- **撤销后用户能再开吗？** 能。让用户自己重新下单，或管理员再开
+- **改了套餐设置对老订阅生效吗？** 不生效。老订阅沿用订阅时的套餐快照，新订阅用新设置
 
-`PUT /api/subscription/` 请求体（`UpdateSubscriptionRequest`）：
+## 相关
 
-```json
-{ "id": 88, "end_time": 1767225600, "status": 1, "billing_type": "token", "notes": "延期 30 天" }
-```
-
-非空字段被更新；`updated_time` 自动刷新。成功后调 `model.CacheDeleteUserActivePlans(userId)` 失效 Redis 缓存。
-
-### 撤销
-
-`DELETE /api/subscription/:id` 是硬删除：先 `First` 再 `Delete`，并清缓存。撤销后该用户立即失去该 plan 的窗口配额（无补偿）。
-
-## 公开套餐
-
-`/api/plan/public` 与 `/api/plan/public/:id` 不需要鉴权，供用户侧订阅页与下单流程调用。`/api/plan/`（admin）会返回 `status=0` 的下架套餐，方便管理。
-
-## 周期任务
-
-`model.ExpireUserPlans` 由后台启动（具体入口见 `main.go`）周期性把 `status=1 AND end_time <= now` 的 `user_plans` 翻成 `status=0`，让 `CheckPlanQuota` 不再选择它。
-
-## 前端操作指南
-
-- **套餐管理**：`/setting/pricing` → "套餐" Tab（`web/default-pro/src/views/setting/PlanSetting.vue`）。列表 + 弹窗编辑 `name` / `description` / `price` / `duration_days` / `duration_text` / `sort` / `status` / `recommended` / `features[]` / `model_limits` JSON / `default_model`
-- **订阅管理**：`/subscription`（`web/default-pro/src/views/subscription/Subscription.vue`）。管理员视角显示 user 列与 "添加订阅" 按钮；用户视角只读
-- **添加订阅弹窗**：用户下拉从 `GET /api/user/search` 拉取；套餐下拉从 `GET /api/plan/` 拉取；`pay_method` 选项固定为 `free` / `offline` / `wechat` / `alipay` / `bank`
-
-## 实现位置
-
-| 关注点 | 位置 |
-|---|---|
-| 套餐 CRUD | `controller/plan.go` |
-| 套餐模型 | `model/plan.go::Plan` |
-| 用户订阅 CRUD | `controller/subscription.go` |
-| 订单 + 激活 | `model/order_payment.go::CreatePlanOrder` / `ActivatePackageByOrder` |
-| 缓存失效 | `model/plan.go::CacheDeleteUserActivePlans` |
-| 周期过期 | `model/plan.go::ExpireUserPlans` |
-
+- [订阅（数据结构）](../schema/subscription)
+- [套餐（数据结构）](../schema/plan)
+- [套餐管理](./plan-management)
+- [用户管理（管理员）](../user/user-management)
