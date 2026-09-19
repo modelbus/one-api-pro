@@ -1,95 +1,60 @@
 ---
-title: Model Pricing
-description: "`model_price` table, units, field semantics, and the `ListModelPriceOptions` dropdown source."
+title: Model Price
+description: Per-model unit price — the single source of truth for billing.
 category: pricing
 order: 1
 ---
 
-# Model Pricing
+# Model Price
 
-> Each model has a row in `model_price` that drives per-token / per-request billing. Implementation: `model/model_price.go::ModelPrice`, `controller/model_price.go`.
+> What does it cost the user per call? Look here.
 
-## Data model
+## What it is
 
-`model.ModelPrice` (`model_price` table):
+`ModelPrice` is the system's "price list". Each model has one row, deciding:
 
-| Field | Type | Notes |
+- **Token billing**: ¥ per million input / output tokens
+- **Per-request billing**: ¥ per call (used for DALL·E / image generation etc.)
+
+Per-call deduction = consumption × ModelPrice × group discount.
+
+## Where to find it
+
+- **Admin → Model Prices**: list, add, bulk edit
+- **Admin → Dashboard**: today's / this month's revenue per model
+
+## What to set
+
+Admin → Model Prices → Add:
+
+| Field | Meaning | Effect |
 |---|---|---|
-| `model_name` | `varchar(100)` UNIQUE | Model name; matched against the request model via `GetModelPrice` |
-| `input_price` | `decimal(16,6)` | Input unit price (¥ / 1M tokens) |
-| `output_price` | `decimal(16,6)` | Output unit price (¥ / 1M tokens) |
-| `cached_price` | `decimal(16,6)` | Cached-input unit price (¥ / 1M tokens), typically half of `input_price` |
-| `per_request_price` | `decimal(16,6)` | Per-request price for non-token models (DALL·E / TTS / embeddings) |
-| `billing_type` | `varchar(20)` | `token` / `per_request` |
-| `enabled` | `bool` | Whether the row is active; the dropdown only shows `enabled=true` rows |
+| `model_name` | Model name | Must match a value in [Channel → Models](/channel/add-channel); mismatched names can't be called |
+| `billing_type` | `token` (per token) or `per_request` (per call) | Decides the four fields below |
+| `input_price` | ¥ per million input tokens | Drives input-side deduction |
+| `output_price` | ¥ per million output tokens | Drives output-side deduction |
+| `cached_price` | ¥ per million cached tokens | Usually half of `input_price`; 0 = no cache |
+| `per_request_price` | ¥ per call | Only used when `billing_type=per_request` |
+| `enabled` | Toggle | Disabled → model can't be called |
 
-Prices are in ¥ per 1M tokens. The actual quota deduction multiplies by the group discount (see [Group Pricing](./group-price)).
+> The system seeds default prices for common models (GPT-4o / Claude / DeepSeek etc.) on first start. Edit them freely.
 
-## Endpoints
+## FAQ
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/model_price/` | `GET` | Root | Full list (including `enabled=false`) |
-| `/api/model_price/options` | `GET` | Admin | Returns the `model_name` list of `enabled=true` rows only — for the channel-edit dropdown |
-| `/api/model_price/` | `POST` | Admin | Create (`model_name` required; `billing_type` defaults to `token`) |
-| `/api/model_price/` | `PUT` | Admin | Update (rebuilds `modelPriceMap` after success) |
-| `/api/model_price/:id` | `DELETE` | Admin | Delete (rebuilds cache after success) |
+- **New model but not in the channel dropdown**: add the model here with `enabled=true` first.
+- **Call succeeded but no quota deducted**: check the model is in Model Price and the price isn't zero.
+- **Changed price — how is it billed going forward**: calls use the model's current ModelPrice at the time of the call.
 
-`GetAllModelPrices` in `controller/model_price.go` is marked Deprecated (Root only) because it leaks the billing fields into contexts that don't need them; prefer `ListModelPriceOptions` for new UI surfaces.
+## Related
 
-## Cache
+- [Model Price Management (admin)](./model-price-management)
+- [Model Price Schema](/en/schema/model-price)
+- [Group Price](/en/schema/group-price)
 
-`InitModelPriceCache` seeds an in-process `modelPriceMap` (`map[string]*ModelPrice`) of `enabled=true` rows, guarded by a RWMutex:
+## Related API
 
-- `GetModelPrice(name)` reads the map under RLock
-- `FindModelPriceByPattern(name)` first tries the exact match, then substring match (handles `-internet` suffixes)
-- Every write (POST / PUT / DELETE) rebuilds the map via `InitModelPriceCache`
-- The scheduled task `SyncModelPriceCache(frequency)` rebuilds it every N seconds (`config.SyncFrequency`)
-
-`CacheGetModelPrice(name)` / `CacheGetGroupPrice(group, model)` are the Redis tier (`ModelPriceCacheSeconds=300`); Redis miss falls through to DB and warms back.
-
-## Billing flow
-
-`relay/billing/ratio/model.go::GetModelPrice(name, fallbackNames...)`:
-
-1. Try `name` against `model.GetModelPrice`
-2. Fall back through `fallbackNames` (e.g. `gpt-4o-internet` → `gpt-4o`)
-3. Otherwise return `errors.New("model price not set")`
-
-Then `postConsumeQuota` computes the quota based on `BillingType`:
-
-```go
-if BillingType == PerRequest {
-  quota = per_request_price * 1 * group_discount
-} else {
-  quota = (input_price * prompt_tokens
-         + output_price * completion_tokens
-         + cached_price * cached_tokens)
-         * group_discount / 1_000_000   // ¥ → quota
-}
-```
-
-## Default prices
-
-`model_price.go::defaultModelPrices` lists common models seeded at first boot (`gpt-4o` / `claude-3.5-sonnet` / `deepseek-chat` / `qwen-max` / `gemini-1.5-pro` etc.). `InitDefaultPrices` only runs when the table is empty, using `OnConflict{DoNothing: true}` so re-runs are safe.
-
-## Frontend Guide
-
-Route: `/setting/pricing` → **Model Pricing** tab (`web/default-pro/src/views/setting/PricingSetting.vue`).
-
-- List columns: `model_name` / `input_price` / `output_price` / `cached_price` / `per_request_price` / `billing_type` / `enabled`
-- Edit modal: the six numeric fields, a billing-type dropdown (`token` / `per_request`), and the enabled switch
-- **Add** uses the same form
-
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| Data model | `model/model_price.go::ModelPrice` |
-| Cache init | `model/model_price.go::InitModelPriceCache` |
-| Lookup (exact / fuzzy) | `model/model_price.go::GetModelPrice` / `FindModelPriceByPattern` |
-| Redis cache | `model/model_price.go::CacheGetModelPrice` |
-| Dropdown source | `controller/model_price.go::ListModelPriceOptions` |
-| CRUD | `controller/model_price.go` |
-| Default prices | `model/model_price.go::InitDefaultPrices` |
-| Billing settlement | `relay/handler/helper.go::postConsumeQuota` |
+- `GET /api/model_price/` — list (Root)
+- `GET /api/model_price/options` — enabled model names only (Admin; for channel edit dropdown)
+- `POST /api/model_price/` — add
+- `PUT /api/model_price/` — update
+- `DELETE /api/model_price/:id` — delete
