@@ -248,12 +248,54 @@ export default defineConfig({
     ],
   ],
   markdown: {
-    // API docs are sanitised by docs/scripts/sync-docs.mjs (angle brackets escaped)
+    // API docs are sanitised by docs/scripts/split-bilingual.mjs (angle brackets escaped)
     // so raw HTML can stay enabled for card grids on the home page.
     html: true,
     theme: { light: 'github-light', dark: 'github-dark' },
   },
   ignoreDeadLinks: true,
+  // Top-level themeConfig: search is read from here at build time and merged
+  // into every locale's themeConfig (see VitePress `resolveSiteDataByRoute`).
+  themeConfig: {
+    search: {
+      provider: 'local',
+      options: {
+        miniSearch: {
+          searchOptions: { fuzzy: 0.2, prefix: true, boost: 2 },
+        },
+        locales: {
+          // VitePress keys the default locale as `root` (Chinese here).
+          root: {
+            placeholder: '搜索文档',
+            translations: {
+              button: { buttonText: '搜索文档', buttonAriaLabel: '搜索文档' },
+              modal: {
+                displayDetails: '显示详情列表',
+                resetButtonTitle: '清除查询条件',
+                backButtonTitle: '返回',
+                noResultsText: '未找到相关结果',
+                footer: {
+                  selectText: '选择',
+                  selectKeyAriaLabel: '回车',
+                  navigateText: '切换',
+                  navigateUpKeyAriaLabel: '上箭头',
+                  navigateDownKeyAriaLabel: '下箭头',
+                  closeText: '关闭',
+                  closeKeyAriaLabel: 'Esc',
+                },
+              },
+            },
+          },
+          en: {
+            placeholder: 'Search docs',
+            translations: {
+              button: { buttonText: 'Search docs', buttonAriaLabel: 'Search docs' },
+            },
+          },
+        },
+      },
+    },
+  },
   locales: {
     root: {
       label: '简体中文',
