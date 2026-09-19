@@ -1,57 +1,71 @@
 ---
 title: Subscription Overview
-description: "How subscriptions, pay-as-you-go, and top-up quota interact, and the deduction order across the three."
+description: "Three billing modes: subscription, pay-as-you-go, top-up quota."
 category: subscription
 order: 1
 ---
 
 # Subscription Overview
 
-> One API Pro supports three billing paths side by side: subscriptions (plans with window-based quotas), pay-as-you-go (drawn from `users.quota`), and top-up (also credited to `users.quota`). Middleware picks the right path per request.
+> How your quota is deducted, how much subscriptions save you, and the relationship to balance.
 
 ## Three billing modes
 
-| Mode | Source | Persists to | Deduction point |
-|---|---|---|---|
-| Subscription | `model.Plan` + `model.UserPlan` | `user_plans` row + `plan_usages` rows | `middleware/plan_quota.go::PlanQuotaCheck` admits based on window quotas; `relay/handler/helper.go::postConsumeQuota` writes `plan_usages` after the call |
-| Pay-as-you-go | User calls `/v1/chat/completions` with no usable subscription | `tokens.quota` + `users.quota` | `model.PreConsumeTokenQuota` pre-deducts → upstream returns → `PostConsumeTokenQuota` settles |
-| Top-up | Redemption code / top-up order / admin manual grant | `users.quota` direct addition | `model.IncreaseUserQuota` (does not participate in admission; only funds the balance) |
+One API Pro supports three billing modes in parallel. They share one account but work differently:
+
+| Mode | What it is | What gets deducted |
+|---|---|---|
+| **Subscription (Token Plan)** | A fixed quota pool per week / month / day | Plan-internal pool — **not** account balance |
+| **Pay-as-you-go** | Pay per call | Account balance (`users.quota`) |
+| **Top-up quota** | Add credit to your balance | Provides the balance for pay-as-you-go |
+
+A single user can hold **all three** at once.
 
 ## Deduction order
 
-When a request hits the relay middleware chain:
+On every call:
 
-1. `PlanQuotaCheck` calls `model.CheckPlanQuota(userId, model)`, which walks `CacheGetUserActivePlans(userId)` ordered by `end_time` ASC and admits the first plan whose weighted usage is below `QuotaPoolCapacity` (100). On hit, `plan_id` is stashed in `meta.PlanId`. No hit falls through to the no-plan path.
-2. During billing (`postConsumeQuota`):
-   - When `meta.PlanId > 0`: increments `plan_usages` (requests, prompt_tokens, completion_tokens, cached_tokens) for the chosen plan and refunds any pre-deducted quota back to the token (subscription users do not consume `quota`).
-   - Otherwise: computes the `quota` delta based on `priceResult.billing_type`, then `PostConsumeTokenQuota` settles against `users.quota`.
+1. **Check subscription first**: does one of your active subscriptions cover this model?
+   - Yes → use the plan's quota (**no balance deducted**)
+   - No → fall through to pay-as-you-go
+2. **Pay-as-you-go**: deduct from your [User quota](../schema/user)
+   - Enough → call succeeds
+   - Not enough → 429 reject
 
-## Subscription vs top-up
+In short:
 
-- A subscription carries its own window quotas: every plan declares per-model `request_period/week/month` and `token_period/week/month` in `plan.model_limits`. **It does not consume `users.quota`.**
-- Top-up credits `users.quota`; that balance is what pay-as-you-go burns through. Admin manual grant (`/api/user/topup`, legacy) and admin grants via the order center (`OrderTypeTopup=2`) end up on the same path.
-- A user can hold multiple subscriptions (the `OrderUpgradeModeStack` mode); they are consumed in `end_time` ASC order. Top-up and subscriptions are independent — subscriptions never spend top-up balance.
+> Subscription = quota pool inside the plan (doesn't touch your balance)
+> Balance = your fallback money; once gone, you can't call any more
 
-## Upgrade paths
+## Subscription vs Top-up
 
-When the user already has an active subscription and orders again, the system reads `plan.upgrade_mode` and branches:
+| Dimension | Subscription | Top-up |
+|---|---|---|
+| Stored in | [Subscription](../schema/subscription) row | [User.quota](../schema/user) field |
+| Expires? | Yes, when the period ends | No, never |
+| Discount? | Yes (plan multiplier) | No |
+| Drawn first? | Yes | Only after subscription is exhausted |
+| After expiry? | Falls back to pay-as-you-go | Keeps being valid |
 
-- `price_diff` (default): when the new plan is higher-tier, charge the difference; order number prefix `UP`; `ActivatePackageByOrder` marks all current `user_plans` expired before inserting the new one. Same-tier or lower-tier orders are rejected.
-- `stack`: keep existing plans and create a new one alongside; order number prefix `TB`; `amount = new_plan.price`.
+## Upgrading
 
-See [Upgrade and Downgrade](./upgrade-downgrade).
+When you already have a subscription and buy a more expensive one:
 
-## Expiry
+- **Default (price-diff)**: pay only the difference; remaining quota is pro-rated.
+- **Stack**: pay full price for the new plan; the old one keeps running.
 
-`model.ExpireUserPlans` (scheduled task) flips `status=1 AND end_time <= now` rows to `UserPlanStatusExpired=0`. Once expired, the subscription no longer appears in `CheckPlanQuota`, and subsequent requests fall through to pay-as-you-go.
+Admin toggles this in [Plan Settings](./plan-settings).
 
-## Implementation Pointers
+## When a subscription expires
 
-| Concern | Location |
-|---|---|
-| Data model | `model/plan.go::Plan` / `UserPlan` / `PlanUsage` |
-| Quota admission | `model/plan_quota.go::CheckPlanQuota` |
-| Middleware | `middleware/plan_quota.go::PlanQuotaCheck` |
-| Billing settlement | `relay/handler/helper.go::postConsumeQuota` |
-| Upgrade / stack | `model/order_payment.go::CreatePlanOrder` / `ActivatePackageByOrder` |
-| User top-up | `model/topup.go::CreateTopupOrder` / `ActivateTopupByOrder` |
+- It auto-expires.
+- Calls still work, but billing falls back to pay-as-you-go (deducts balance).
+- To regain the discount, **resubscribe**.
+
+## Related
+
+- [Subscription Schema](../schema/subscription)
+- [Plan Schema](../schema/plan)
+- [User Schema](../schema/user)
+- [Upgrade & Downgrade](./upgrade-downgrade)
+- [Billing Rules](./billing-rules)
