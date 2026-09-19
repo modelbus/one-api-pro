@@ -304,6 +304,9 @@ export default defineConfig({
       themeConfig: {
         logo: { src: '/logo.png', alt: 'One API Pro', height: 36 },
         siteTitle: '',
+        socialLinks: [
+          { icon: 'github', link: 'https://github.com/modelbus/one-api-pro', ariaLabel: 'GitHub' },
+        ],
         nav: buildNav('zh'),
         sidebar: buildSidebar('zh'),
         outline: { level: [2, 3], label: '本页目录' },
@@ -326,6 +329,9 @@ export default defineConfig({
       themeConfig: {
         logo: { src: '/logo.png', alt: 'One API Pro', height: 36 },
         siteTitle: '',
+        socialLinks: [
+          { icon: 'github', link: 'https://github.com/modelbus/one-api-pro', ariaLabel: 'GitHub' },
+        ],
         nav: buildNav('en'),
         sidebar: buildSidebar('en'),
         outline: { level: [2, 3], label: 'On this page' },
