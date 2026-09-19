@@ -1,86 +1,95 @@
 ---
 title: Add a Channel
-description: "Channel fields, the create endpoint, and multi-key batch insert."
+description: "Field-by-field: what each setting is, where to get it, and what it changes."
 category: channel
 order: 2
 ---
 
 # Add a Channel
 
-> `POST /api/channel/` — implementation: `controller/channel.go::AddChannel`.
+> Each field on the New Channel form: what it is, where to get it, what it changes.
 
-## Endpoint
+Open Admin → Channels → Add. The form has these fields.
 
-| Field | Value |
-|---|---|
-| Method | `POST` |
-| Path | `/api/channel/` |
-| Auth | Admin |
-| Body | `Channel` JSON; the `key` field accepts `\n`-separated values for batch insert |
+## Required
 
-`AddChannel` (`controller/channel.go:80`) splits `key` on `\n` — one line becomes one channel row — and `model.BatchInsertChannels` then calls `AddAbilities()` to mirror every model in `models` into the `abilities` table.
+### Provider type
 
-## Fields
+- **What**: which upstream (OpenAI / Anthropic / Azure / Zhipu / DeepSeek / Ollama …).
+- **Where**: pick from the dropdown.
+- **Effect**: determines the request protocol (OpenAI-compatible / Anthropic Messages / Azure custom). **Wrong choice = nothing works.**
 
-| Field | JSON type | Notes |
-|---|---|---|
-| `type` | `int` | Provider type enum (mirrors `CHANNEL_TYPE_MAP`: openai=1, claude=2, azure=3, gemini=4, baidu=5, aliyun=6, tencent=7, xunfei=8, zhipu=9, deepseek=10, midjourney=11, …) |
-| `key` | `string` | Credential; sent as `Authorization: Bearer <key>`. Accepts `\n`-separated multi-key batch |
-| `name` | `string` | Display name (indexed) |
-| `base_url` | `*string` | Upstream API root. Empty falls back to provider default; required for OpenAI-compatible relays |
-| `models` | `string` | Model allow-list, comma-separated. When testing, a model not in the list falls back to the first listed one |
-| `group` | `string` | User-group allow-list, comma-separated. `ContainsGroup` does exact match; empty group is visible to everyone |
-| `model_mapping` | `*string` | JSON object: `{ "source model": "upstream actual model" }`. Request model is rewritten before forwarding |
-| `system_prompt` | `*string` | Prepended to the system message before forwarding (used by certain relay flows) |
-| `weight` | `*uint` | Weighted-round-robin weight; the router currently keys off `priority`, `weight` is reserved |
-| `priority` | `*int64` | Higher value sorts earlier within the same priority tier; the selector picks randomly within a tier |
-| `max_concurrency` | `*int` | Per-node (or whole-cluster when clustering is on) cap; `<=0` means unlimited. Honored by `ConcurrencyFilter` |
-| `cooldown_seconds` | `int` | Cooldown applied after an upstream error (default 60) |
-| `rpm` | `*int` | Requests-per-minute cap; honored by `RPMFilter`. `<=0` means unlimited |
-| `is_fallback` | `*bool` | When `true`, the channel is reserved for the fallback path and excluded from normal routing |
-| `fallback_priority` | `*int64` | Order among fallback-only channels (ascending) |
-| `config` | `string` | Provider-specific JSON (`ChannelConfig`: region / sk / ak / user_id / api_version / library_id / plugin / vertex_ai_*) |
-| `status` | `int` | Default 1; see [Channel Routing](./channel-routing) |
+### Channel name
 
-> The default list endpoint `GetAllChannels` runs `Omit("key")`, so the frontend never sees the real credential. Only `GetChannel(..., selectAll=true)` returns it.
+- **What**: a free-text label.
+- **Where**: anything you like (e.g. `OpenAI Official`, `Azure East`, `Zhipu Production`).
+- **Effect**: display only, no protocol impact.
 
-## Multi-key batch insert
+### Base URL
 
-Put one key per line in the `key` field:
+- **What**: the upstream provider's endpoint URL.
+- **Where**:
+  - OpenAI: `https://api.openai.com/v1`
+  - Azure OpenAI: from your deployment page, e.g. `https://<resource>.openai.azure.com/openai/deployments/<dep>`
+  - Third-party proxy: the URL your vendor gives you
+- **Effect**: wrong value = 404. Note whether `/v1` is required.
 
-```json
-{
-  "type": 1,
-  "name": "OpenAI-bulk",
-  "base_url": "https://api.openai.com",
-  "models": "gpt-4o,gpt-4o-mini",
-  "group": "default,vip",
-  "key": "sk-AAA...\nsk-BBB...\nsk-CCC..."
-}
-```
+### API key / credential
 
-Each line becomes an independent channel row; the batch fails as a whole on any insert error.
+- **What**: the upstream access token.
+- **Where**: upstream console → API Keys / Access Tokens.
+- **Effect**: wrong value = 401.
+- **Tip**: copy whole, no quotes / spaces / newlines.
 
-## `PUT /api/channel/`
+### Models
 
-`UpdateChannel` parses the raw JSON and updates only the keys that actually appear in the payload, so a partial update like `{id, status}` cannot wipe `name` / `models` / `group` / `config` / `balance`. See `controller/channel.go:151`.
+- **What**: which models this channel serves (multi-select).
+- **Where**: options come from [Model Price](/en/pricing/model-price) entries you have enabled.
+- **Effect**: unselected models are not routed here.
+- **Tip**: set the Model Price first, otherwise calls succeed but no quota is deducted.
 
-## Frontend Guide
+## Common
 
-Route: `/channel` → **Add Channel** (`web/default-pro/src/views/channel/Channel.vue`).
+### Weight / Priority
 
-- **Type** dropdown uses `CHANNEL_TYPE_MAP` + Provider list
-- **Base URL** is required for OpenAI-compatible relays; official providers fall back to defaults when blank
-- **Models** is populated from `GET /api/model_price/options` (AdminAuth) — only enabled `model_price` rows show up
-- **Group** is a multi-select, defined in user management
-- **Model Mapping** is edited as key/value pairs and serialized to JSON before submit
-- **Max Concurrency / RPM / Cooldown** with value `<=0` mean "unlimited"
+- **What**: a number; higher = more likely to be picked.
+- **Suggestion**: cheap-and-fast channels high, expensive-and-slow low.
 
-## Implementation Pointers
+### Concurrency cap
 
-| Concern | Location |
-|---|---|
-| CRUD handlers | `controller/channel.go` |
-| Data model | `model/channel.go::Channel` |
-| Ability sync | `model/ability.go::AddAbilities` / `UpdateAbilities` |
-| Partial-update safety | `controller/channel.go::UpdateChannel` |
+- **What**: max simultaneous in-flight calls.
+- **Effect**: exceeding it trips the breaker / re-routes.
+- **Suggestion**: match your upstream provider's RPM / TPM limits.
+
+### Enabled
+
+- **What**: a toggle.
+- **Effect**: disabled = router skips.
+
+## Advanced (rarely needed)
+
+### Custom request headers
+
+Only when the upstream requires a specific header (e.g. legacy Azure with `api-key`).
+
+### Response JSONPath
+
+For non-standard upstream responses; leave blank 99% of the time.
+
+### Retry / timeout
+
+Bump only if the upstream is slow or flaky.
+
+## After save
+
+1. Save.
+2. Open the channel detail.
+3. [Channel Test](./channel-test) — enter a model name; confirm success.
+4. Once passing, enable the channel.
+
+## Related
+
+- [Channel Routing](./channel-routing) — how multi-channel selection works
+- [Channel Test](./channel-test)
+- [Balance Update](./balance-update)
+- [Provider List](./provider-list)
