@@ -22,18 +22,18 @@ order: 5
 
 | 字段 | 含义 | 设置后影响 |
 |---|---|---|
-| 模型名 | `gpt-4o` / `claude-sonnet-4` 等 | 必须与 [渠道](/schema/channel) 模型列表中的值匹配 |
-| 计费类型 | `token`（按 token 计费）或 `per_request`（按次计费） | 决定后续 3 个字段的语义 |
-| 输入单价 | ¥/百万 token | 影响每次调用的输入扣费 |
-| 输出单价 | ¥/百万 token | 影响每次调用的输出扣费 |
-| 缓存单价 | ¥/百万 token | 影响命中缓存的 token 段（0 表示不缓存） |
-| 按次价格 | ¥/次 | 当计费类型为 `per_request` 时使用 |
-| 启用 | 开关 | 禁用后，模型不可被调用 |
+| `model_name` | `gpt-4o` / `claude-sonnet-4` 等 | 必须与 [渠道](/schema/channel) 模型列表中的值匹配 |
+| `billing_type` | `token`（按 token 计费）或 `per_request`（按次计费） | 决定后续字段的语义 |
+| `input_price` | ¥/百万 token | 影响每次调用的输入扣费 |
+| `output_price` | ¥/百万 token | 影响每次调用的输出扣费 |
+| `cached_price` | ¥/百万 token | 影响命中缓存的 token 段（0 表示不缓存） |
+| `per_request_price` | ¥/次 | 当 `billing_type` 为 `per_request` 时使用 |
+| `enabled` | 开关 | 禁用后，模型不可被调用 |
 
 ## 与「渠道」的关系
 
-- 渠道里勾选「可用模型」时，可选项来自 ModelPrice 中已启用的模型。
-- 修改 ModelPrice 不影响渠道的可用性，只影响计费。
+- 渠道里勾选「可用模型」时，可选项来自 `ModelPrice` 中已启用的模型
+- 修改 `ModelPrice` 不影响渠道的可用性，只影响计费
 
 ## 与「分组折扣」的关系
 
