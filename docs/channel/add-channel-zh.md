@@ -1,78 +1,96 @@
 ---
 title: 新增渠道
-description: "新增渠道的字段含义、保存路径与多 Key 批量录入。"
+description: 新建一条渠道需要填写哪些字段、这些字段从哪里来、设置后影响什么。
 category: channel
 order: 2
 ---
 
 # 新增渠道
 
-> 新增渠道请求：POST `/api/channel/`，实现见 `controller/channel.go::AddChannel`。
+> 本页解释「新建一条渠道」时每一项是什么、从哪里获取、设置后会改变什么。
 
-## 接口
+后台 → 渠道 → 新增，会打开如下表单。
 
-| 项 | 值 |
-|---|---|
-| Method | `POST` |
-| Path | `/api/channel/` |
-| Auth | Admin |
-| Body | `Channel` JSON；`key` 支持 `\n` 分隔的多行批量录入 |
+## 必填项
 
-`AddChannel` 在 `controller/channel.go:80` 会把 `key` 字段按 `\n` 拆分：每行一个 key 在事务内生成一条渠道记录，然后由 `model.BatchInsertChannels` 调 `AddAbilities()` 把每个 `models` 字段里的模型写入 `abilities` 表。
+### Provider 类型
 
-## 字段详解
+- **是什么**：上游是哪个服务商（OpenAI / Anthropic / Azure / 智谱 / DeepSeek / Ollama…）
+- **从哪里来**：在下拉列表里选
+- **设置后影响**：决定请求协议（OpenAI 兼容 / Anthropic Messages / Azure 自定义）。**选错就调不通**
 
-| 字段 | JSON 类型 | 说明 |
-|---|---|---|
-| `type` | `int` | Provider 类型枚举（与前端常量 `CHANNEL_TYPE_MAP` 对应：openai=1, claude=2, azure=3, gemini=4, baidu=5, aliyun=6, tencent=7, xunfei=8, zhipu=9, deepseek=10, midjourney=11 …） |
-| `key` | `string` | 鉴权凭证；服务端从 `Authorization: Bearer <key>` 头读取。允许 `"\n"` 分隔一次提交多条 |
-| `name` | `string` | 显示名（索引列），便于列表检索 |
-| `base_url` | `*string` | 上游 API 根地址。留空时使用 Provider 默认地址；OpenAI 兼容中转必填 |
-| `models` | `string` | 模型白名单，逗号分隔。测试时若请求的模型不在列表里，会自动回退到列表的第一个 |
-| `group` | `string` | 允许使用该渠道的用户组，逗号分隔。`ContainsGroup` 做精确匹配；空 group 表示对所有用户可见 |
-| `model_mapping` | `*string` | JSON 对象：`{ "源模型": "上游实际模型名" }`。请求时命中后会把入参模型名改写到上游实际名 |
-| `system_prompt` | `*string` | 转发到上游前拼接在系统消息前的提示词（部分 relay 流程会使用） |
-| `weight` | `*uint` | 加权轮询权重；当前路由以 `priority` 为主，`weight` 保留字段 |
-| `priority` | `*int64` | 同 priority 的渠道在同优先级内随机；值越大越靠前 |
-| `max_concurrency` | `*int` | 单节点 / 全集群的最大并发；`<=0` 表示不限。`ConcurrencyFilter` 启用 |
-| `cooldown_seconds` | `int` | 单次上游错误后该渠道进入冷却的秒数（默认 60） |
-| `rpm` | `*int` | 每分钟请求上限；`RPMFilter` 启用。`<=0` 表示不限 |
-| `is_fallback` | `*bool` | 设为 true 后仅在所有正常渠道耗尽时由 fallback 路径选中 |
-| `fallback_priority` | `*int64` | 同为 fallback 时按此值升序选中 |
-| `config` | `string` | Provider 特定 JSON（`ChannelConfig`：region|
-| `status` | `int` | 默认 1；详见 [渠道路由](./channel-routing) |
+### 渠道名称
 
-> 列表接口 `GetAllChannels`（默认 scope）会 `Omit("key")`，前端永远拿不到真实 key；只有 `GetChannel` 不带 `id` 参数或 `selectAll=true` 时才会回填。
+- **是什么**：给渠道起个名字，仅展示
+- **从哪里来**：自己起（如「OpenAI 官方 / Azure East / 智谱生产」）
+- **设置后影响**：仅展示用，不影响通信
 
-## 多 Key 批量
+### Base URL
 
-把多个 key 用换行写在 `key` 字段里即可一次创建多条渠道。例如：
+- **是什么**：上游 Provider 的接入地址
+- **从哪里来**：
+  - OpenAI 官方：`https://api.openai.com/v1`
+  - Azure OpenAI：你的部署页有形如 `https://<resource>.openai.azure.com/openai/deployments/<dep>` 的端点
+  - 第三方中转：服务商提供的接入地址
+- **设置后影响**：错就 404。**注意是否需要带 `/v1`**，不同 Provider 习惯不同
 
-```
+### API Key / 凭证
 
-服务端逐条 `Insert` + `AddAbilities`，失败会回滚整批。
+- **是什么**：上游 Provider 给你的访问令牌
+- **从哪里来**：上游 Provider 控制台 → API Keys / Access Tokens
+- **设置后影响**：错就 401
+- **注意**：复制完整、不要带前后引号 / 空格 / 换行
 
-## 更新
+### 模型列表
 
-`UpdateChannel` 解析原始 JSON 后只对 payload 里实际出现的 key 做 `Updates`，避免 `{id, status}` 这类部分更新把其他字段清空。详见 `controller/channel.go:151`。
+- **是什么**：这条渠道能调用哪些模型（多选）
+- **从哪里来**：下拉里的选项来自 [模型定价](/pricing/model-price) 中已启用的模型
+- **设置后影响**：不勾的模型不会被路由到这条渠道
+- **注意**：勾之前先在「模型定价」里把价格维护好，否则调用成功但不会扣费
 
-## 前端操作指南
+## 常用项
 
-路径：`/channel` → 「新增渠道」按钮（`web/default-pro/src/views/channel/Channel.vue`）。
+### 权重 / 优先级
 
-- 「类型」下拉展示前端 `CHANNEL_TYPE_MAP` 与 Provider 列表
-- 「Base URL」对 OpenAI 兼容中转是必填，对官方地址是覆盖
-- 「模型」从 `GET /api/model_price/options` 拉取已启用模型清单（AdminAuth）
-- 「分组」多选，用户组在用户管理里维护
-- 「Model Mapping」以键值对编辑，提交时序列化为 JSON 字符串
-- 「最大并发 / RPM / 冷却秒数」`<=0` 表示不限
+- **是什么**：数字越大越容易被选中
+- **建议**：把「便宜快稳」的渠道权重设高，「贵慢备」的设低
 
-## 实现位置
+### 并发上限
 
-| 关注点 | 位置 |
-|---|---|
-| CRUD | `controller/channel.go` |
-| 模型定义 | `model/channel.go::Channel` |
-| 能力同步 | `model/ability.go::AddAbilities` / `UpdateAbilities` |
-| 部分更新安全 | `controller/channel.go::UpdateChannel` |
+- **是什么**：同时跑多少请求
+- **设置后影响**：超过会自动熔断 / 重试别的渠道
+- **建议**：与上游 Provider 给你的 RPM / TPM 上限匹配
 
+### 启用 / 禁用
+
+- **是什么**：开关
+- **设置后影响**：禁用后路由跳过
+- **建议**：新建后先点 [渠道测试](./channel-test) 通过再启用
+
+## 进阶项（大多数情况不需要动）
+
+### 自定义请求头
+
+仅当上游要求特殊 Header 时填。例如 Azure 早期需要 `api-key` 而非 `Authorization`。
+
+### 响应 JSONPath
+
+上游返回结构非标准时用于提取错误信息。99% 留空即可。
+
+### 重试次数 / 超时秒数
+
+Provider 慢或经常失败时再调。
+
+## 完成后的下一步
+
+1. 在新增页底部点「保存」
+2. 跳转到渠道详情页
+3. 点 [渠道测试] → 输入一个模型名 → 看返回是否成功
+4. 测试通过后启用该渠道
+
+## 相关文档
+
+- [渠道路由策略](./channel-routing) — 多渠道时如何被挑选
+- [渠道连通性测试](./channel-test)
+- [余额自动更新](./balance-update)
+- [Provider 全清单](./provider-list)
