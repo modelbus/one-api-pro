@@ -260,7 +260,8 @@ export default defineConfig({
       lang: 'zh-CN',
       link: '/',
       themeConfig: {
-        logo: { src: '/logo.png', alt: 'One API Pro' },
+        logo: { src: '/logo.png', alt: 'One API Pro', height: 36 },
+        siteTitle: '',
         nav: buildNav('zh'),
         sidebar: buildSidebar('zh'),
         outline: { level: [2, 3], label: '本页目录' },
@@ -281,7 +282,8 @@ export default defineConfig({
       lang: 'en-US',
       link: '/en/',
       themeConfig: {
-        logo: { src: '/logo.png', alt: 'One API Pro' },
+        logo: { src: '/logo.png', alt: 'One API Pro', height: 36 },
+        siteTitle: '',
         nav: buildNav('en'),
         sidebar: buildSidebar('en'),
         outline: { level: [2, 3], label: 'On this page' },
