@@ -89,4 +89,4 @@ curl http://localhost:3000/v1/chat/completions \
 
 Inspect via `Logs` page or `curl /api/log/self -b cookies.txt`. Token counts are accurate thanks to embedded BPE; quota is computed from the price table and group ratio. Redis cache is kept consistent via `IncreaseUserQuota`.
 
-下一步 / Next: [架构总览](/zh/start/architecture) · [套餐订阅](/zh/subscription/overview) · [充值](/zh/pricing/topup)。
+下一步 / Next: [架构总览](/zh/start/architecture) · [套餐订阅](/zh/subscription/overview) · [充值](/zh/pricing/topup-settings)。
