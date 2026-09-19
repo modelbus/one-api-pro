@@ -83,6 +83,108 @@ body {
   margin-right: 0;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Two-row navbar                                                          */
+/*   Row 1 (64px): logo · search · language · light/dark                   */
+/*   Row 2 (40px): category menu (full width, centered)                    */
+/* ---------------------------------------------------------------------- */
+@media (min-width: 768px) {
+  :root {
+    /* 64px first row + 40px second row */
+    --vp-nav-height: 104px;
+    --op-nav-row-1: 64px;
+    --op-nav-row-2: 40px;
+  }
+
+  /* The whole nav bar is two rows tall; row 1 children stay at 64px. */
+  .VPNavBar .container,
+  .VPNavBar .wrapper {
+    height: var(--vp-nav-height) !important;
+  }
+
+  .VPNavBar .container {
+    align-items: flex-start !important;
+  }
+
+  .VPNavBar .content,
+  .VPNavBar .content-body {
+    height: var(--op-nav-row-1) !important;
+    /* Remove positioned ancestors so `.menu` anchors to `.VPNavBar` */
+    position: static !important;
+  }
+
+  .VPNavBar .title,
+  .VPNavBar .VPNavBarTitle .title {
+    height: var(--op-nav-row-1) !important;
+  }
+
+  /* Sidebar layout overrides the title to absolute — keep it on row 1. */
+  .VPNavBar.has-sidebar .title {
+    height: var(--op-nav-row-1) !important;
+  }
+
+  /* Hide the theme's bottom divider (row 2 provides its own borders). */
+  .VPNavBar .divider {
+    display: none !important;
+  }
+
+  /* Row 2: category menu, full width, centered under row 1. */
+  .VPNavBarMenu.menu {
+    position: absolute !important;
+    top: var(--op-nav-row-1) !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    height: var(--op-nav-row-2) !important;
+    margin: 0 !important;
+    padding: 0 16px;
+    border-top: 1px solid var(--vp-c-divider);
+    border-bottom: 1px solid var(--vp-c-divider);
+    background-color: var(--vp-nav-bg-color);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .VPNavBarMenu.menu::-webkit-scrollbar {
+    display: none; /* Chromium / Safari */
+  }
+
+  /* Keep language switcher + light/dark toggle visible on the top row
+     (VitePress hides them below 1280px and shows a "..." menu instead). */
+  .VPNavBar .translations,
+  .VPNavBar .appearance {
+    display: flex !important;
+  }
+
+  .VPNavBar .extra {
+    display: none !important;
+  }
+
+  /* Compact menu links so all 13 categories fit on one line. */
+  .VPNavBarMenu.menu .VPNavBarMenuLink {
+    padding: 0 10px;
+    font-size: 14px;
+    line-height: var(--op-nav-row-2);
+    white-space: nowrap;
+  }
+
+  .VPNavBarMenu.menu .VPNavBarMenuGroup .text {
+    font-size: 14px;
+  }
+
+  /* Separators between the top-row controls look better without the menu. */
+  .VPNavBar .search + .translations::before,
+  .VPNavBar .search + .appearance::before,
+  .VPNavBar .translations + .appearance::before {
+    margin-right: 8px;
+    margin-left: 8px;
+  }
+}
+
 /* Sidebar */
 .VPSidebar {
   border-right: 1px solid var(--vp-c-divider);
@@ -319,3 +421,4 @@ div[class*='language-'] {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-1);
 }
+
