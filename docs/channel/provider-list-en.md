@@ -1,102 +1,91 @@
 ---
 title: Provider List
-description: "All providers declared in the frontend constant, tag groupings, and the OpenAI-compat protocol coverage."
+description: All LLM providers adapted by One API Pro.
 category: channel
 order: 6
 ---
 
 # Provider List
 
-> Source of truth: `web/default-pro/src/constants/providers.js`. This file is also the source for the channel-type picker and the brand colors.
+> Every provider has a built-in adapter. Pick the matching type when creating a channel.
+>
+> For **OpenAI-compatible** proxies (any third-party aggregator), always pick `OpenAI` — just set `base_url` + `models`.
 
-## Data shape
+## International
 
-```js
-{
-  name: 'DeepSeek',
-  slug: 'deepseek',
-  color: '#4D6BFE',
-  tag: '国产'
-}
+| Provider type | Used for | Notes |
+|---|---|---|
+| `openai` | OpenAI / any OpenAI-compatible proxy | Default type; set `base_url` only. |
+| `anthropic` | Anthropic Claude | Messages API. |
+| `azure` | Azure OpenAI | Needs deployment name / API key. |
+| `gemini` | Google Gemini | Native protocol. |
+| `openrouter` | OpenRouter (multi-model aggregator) | OpenAI protocol. |
+| `groq` | Groq | OpenAI protocol. |
+| `mistral` | Mistral AI | OpenAI protocol. |
+| `cohere` | Cohere | OpenAI protocol. |
+| `togetherai` | Together AI | OpenAI protocol. |
+| `replicate` | Replicate | Custom protocol. |
+| `aws` | AWS Bedrock | Custom protocol. |
+| `vertexai` | Google Vertex AI | GCP credentials required. |
+| `palm` | Google PaLM (legacy) | Will be deprecated. |
+| `xai` | x.AI (Grok) | OpenAI protocol. |
+
+## China
+
+| Provider type | Used for | Notes |
+|---|---|---|
+| `deepseek` | DeepSeek | OpenAI protocol. |
+| `moonshot` | Moonshot Kimi | OpenAI protocol. |
+| `zhipu` | Zhipu GLM | Custom protocol. |
+| `qwen` / `ali` / `alibailian` | Alibaba Qwen / Bailian | Multiple endpoints. |
+| `doubao` | ByteDance Doubao | Custom protocol. |
+| `baichuan` | Baichuan | Custom protocol. |
+| `baidu` / `baiduv2` | ERNIE | Multi-version. |
+| `tencent` | Tencent Hunyuan | Custom protocol. |
+| `lingyiwanwu` | Zhipu Lingyi | Custom protocol. |
+| `stepfun` | StepFun | Custom protocol. |
+| `minimax` | MiniMax | Custom protocol. |
+| `novita` | Novita AI (GPU aggregator) | Custom protocol. |
+
+## Local / Self-hosted
+
+| Provider type | Used for | Notes |
+|---|---|---|
+| `ollama` | Ollama (local inference) | OpenAI protocol. |
+| `proxy` | Generic HTTP proxy | Pure passthrough. |
+
+## Generic OpenAI-compatible proxies
+
+Any third-party OpenAI-compatible service uses the `openai` type with:
+
+- `Base URL`: the URL the proxy gives you
+- `API Key`: the key the proxy issues
+- `Models`: which models the proxy supports
+- `Model Mapping` (optional): map official names to internal names
+
+Example:
+
+```json
+{ "gpt-4o": "openai-gpt-4o-vip", "claude-sonnet-4": "anthropic-claude-3.5" }
 ```
 
-- `name` — display name
-- `slug` — matches `relay/adaptor/provider/<slug>` on the backend
-- `color` — badge color in the channel list
-- `tag` — `国产` / `海外` grouping
+## How to know whether your provider is supported
 
-## Domestic
+- Just look at the dropdown on the New Channel form.
+- Or use [Channel Test](./channel-test) to verify.
 
-| slug | name |
-|---|---|
-| `deepseek` | DeepSeek |
-| `qwen` | Alibaba Qwen |
-| `wenxin` | Baidu ERNIE |
-| `chatglm` | Zhipu ChatGLM |
-| `doubao` | ByteDance Doubao |
-| `hunyuan` | Tencent Hunyuan |
-| `spark` | iFlytek Spark |
-| `moonshot` | Moonshot AI |
-| `baichuan` | Baichuan |
-| `stepfun` | Stepfun |
-| `zeroone` | Lingyiwanwu |
-| `minimax` | SenseTime |
-| `internlm` | InternLM |
-| `siliconcloud` | SiliconFlow |
-| `aihubmix` | AIHubMix |
+## Adapting a new Provider
 
-## Overseas
+If your provider isn't listed AND the protocol isn't OpenAI-compatible, you need to adapt it:
 
-| slug | name |
-|---|---|
-| `openai` | OpenAI |
-| `claude` | Anthropic Claude |
-| `gemini` | Google Gemini |
-| `mistral` | Mistral AI |
-| `palm` | Meta LLaMA |
-| `gemma` | Google Gemma |
-| `grok` | xAI Grok |
-| `cohere` | Cohere |
-| `groq` | Groq |
-| `ollama` | Ollama |
-| `openrouter` | OpenRouter |
-| `together` | Together AI |
-| `novita` | Novita AI |
-| `cloudflare` | Cloudflare |
-| `ai21` | AI21 Labs |
-| `stability` | Stability AI |
-| `midjourney` | Midjourney |
-| `dalle` | DALL·E |
-| `replicate` | Replicate |
-| `runway` | Runway |
-| `suno` | Suno |
-| `perplexity` | Perplexity |
-| `phind` | Phind |
-| `devin` | Devin |
-| `huggingface` | Hugging Face |
+- Write a `relay/adaptor/provider/<name>/` subpackage
+- Implement the `Adaptor` interface + register in `init()`
+- It appears in the dropdown automatically
 
-## OpenAI-compatible coverage
+See [Add a Provider](/en/contribute/add-provider).
 
-Any OpenAI-compatible relay or self-hosted gateway does not need a new Provider entry — create a channel with `type=openai=1`, fill `base_url` + `models`, and use `model_mapping` to rewrite upstream model names. Routing, billing, and balance updates (in `updateChannelBalance` for type `openai` / `custom`) all reuse that `base_url`.
+## Related
 
-## Channel type map
-
-The frontend exports `CHANNEL_TYPE_MAP` for the channel-create dialog:
-
-```js
-{
-  openai: 1, claude: 2, azure: 3, gemini: 4,
-  baidu: 5, aliyun: 6, tencent: 7, xunfei: 8,
-  zhipu: 9, deepseek: 10, midjourney: 11
-}
-```
-
-Backend `relay.GetAdaptorByChannel(channel.Type)` dispatches to `relay/adaptor/provider/<slug>`. OpenAI-compatible relays reuse the `openai` adaptor and override `base_url`.
-
-## Implementation Pointers
-
-| Concern | Location |
-|---|---|
-| Provider constants | `web/default-pro/src/constants/providers.js` |
-| Backend adaptors | `relay/adaptor/provider/<slug>/` |
-| Adaptor registration | `relay/adaptor/openai` etc. |
+- [Channel Overview](./overview)
+- [Add a Channel](./add-channel)
+- [Channel Routing](./channel-routing)
