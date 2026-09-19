@@ -1,75 +1,140 @@
 ---
-title: Payment Channels
-description: "WeChat / Alipay / Bank-transfer configuration: cert upload, notify URL and enable toggle."
+title: Payment Channel Settings
+description: Enable and configure each payment channel (WeChat / Alipay / Bank Transfer) in the admin console.
 category: pricing
-order: 12
+order: 10
 ---
 
-# Payment Channels
+# Payment Channel Settings
 
-> Maintain enable switches, parameters and certificate file paths for the three payment channels on top of `system_settings`. UI: `web/default-pro/src/views/setting/PaymentSetting.vue`.
+> Admin → Payment Settings. Visible only to Root.
 
-## Endpoints
+## Three channels
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/setting/payment` | `GET` | Root | Single response containing all three channels' `{ enabled, config, description, updated_at }` |
-| `/api/setting/payment/:method` | `PUT` | Root | Save one channel; accepts `multipart/form-data` for cert uploads |
+Each channel has its own toggle and credentials. **Enable at least one** or users can't pay.
 
-`:method` is one of `wechat` / `alipay` / `bank`.
+### WeChat Pay
 
-Implementation: `controller/setting_payment.go`.
+| Field | What | Where |
+|---|---|---|
+| `app_id` | AppID | WeChat Pay merchant console → Account center |
+| `mch_id` | Merchant ID | Same |
+| `api_key` | v2 key | Merchant console → API security → APIv2 key |
+| `notify_url` | Callback URL | `https://your-domain.com/api/payment/wechat/notify` |
+| Cert / Private key | PEM files (for refunds) | Merchant console → API security → API certificates |
 
-## Payload Shape
+### Alipay Face-to-Face
 
-PUT requests use `multipart/form-data`:
+| Field | What | Where |
+|---|---|---|
+| `app_id` | App ID | Alipay Open Platform → My apps |
+| `private_key` / `public_key` | App private key / Alipay public key | Same |
+| or `private_key_file` / `public_key_file` | Paths to the above PEM files | Auto-saved on upload |
+| `gateway` | Gateway | Default `https://openapi.alipay.com/gateway.do` (production) |
+| `notify_url` | Callback URL | `https://your-domain.com/api/payment/alipay/notify` |
 
-| Form field | Notes |
+### Bank transfer
+
+| Field | What |
 |---|---|
-| `config` | JSON string: `{ "enabled": bool, "config": { … } }` |
-| `cert_file` | wechat only — merchant certificate (`.pem`) |
-| `key_file` | wechat only — merchant private key (`.pem`) |
-| `private_key_file` | alipay only — app private key |
-| `public_key_file` | alipay only — Alipay public key |
+| `account_name` | Beneficiary name (company name) |
+| `account_no` | Bank account number |
+| `bank_name` | Bank |
+| `branch` | Branch |
+| `notes` | Prompt shown to users to include the order number in remarks |
 
-Files are saved under `data/payment/<method>/<basename>`. The saved path replaces the `xxx_file` key inside the config map. The PUT response does **not** echo the file path — call GET again to confirm persistence.
+## How to enable / configure
 
-## Persistence
+Admin → Payment Settings:
 
-Each channel occupies two `system_settings` rows:
+1. Pick a channel → turn on "Enabled"
+2. Form fields expand → fill in
+3. For WeChat / Alipay, upload the PEM file(s)
+4. Click Save
 
-| key | Purpose |
-|---|---|
-| `payment.<method>.enabled` | Minimal JSON containing only `{"enabled": bool}` |
-| `payment.<method>.config` | Full configuration JSON (including `enabled` and all keys) |
+The toggle is effective immediately.
 
-`category` is fixed to `payment`. The GET endpoint merges the two rows back into a single `{ enabled, config }` object.
+## Certificate / file upload
 
-## Field Conventions
+PEM files for WeChat and Alipay:
 
-| Method | Recommended keys |
-|---|---|
-| `wechat` | `app_id` / `mch_id` / `api_key` / `notify_url` / `cert_file` / `key_file` |
-| `alipay` | `app_id` / `gateway` / `notify_url` / `private_key` / `public_key` / `private_key_file` / `public_key_file` |
-| `bank` | `account_name` / `account_no` / `bank_name` / `branch` / `notes` |
+- Saved to `data/payment/<method>/<basename>` on disk
+- The path is written back into the `config` field (e.g. `cert_file: /app/data/payment/wechat/apiclient_cert.pem`)
+- **Not returned in the response** — you need to GET again to confirm
 
-Keys like `app_id` / `mch_id` / `api_key` / `cert_file` / `key_file` are read directly by the payment SDK — keep the names consistent across backend and frontend.
+## Example configs
 
-## Frontend Guide
+### WeChat production
 
-- Three sections: **WeChat**, **Alipay**, **Bank**.
-- Each section's top item is the `enabled` switch; toggling it immediately PUTs the minimal `{ enabled, config }` payload (config is sent along too, to stay idempotent).
-- Form fields are only revealed after enabling.
-- The **Upload cert** / **Upload private key** buttons (wechat / alipay) use `<a-upload custom-request>` to PUT the current form together with the file.
-- The **Save** button submits the entire section; bank has no cert, so just click Save.
+```json
+{
+  "enabled": true,
+  "config": {
+    "app_id": "wx0123456789abcdef",
+    "mch_id": "1900000001",
+    "api_key": "your-strong-api-key",
+    "notify_url": "https://api.example.com/api/payment/wechat/notify"
+  }
+}
+```
 
-## Implementation Pointers
+### Alipay production
 
-| Concern | Location |
-|---|---|
-| Handler | `controller/setting_payment.go` |
-| Settings CRUD | `model/system_setting.go::GetSystemSetting` / `UpsertSystemSetting` |
-| Cert storage | `controller/etting_payment.go::PutPaymentMethod` (`data/payment/<method>/`) |
-| Channel implementations | `common/payment/` (`wechat.go`, `alipay.go`, `bank.go`) |
-| Public channel status | `controller/payment.go::GetPaymentStatus` |
-| Routes | `router/api.go` |
+```json
+{
+  "enabled": true,
+  "config": {
+    "app_id": "2021000123456789",
+    "gateway": "https://openapi.alipay.com/gateway.do",
+    "notify_url": "https://api.example.com/api/payment/alipay/notify"
+  }
+}
+```
+
+For private key, upload the PEM file rather than pasting.
+
+### Bank transfer
+
+```json
+{
+  "enabled": true,
+  "config": {
+    "account_name": "XX Tech Ltd.",
+    "account_no": "6225 1234 5678 9012",
+    "bank_name": "CMB",
+    "branch": "Shanghai Branch",
+    "notes": "Please include the order number in your transfer remarks."
+  }
+}
+```
+
+## How to verify
+
+1. Admin → Payment Settings → confirm toggle is on
+2. Public endpoint `/api/payment/status` returns the enabled channels (no login)
+3. Place a test order → user can pick the channel → mock the payment to verify the full chain
+
+## Notes
+
+- Changes take effect immediately, but don't affect orders already created
+- Credentials are **sensitive**: don't commit them to git / share unnecessarily
+- Switching channels: existing orders stay on the old channel; new orders use the new channel
+
+## FAQ
+
+- **Users see no payment methods**: no channel enabled, or all are mis-configured
+- **Payment succeeded but order stays unpaid**: verify `notify_url` is publicly reachable; check backend logs
+- **Certificate upload fails**: check PEM format; private key must not have a passphrase
+- **Switched channel — what about old orders**: existing orders use the old channel; new orders use the new one
+
+## Related
+
+- [Payment Channels](./payment)
+- [Top-up Settings](./topup-settings)
+- [Order Management](./order-management)
+
+## Related API
+
+- `GET /api/setting/payment` — read all channel configs (Root)
+- `PUT /api/setting/payment/:method` — save one channel (Root, supports file upload)
+- `GET /api/payment/status` — public enabled-channels query (no login)
