@@ -1,39 +1,32 @@
 ---
-title: Docker Compose
-description: "Orchestrate a single instance or a stack with dependencies via docker-compose."
+title: Docker Compose Deploy
+description: Compose One API Pro with a database and Redis for production.
 category: install
 order: 3
 ---
 
-# Docker Compose
+# Docker Compose Deploy
 
-> Orchestrate a single instance or a stack with dependencies via docker-compose.
+> For production with a single node + MySQL/Redis.
 
-## One API Pro only
+## One API Pro only (SQLite)
 
-The minimal stack — relies on the embedded SQLite inside the container.
+The minimum compose file:
+
+`docker-compose.yml`:
 
 ```yaml
-# compose.yaml
 services:
   one-api-pro:
     image: ghcr.io/modelbus/one-api-pro:latest
     container_name: one-api-pro
-    restart: unless-stopped
+    restart: always
     ports:
       - "3000:3000"
+    volumes:
+      - ./data:/app/data
     environment:
       TZ: Asia/Shanghai
-      SESSION_SECRET: please-change-me
-    volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/status"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
 ```
 
 Start:
@@ -42,148 +35,120 @@ Start:
 docker compose up -d
 ```
 
-The `wget`-based healthcheck matches the image's built-in `HEALTHCHECK`.
+## One API Pro + MySQL (recommended for production)
 
-## Full stack with MySQL & Redis
-
-Production-ready stack: MySQL for persistence, Redis for caching and rate-limit state.
+`docker-compose.yml`:
 
 ```yaml
-# compose.yaml
 services:
   one-api-pro:
     image: ghcr.io/modelbus/one-api-pro:latest
     container_name: one-api-pro
-    restart: unless-stopped
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      TZ: Asia/Shanghai
+      SQL_DSN: "oneapi:oneapi-pass@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    container_name: one-api-pro-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root-pass
+      MYSQL_DATABASE: oneapi
+      MYSQL_USER: oneapi
+      MYSQL_PASSWORD: oneapi-pass
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+```
+
+Start:
+
+```bash
+docker compose up -d
+```
+
+DB schema auto-migrates.
+
+## One API Pro + MySQL + Redis (production)
+
+```yaml
+services:
+  one-api-pro:
+    # ... same as above ...
+    environment:
+      SQL_DSN: "oneapi:oneapi-pass@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
+      REDIS_CONN_STRING: "redis://redis:6379/0"
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "3000:3000"
-    environment:
-      TZ: Asia/Shanghai
-      SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
-      LOG_SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi_logs?charset=utf8mb4&parseTime=True&loc=Local"
-      REDIS_CONN_STRING: "redis://default:redispw@redis:6379/0"
-      SESSION_SECRET: "please-change-me"
-      SYNC_FREQUENCY: "60"
-    volumes:
-      - ./config:/app/config
-      - ./data:/app/data
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/status"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-  mysql:
-    image: mysql:8.0
-    container_name: one-api-mysql
-    restart: unless-stopped
-    command:
-      - --default-authentication-plugin=mysql_native_password
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    environment:
-      MYSQL_ROOT_PASSWORD: oneapi_pw
-      MYSQL_DATABASE: oneapi
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-poneapi_pw"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
   redis:
     image: redis:7-alpine
-    container_name: one-api-redis
-    restart: unless-stopped
-    command:
-      - redis-server
-      - --requirepass
-      - redispw
-      - --appendonly
-      - "yes"
+    container_name: one-api-pro-redis
+    restart: always
     volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
+      - ./redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispw", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-volumes:
-  mysql_data:
-  redis_data:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 ```
 
-Start:
+## Key env vars
+
+| Var | Notes |
+|---|---|
+| `TZ` | Time zone |
+| `SQL_DSN` | MySQL DSN; blank = SQLite |
+| `REDIS_CONN_STRING` | Redis URL; blank = no Redis |
+| `CLUSTER_NODE_ID` / `CLUSTER_NODE_SECRET` / `CLUSTER_NODE_PORT` | Cluster mode (multi-node) |
+| More | See [Configuration](./config) |
+
+## Data persistence
+
+Three host mounts: `./data`, `./mysql-data`, `./redis-data`. **Container restarts / image upgrades do NOT lose data.**
+
+## Upgrade
 
 ```bash
-# Drop the file above into an empty directory as compose.yaml
+docker compose pull one-api-pro
 docker compose up -d
-docker compose logs -f one-api-pro
 ```
 
-Look for `using MySQL as database` (and `cluster module initialized` when `CLUSTER_ENABLED=true`) in the logs to confirm a successful boot.
+Only the one-api-pro container restarts.
 
-## Multi-instance sharing MySQL / Redis
-
-> This is **not** the decentralized cluster mode. It is the classic horizontal scale-out where every instance shares the same MySQL / Redis; consistency is maintained via `SESSION_SECRET` and `SYNC_FREQUENCY`.
-
-```yaml
-services:
-  one-api-pro-1:
-    image: ghcr.io/modelbus/one-api-pro:latest
-    restart: unless-stopped
-    ports:
-      - "3001:3000"
-    environment:
-      SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
-      REDIS_CONN_STRING: "redis://default:redispw@redis:6379/0"
-      SESSION_SECRET: "all-instances-must-share-this"
-      SYNC_FREQUENCY: "60"
-      NODE_TYPE: master
-    depends_on:
-      mysql: { condition: service_healthy }
-      redis: { condition: service_healthy }
-
-  one-api-pro-2:
-    image: ghcr.io/modelbus/one-api-pro:latest
-    restart: unless-stopped
-    ports:
-      - "3002:3000"
-    environment:
-      SQL_DSN: "root:oneapi_pw@tcp(mysql:3306)/oneapi?charset=utf8mb4&parseTime=True&loc=Local"
-      REDIS_CONN_STRING: "redis://default:redispw@redis:6379/0"
-      SESSION_SECRET: "all-instances-must-share-this"
-      SYNC_FREQUENCY: "60"
-      NODE_TYPE: slave
-      FRONTEND_BASE_URL: "http://host-master:3001"
-    depends_on:
-      mysql: { condition: service_healthy }
-      redis: { condition: service_healthy }
-```
-
-All instances must share the same `SESSION_SECRET`; slave instances may set `FRONTEND_BASE_URL` to redirect page requests to the master.
-
-## Uninstall
+## Backup
 
 ```bash
-docker compose down            # stop and remove containers
-docker compose down -v         # also remove volumes (irreversible)
+docker compose stop one-api-pro
+cp -r ./mysql-data ./backup-$(date +%Y%m%d)
+docker compose start one-api-pro
 ```
 
-Data volumes (`mysql_data`, `redis_data`) and the host `./data` directory must be removed manually.
+Full backup strategy: [Backup & Restore](./backup-restore).
 
-Next: [Source Build](/en/install/source-build) · [Backup & Restore](/en/install/backup-restore).
+## Related
+
+- [Docker Single-instance](./docker-deploy)
+- [Configuration](./config)
+- [Backup & Restore](./backup-restore)
+- [Reverse Proxy](./reverse-proxy)
