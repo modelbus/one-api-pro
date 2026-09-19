@@ -21,22 +21,21 @@ order: 4
 
 新增渠道时，**通常只需要填这些字段**：
 
-| 项 | 从哪里来 | 设置后影响 |
+| 项 | 含义 | 设置后影响 |
 |---|---|---|
-| Provider 类型 | 从下拉列表选：OpenAI、Anthropic、Azure、Ollama… | 决定请求协议 |
-| 渠道名称 | 自己起（仅展示） | 仅用于辨识多个渠道 |
-| Base URL | 上游 Provider 提供的接入地址 | 错就 404 / 拒连；OpenAI 通常 `https://api.openai.com/v1`；Azure 按部署填 |
-| API Key / 凭证 | 上游 Provider 控制台 → API Keys | 错就 401；不要带引号、空格、换行 |
-| 模型列表（多选） | 从 [模型定价](/schema/model-price) 中已有模型里勾选 | 不勾的模型不会被路由到该渠道 |
-| 优先级 / 权重 | 数字 0–N | 决定被路由命中的概率 |
-| 并发上限 | 数字 | 超过会自动熔断 / 重试别的渠道 |
-| 启用 / 禁用 | 开关 | 禁用后路由跳过 |
+| `type` | Provider 类型 | 决定请求协议（OpenAI 兼容 / Anthropic / Azure 等） |
+| `name` | 渠道名称 | 仅用于辨识多个渠道 |
+| `base_url` | 上游 Provider 的接入地址 | 错就 404 / 拒连；OpenAI 通常 `https://api.openai.com/v1`；Azure 按部署填 |
+| `key` | API Key / 凭证 | 错就 401；不要带引号、空格、换行 |
+| `models` | 模型列表（多选） | 从 [模型定价](/schema/model-price) 中已有模型里勾选；不勾的模型不会被路由到该渠道 |
+| `weight` / `priority` | 路由权重 / 优先级 | 决定被路由命中的概率 |
+| `status` | 启用 / 禁用 | 禁用后路由跳过 |
 
 下面这些是**大多数情况不需要动**的字段，除非遇到问题：
 
-- **自定义请求头**：上游要求特定 Header 时填（如 Azure `api-key`）
-- **响应转换 JSONPath**：解析上游返回结构用；99% 留空即可
-- **重试次数 / 超时秒数**：仅在 Provider 慢或经常失败时再调
+- `system_prompt`：自定义请求头 / 响应转换 JSONPath
+- `max_concurrency` / `cooldown_seconds`：并发 / 冷却
+- `group`：用户组白名单
 
 ## 它如何参与计费
 
@@ -49,7 +48,7 @@ order: 4
 ## 相关页面
 
 - [渠道概览](/channel/overview)
-- [新建渠道](/channel/add-channel)
+- [新增渠道](/channel/add-channel)
 - [渠道连通性测试](/channel/channel-test)
 - [渠道路由策略](/channel/channel-routing)
 - [余额自动更新](/channel/balance-update)
