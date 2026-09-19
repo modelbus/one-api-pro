@@ -4,8 +4,8 @@ title: One API Pro
 titleTemplate: LLM Gateway & Monetization Platform
 hero:
   name: One API Pro
-  text: LLM Gateway & Monetization Platform
-  tagline: Unify 40+ model providers behind one OpenAI-compatible API, with channel routing, subscriptions, top-up payments and multi-node clustering built in.
+  text: One gateway. Every model. End-to-end monetization.
+  tagline: 40+ providers · Channel routing · Subscriptions & top-up · Multi-node cluster
   image:
     src: /logo.png
     alt: One API Pro
@@ -14,11 +14,11 @@ hero:
       text: Get Started
       link: /en/start/overview
     - theme: alt
-      text: API Reference
-      link: /en/api/README
+      text: Schema
+      link: /en/schema/overview
     - theme: alt
-      text: Changelog
-      link: /en/changelog/index
+      text: API
+      link: /en/api/README
 features:
   - icon: 🚀
     title: 40+ Providers
@@ -46,8 +46,8 @@ features:
     details: Complete API reference and one-command Docker deployment for low-cost customization.
 ---
 
-<h2 class="home-section-title">Documentation</h2>
-<p class="home-section-subtitle">Pick a category below, or use the top navigation.</p>
+<h2 class="home-section-title">Pick your starting point</h2>
+<p class="home-section-subtitle">Browse by role or feature. Every card lands on its category.</p>
 
 <div class="category-grid">
   <a class="category-card" href="/en/start/overview">
@@ -87,12 +87,17 @@ features:
   </a>
   <a class="category-card" href="/en/decentralization/overview">
     <span class="category-icon">🕸️</span>
-    <h3>Decentralization</h3>
-    <p>Cluster nodes, config sync and health checks.</p>
+    <h3>Cluster</h3>
+    <p>Multi-node cluster, config sync and health checks.</p>
+  </a>
+  <a class="category-card" href="/en/schema/overview">
+    <span class="category-icon">🗂️</span>
+    <h3>Schema</h3>
+    <p>Persisted entities (users, channels, plans, orders) and how they relate.</p>
   </a>
   <a class="category-card" href="/en/api/README">
     <span class="category-icon">🔗</span>
-    <h3>API Reference</h3>
+    <h3>API</h3>
     <p>Auth, all <code>/api/*</code> endpoints and OpenAI-compatible APIs.</p>
   </a>
   <a class="category-card" href="/en/changelog/index">
