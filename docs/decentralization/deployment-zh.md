@@ -1,130 +1,139 @@
 ---
 title: 多节点部署
-description: "生产环境多节点部署最佳实践。"
+description: 在生产环境启用 Cluster 模式：环境变量、Nginx、灾备。
 category: decentralization
 order: 5
 ---
 
 # 多节点部署
 
-> 生产环境多节点部署最佳实践。
+> 把 One API Pro 部署成 3 节点 Cluster 的完整步骤。
 
 ## 总体拓扑
 
-```text
-                ┌─────────────┐
-                │  Nginx/LB   │   (单一入口, ip_hash)
-                └──────┬──────┘
-                       │
-       ┌───────────────┼───────────────┐
-       │               │               │
- ┌─────┴─────┐   ┌─────┴─────┐   ┌─────┴─────┐
- │  Node 1   │   │  Node 2   │   │  Node 3   │
- │ one-api   │   │ one-api   │   │ one-api   │
- │ + MySQL   │   │ + MySQL   │   │ + MySQL   │
- │ + Redis   │   │ + Redis   │   │ + Redis   │
- └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
-       │               │               │
-       └────── HTTP push of sync events ──────┘
+```
+                 ┌─────────────┐
+                 │  Nginx/LB   │  ← 单一入口，ip_hash
+                 └──────┬──────┘
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+   ┌────┴────┐    ┌────┴────┐    ┌────┴────┐
+   │ Node 1  │    │ Node 2  │    │ Node 3  │
+   │ one-api │    │ one-api │    │ one-api │
+   │ MySQL   │    │ MySQL   │    │ MySQL   │
+   │ Redis   │    │ Redis   │    │ Redis   │
+   └────┬────┘    └────┬────┘    └────┬────┘
+        │               │               │
+        └──────── HTTP push 同步 ────────┘
 ```
 
-每个节点都是 **完全独立** 的：
-Each node is **fully independent**:
+每个节点完全独立：各自的 MySQL、Redis、地址。
 
-- 各自运行一个 MySQL 实例；
-- 各自运行一个 Redis 实例；
-- 自己的 `CLUSTER_NODE_ID`、`CLUSTER_NODE_ADDRESS`、独立 secret。
+## 前置条件
 
-## MySQL：每节点独立实例
+每个节点需要：
 
-> **Why**: `auto_increment_offset` 是 MySQL **实例级**变量，多个数据库共用同一个实例时无法分别为它们设置不同 offset。
+- Linux 服务器 + Docker / 二进制
+- 独立的 MySQL 实例（**不要共享数据库**）
+- 独立的 Redis 实例
+- 公网域名（如 `cn.example.com`）+ TLS 证书
+- 反向代理（Nginx / Caddy / Cloudflare）
 
-`my.cnf` 模板 / Sample `my.cnf` (three-node example):
+## MySQL 配置
 
+每节点一个独立的 MySQL 实例。`my.cnf` 关键项：
+
+```ini
+[mysqld]
+server-id = <与 CLUSTER_NODE_ID 唯一>
+auto_increment_increment = 50     # 支持最多 50 个节点
+auto_increment_offset = <CLUSTER_NODE_ID>
+log_bin = ON
+binlog_format = ROW                # 推荐，未来主从复制用
 ```
 
-要点 / Highlights:
+预创建空库：
 
-- `auto_increment_increment = 50` — 支持最多 50 个节点；
-  `auto_increment_increment = 50` supports up to 50 nodes.
-- 每个节点的 `offset` = `CLUSTER_NODE_ID`，全集群唯一；
-  Each node's `offset` equals `CLUSTER_NODE_ID`, unique across the cluster.
-- `server-id` 必须唯一；
-  `server-id` must be unique across all MySQL instances.
-- `log_bin` + `binlog_format=ROW` 推荐开启 — 便于未来主从复制与 PITR；
-  `log_bin` + `binlog_format=ROW` recommended — enables future master/slave replication and point-in-time recovery.
-- 集群数据同步不依赖 binlog（走 GORM 回调），binlog 只作额外保险。
-  Cluster data sync does not depend on binlog (it uses GORM callbacks); binlog is just an extra safety net.
-
-预创建空库 / Pre-create the empty database:
-
+```sql
+CREATE DATABASE oneapi_node1 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-## Redis：每节点独立实例
+## Redis 配置
 
-Redis 在此仅作 **本地缓存 + 限流**，不承载集群流量；每节点独立即可。
+每节点一个本地 Redis，仅做缓存与限流。无需集群：
 
 ```bash
-# 每节点各自启动
 redis-server --port 6379 --appendonly yes
 ```
 
-## 引导新节点
+## 加入现有节点
 
-新加入节点必须从已有节点同步一次快照，否则从 0 启动后只能看到加入之后的变更。
+新节点**必须从存活节点同步一次数据库快照**，否则只能看到加入后的变更。
 
-### 方法 1：mysqldump 导入（推荐）/ Option 1: mysqldump import (recommended)
+### 方法 1：mysqldump（推荐）
 
 ```bash
-# 从一个存活节点导出
-mysqldump -h <alive-node> -u root -p \
+# 从存活节点导出
+mysqldump -h cn.example.com -u root -p \
   --single-transaction --routines --triggers \
-  --databases oneapi \
-  > /opt/one-api-pro/seed/oneapi.sql
+  oneapi > /tmp/oneapi.sql
 
-# 导入到新节点（数据库必须已 CREATE DATABASE）
-mysql -u root -p oneapi < /opt/one-api-pro/seed/oneapi.sql
+# 导入到新节点
+mysql -u root -p oneapi < /tmp/oneapi.sql
 ```
 
 ### 方法 2：快照 API
 
 ```bash
-curl -H "X-Cluster-Secret: <target-node-secret>" \
-  "https://<alive-node>/api/cluster/snapshot?tables=users,tokens,channels,abilities,options,redemptions,plans,user_plans,plan_usages" \
-  -o /opt/one-api-pro/seed/snapshot.json
+curl -H "X-Cluster-Secret: <target-secret>" \
+  "https://cn.example.com/api/cluster/snapshot?tables=users,tokens,channels,abilities,options,redemptions,plans,user_plans,plan_usages" \
+  -o snapshot.json
 ```
 
-> 启动顺序：先启第一个节点 → 等到日志打印 `cluster module initialized` → 再启其他节点（其 `CLUSTER_SEEDS` 指向第一个节点）。
+## 启动顺序
 
-## .env 全模板
+1. **先启第一个节点**：`CLUSTER_SEEDS` 留空或填自身
+2. 等 ~5-10s，看到日志 `cluster module initialized`
+3. **再启其他节点**：`CLUSTER_SEEDS` 指向任一存活节点
+4. 新节点 ping seed，传递性发现其余节点
+5. 后台 → 集群设置 → 节点管理 校验列表与心跳
 
-> 所有节点共用 `CLUSTER_SECRET` 初始值；secret 在首次启动时写入各自的 `cluster_nodes.secret_key`，之后由管理后台或 API 独立轮换。
+## 环境变量（3 节点示例）
 
-### 节点 1 — China
+| 变量 | Node 1 | Node 2 | Node 3 |
+|---|---|---|---|
+| `PORT` | 3000 | 3001 | 3002 |
+| `SQL_DSN` | `...oneapi_node1` | `...oneapi_node2` | `...oneapi_node3` |
+| `REDIS_CONN_STRING` | `:6379/0` | `:6380/0` | `:6381/0` |
+| `CLUSTER_ENABLED` | true | true | true |
+| `CLUSTER_NODE_ID` | **1** | **2** | **3** |
+| `CLUSTER_NODE_NAME` | `node-cn` | `node-us` | `node-eu` |
+| `CLUSTER_NODE_ADDRESS` | `https://cn.example.com` | `https://us.example.com` | `https://eu.example.com` |
+| `CLUSTER_SECRET` | 同一个值 | 同一个值 | 同一个值 |
+| `CLUSTER_SEEDS` | 自身或空 | `https://cn.example.com` | `https://cn.example.com` |
+
+**关键约束：**
+
+- `CLUSTER_SECRET` 所有节点必须一致（首次启动时；后续可独立轮换）
+- `CLUSTER_NODE_ID` 必须唯一，与 MySQL `auto_increment_offset` 一致
+- `CLUSTER_NODE_ADDRESS` 必须是其他节点能访问的公网 URL（含 `https://`）
+- `CLUSTER_SEEDS` 仅首次发现时使用；加入后不再查询
+
+### Node 1 完整 .env
 
 ```bash
-# /opt/one-api-pro/node1/.env
 PORT=3000
-SYSTEM_NAME=One Api Pro Cluster
-
-# Database (independent MySQL)
 SQL_DSN=root:password@tcp(127.0.0.1:3306)/oneapi_node1?charset=utf8mb4&parseTime=True&loc=Local
-
-# Redis (independent)
 REDIS_CONN_STRING=redis://127.0.0.1:6379/0
 
-# Cluster
 CLUSTER_ENABLED=true
 CLUSTER_NODE_ID=1
 CLUSTER_NODE_NAME=node-cn
 CLUSTER_NODE_ADDRESS=https://cn.example.com
 CLUSTER_SECRET=your-strong-shared-secret-key-change-me
 
-# Seed nodes (only needed for first-time discovery)
-# First node: leave empty or use its own address
-CLUSTER_SEEDS=https://cn.example.com,https://us.example.com,https://eu.example.com
-
-# Cluster tuning (optional)
+# 可选调优
 CLUSTER_DISCOVERY_INTERVAL=30
 CLUSTER_DEAD_PING_INTERVAL=120
 CLUSTER_MAX_PING_FAILURES=3
@@ -133,86 +142,13 @@ CLUSTER_SYNC_LOGS=true
 CLUSTER_BATCH_SIZE=50
 ```
 
-### 节点 2 — US
+Node 2 / 3 类似，只改 ID / Name / Address / SQL_DSN。
 
-```bash
-# /opt/one-api-pro/node2/.env
-PORT=3001
-SYSTEM_NAME=One Api Pro Cluster
-
-SQL_DSN=root:password@tcp(127.0.0.1:3306)/oneapi_node2?charset=utf8mb4&parseTime=True&loc=Local
-
-REDIS_CONN_STRING=redis://127.0.0.1:6380/0
-
-CLUSTER_ENABLED=true
-CLUSTER_NODE_ID=2
-CLUSTER_NODE_NAME=node-us
-CLUSTER_NODE_ADDRESS=https://us.example.com
-CLUSTER_SECRET=your-strong-shared-secret-key-change-me   # must match node 1
-
-# One reachable node is enough
-CLUSTER_SEEDS=https://cn.example.com
-```
-
-### 节点 3 — Europe
-
-```bash
-# /opt/one-api-pro/node3/.env
-PORT=3002
-SYSTEM_NAME=One Api Pro Cluster
-
-SQL_DSN=root:password@tcp(127.0.0.1:3306)/oneapi_node3?charset=utf8mb4&parseTime=True&loc=Local
-
-REDIS_CONN_STRING=redis://127.0.0.1:6381/0
-
-CLUSTER_ENABLED=true
-CLUSTER_NODE_ID=3
-CLUSTER_NODE_NAME=node-eu
-CLUSTER_NODE_ADDRESS=https://eu.example.com
-CLUSTER_SECRET=your-strong-shared-secret-key-change-me   # must match all nodes
-
-CLUSTER_SEEDS=https://cn.example.com
-```
-
-### 配置速查
-
-| 变量| Node 1 | Node 2 | Node 3 | 备注|
-| --- | --- | --- | --- | --- |
-| `PORT` | 3000 | 3001 | 3002 | 同机时必须不同|
-| `SQL_DSN` | `...oneapi_node1` | `...oneapi_node2` | `...oneapi_node3` | 独立 MySQL|
-| `REDIS_CONN_STRING` | `:6379/0` | `:6380/0` | `:6381/0` | 独立 Redis|
-| `CLUSTER_NODE_ID` | 1 | 2 | 3 | = `auto_increment_offset` |
-| `CLUSTER_NODE_NAME` | `node-cn` | `node-us` | `node-eu` | 显示名|
-| `CLUSTER_NODE_ADDRESS` | `https://cn.example.com` | `https://us.example.com` | `https://eu.example.com` | 公网 URL |
-| `CLUSTER_SECRET` | same | same | same | 全集群一致|
-| `CLUSTER_SEEDS` | 自身或空| 任一可达节点| 任一可达节点| 仅用于首次发现|
-
-## 启动
-
-```bash
-# Node 1
-./one-api-pro --env /opt/one-api-pro/node1/.env --port 3000
-
-# Node 2
-./one-api-pro --env /opt/one-api-pro/node2/.env --port 3001
-
-# Node 3
-./one-api-pro --env /opt/one-api-pro/node3/.env --port 3002
-```
-
-启动顺序 / Order:
-
-1. 启动第一个节点；其 `CLUSTER_SEEDS` 留空或填自身；
-2. 等待 ~5–10s，直到日志打印 `cluster module initialized`；
-3. 启动其他节点，`CLUSTER_SEEDS` 指向任一存活节点；
-4. 新节点 ping seed，传递性发现其余节点；
-5. 全部上线后，在管理后台 **Settings → Node Management** 校验节点列表与心跳。
-
-## Nginx（ip_hash）/ Nginx with ip_hash
+## Nginx（ip_hash 入口）
 
 ```nginx
 upstream one_api_cluster {
-    ip_hash;  # 同一客户端固定到同一节点 / pin client to one node
+    ip_hash;  # 同一客户端固定到同一节点，套餐限流 + Redis 缓存命中一致
     server cn.example.com:3000;
     server us.example.com:3000;
     server eu.example.com:3000;
@@ -243,53 +179,47 @@ server {
 }
 ```
 
-> `ip_hash` 是关键 — 它把同一客户端绑定到同一节点，让套餐限流与 Redis 缓存命中一致。
+`ip_hash` 让同一客户端始终落到同一节点，缓存与限流不会因为切换节点而失效。
+
+## 滚动升级
+
+集群升级推荐 **滚动** 进行（一次只重启一个节点）：
+
+```
+1. 升级 Node A（保持 B/C 运行）
+2. 等 A 健康、A↔B、A↔C 心跳恢复
+3. 升级 Node B
+4. 升级 Node C
+```
+
+每步观察心跳和同步状态。离线期间事件由 Pusher 补推。
+
+## 灾备
+
+| 场景 | 操作 |
+|---|---|
+| 节点短暂离线 | 自动恢复（`status=1`），离线期间事件由 Pusher 补推 |
+| 节点长时间离线导致漂移 | `mysqldump` 从存活节点导入，重启 |
+| 整个机房故障 | 切换 DNS 到其他机房节点，重新 `mysqldump` 重建 |
+| Secret 泄露 | 后台 → 节点管理 → 编辑 secret；下次 ping 自动同步 |
 
 ## 监控
 
-```bash
-# 列出全部节点（含心跳
-curl -H "Authorization: Bearer YOUR_ROOT_TOKEN" \
-  https://cn.example.com/api/cluster_node/
-```
-
-或在管理后台 **Settings → Node Management** 查看：
+后台 → 集群设置 → 节点管理 看每行：
 
 - `status`：`1` 在线，`2` 失败/禁用
 - `last_heartbeat`：最近一次存活时间
 - `ping_failures`：自上次成功以来的失败计数
 
-## 升级
+或调 API：
 
-集群升级推荐 **滚动** 进行，避免多节点同时重启造成事件丢失：
-
-```text
-1. 升级 Node A（保持 B/C 运行）
-2. 等待 A 健康、A↔B、A↔C 心跳恢复
-3. 升级 Node B
-4. ...
+```bash
+curl -H "Authorization: Bearer <root-token>" \
+  https://cn.example.com/api/cluster_node/
 ```
 
-去中心化集群同步是 **实时推送**，离线期间的变更不会自动回填；节点恢复后建议用 `mysqldump` 同步一次以收敛漂移。
+## 相关
 
-## 灾备
-
-| 场景| 操作|
-| --- | --- |
-| 节点短暂离线 | 自动恢复（`status=1`），离线期间事件由 Pusher 补推 |
-| 节点长时间离线 → 数据漂移 | `mysqldump` 从存活节点导入，重启 |
-| 整个机房故障 | 切换 DNS 到其他机房节点，重新 `mysqldump` 重建 |
-| Secret 泄露 | 管理后台 `PUT /api/cluster_node/` 改 secret；下次 ping 自动同步 |
-
-## 注意事项
-
-- `CLUSTER_SECRET` 必须在所有节点保持一致（初始值一致即可；后续可独立轮换）；
-- `CLUSTER_NODE_ID` 必须唯一且与 MySQL `auto_increment_offset` 一致；
-- `CLUSTER_NODE_ADDRESS` 必须能被其他节点访问（含协议前缀，例如 `https://`）；
-- 失败节点 **不会** 被自动删除，仅标记 `status=2`；恢复后自动上线。
-- `CLUSTER_SEEDS` 仅用于首次发现；节点加入后不再被查询。
-- `logs` 表数据量大时可关闭 `CLUSTER_SYNC_LOGS`；
-- 离线期间的变更不会自动回填，恢复后建议 `mysqldump` 同步。
-
-下一步 / Next: [节点管理](/zh/decentralization/node-management) · [节点健康](/zh/decentralization/node-health)。
-
+- [Cluster 概览](./overview)
+- [节点管理](./node-management)
+- [节点健康](./node-health)
