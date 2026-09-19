@@ -66,5 +66,5 @@ Three tabs at the top of the page:
 
 - [Subscription (Token Plan)](../subscription/overview)
 - [Upgrade & Downgrade](../subscription/upgrade-downgrade)
-- [Top-up](../pricing/topup)
+- [Top-up](../pricing/topup-settings)
 - [Payment Settings (admin)](../pricing/payment-settings)
