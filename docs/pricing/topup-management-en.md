@@ -1,77 +1,77 @@
 ---
-title: Top-up Admin
-description: "Manual top-up for users and admin-side queries of top-up orders."
+title: Manual Top-up (Admin)
+description: How admins directly add quota to a user (bypassing payment channels).
 category: pricing
 order: 8
 ---
 
-# Top-up Admin
+# Manual Top-up (Admin)
 
-> Bypass payment channels and add `quota` directly to a user (`model.IncreaseUserQuota`) with a `LogTypeTopup` audit row.
+> Customer service compensation, event gifts, reconciliation fix — see here.
 
-Route: `/admin/orders` admin order center (the "Mark as paid" flow creates an `OrderTypeTopup` order and activates it immediately). The legacy endpoint `POST /api/user/topup` (`controller/user.go::AdminTopUp`) is kept for compatibility.
+## Two ways
 
-## Endpoints
+### Option 1: Through Order Management (recommended, has audit trail)
 
-| Endpoint | Method | Auth | Description |
-|---|---|---|---|
-| `/api/user/topup` | `POST` | Admin | Directly add quota (legacy path) |
-| `/api/topup/order` | `POST` | User | User self-service top-up (requires `topup.enabled=true`) |
-| `/api/order/:id` | `PUT` | Admin | Mark paid (covers admin pay methods, see Orders page) |
-| `/api/order/` | `GET` | Admin | Query top-up orders with `?type=2` |
+1. Admin → Orders → New Order (pick "Top-up")
+2. Offline bank transfer or admin manual confirmation
+3. Row → "Mark paid" → system creates top-up order + credits quota + writes audit log
 
-User-facing flows are documented in the user docs; this page covers the admin view only.
+**Pro**: every top-up has an `Order` record for reconciliation.
 
-## POST `/api/user/topup` (legacy)
+### Option 2: Direct quota credit (legacy)
 
-```json
-{ "user_id": 42, "quota": 100000, "remark": "support compensation" }
+Only for special cases: internal testing, urgent compensation, reconciliation fix.
+
+```
+POST /api/user/topup
+{
+  "user_id": 42,
+  "quota": 100000,
+  "remark": "Customer service compensation"
+}
 ```
 
-- Calls `model.IncreaseUserQuota(user_id, quota)` directly (Redis cache invalidated).
-- When `remark` is empty, defaults to `通过 API 充值 <LogQuota(quota)>`.
-- Writes a `LogTypeTopup` audit row via `model.RecordTopupLog`.
+`remark` is the audit note (required). Empty → auto-filled with `API topup <LogQuota(quota)>`.
 
-> No `Order` row is created; switch to the order-center path if you need an auditable order record.
+**Con**: no `Order` row; hard to audit afterwards.
 
-## Activate Top-up via Order Center (recommended)
+## Prefer option 1
 
-1. In `/admin/orders`, click **New order** (or use the user-side top-up form with `POST /api/order`) to create an `OrderTypeTopup=2` order.
-2. After the user pays offline (`pay_method=bank` / `offline`), click **Mark paid** in the order list.
-3. `PUT /api/order/:id { status:1, pay_method, pay_trade_no }` triggers `model.ActivateTopupByOrder`:
-   - Parses `plan_info` to recover the snapshotted `bonus_quota`.
-   - Calls `IncreaseUserQuota` to add to the balance.
-   - Persists `status`, `pay_status`, `pay_time`, `pay_trade_no`.
+Default to Order Management: every top-up is traceable to a source (bank flow / support ticket).
 
-`ActivateTopupByOrder` is idempotent — orders already at `status=1` are returned with `nil` immediately.
+## How to query top-up orders
 
-## Top-up Order Query
+Admin → Orders → Type dropdown = "Top-up":
 
-`GET /api/order/?type=2` (or pick `Type=Topup` in the admin filter dropdown) to see only top-up orders.
-Columns are shared with plan orders: `order_no` / `user_id` / `plan_id` (always `0` for top-ups) / `amount` / `pay_method` / `status` / `source`.
+- `order_no`: `TP` prefix
+- `user_id`: target user
+- `amount`: ¥ paid
+- `plan_info` is JSON containing `bonus_quota` (actual credited)
+- `pay_method`: wechat / alipay / bank / offline / free
+- `status`: unpaid / paid / canceled / refunded
+- `pay_time`: payment completion time
 
-`plan_info` is JSON with this shape:
+## How to mark paid
 
-```json
-{ "amount": 100.00, "preset_amount": 100.00, "bonus_quota": 100000, "exchange_rate": 1000 }
-```
+See [Order Management](./order-management).
 
-`plan_info.bonus_quota` is the authoritative granted amount — prefer it over `amount` to be safe against later exchange-rate changes.
+## FAQ
 
-## Frontend Guide
+- **User says they paid but balance didn't arrive**: check order detail's `pay_time` / `pay_trade_no`; mark paid manually
+- **Added the same quota twice**: system is idempotent — already-paid orders won't be re-activated
+- **Refunded but balance still there**: correct — system doesn't auto-reverse. Manually adjust in [User Management](../en/user/user-management)
 
-- Manual quota grant (legacy): some admin user rows have a "+ quota" action that submits `{ user_id, quota, remark }`.
-- Mark paid: pending orders in the order center get a "Mark paid" button at the end of the row.
-- Refund: paid orders get a "Refund" button (status flip only, no quota claw-back).
-- Delete: Root can hard-delete non-paid orders.
+## Related
 
-## Implementation Pointers
+- [Top-up (concept)](./topup)
+- [Top-up Settings](./topup-settings)
+- [Order Management](./order-management)
+- [User Management (admin)](/en/user/user-management)
 
-| Concern | Location |
-|---|---|
-| Legacy manual grant | `controller/user.go::AdminTopUp` |
-| User self-service order | `controller/topup.go::CreateTopupOrder` |
-| Order-center mark paid | `controller/order.go::MarkOrderPaid` |
-| Idempotent activation | `model/topup.go::ActivateTopupByOrder` |
-| Order creation | `model/topup.go::CreateTopupOrder` |
-| Routes | `router/api.go` |
+## Related API
+
+- `POST /api/user/topup` — direct quota credit (legacy, retained)
+- `POST /api/order` — create top-up order (recommended)
+- `PUT /api/order/:id` — mark paid (Admin)
+- `GET /api/order/?type=2` — list top-up orders
