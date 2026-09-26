@@ -13,6 +13,8 @@
   👉 <strong>查看在线 Demo</strong>：<a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
   &nbsp;·&nbsp;
   👉 <strong>演示账号</strong>：<code>root</code> / <code>123456</code>
+  &nbsp;·&nbsp;
+  👉 <strong>开发与使用文档</strong>：<a href="http://doc.one-api.pro/">http://doc.one-api.pro/</a>
   👉 <strong>QQ 交流群：1102851586</strong>
 </p>
 
