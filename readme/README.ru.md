@@ -13,6 +13,8 @@
   👉 <strong>Посмотреть онлайн-демо</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
   &nbsp;·&nbsp;
   👉 <strong>Демо-аккаунт</strong>: <code>root</code> / <code>123456</code>
+  &nbsp;·&nbsp;
+  👉 <strong>Документация по разработке и использованию</strong>: <a href="http://doc.one-api.pro/">http://doc.one-api.pro/</a>
 </p>
 
 <p align="center">
