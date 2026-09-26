@@ -13,6 +13,8 @@
   👉 <strong>온라인 Demo 보기</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
   &nbsp;·&nbsp;
   👉 <strong>Demo 계정</strong>: <code>root</code> / <code>123456</code>
+  &nbsp;·&nbsp;
+  👉 <strong>개발 및 사용 문서</strong>: <a href="http://doc.one-api.pro/">http://doc.one-api.pro/</a>
 </p>
 
 <p align="center">
