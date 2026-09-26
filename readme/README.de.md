@@ -13,6 +13,8 @@
   👉 <strong>Live-Demo ansehen</strong>: <a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
   &nbsp;·&nbsp;
   👉 <strong>Demo-Konto</strong>: <code>root</code> / <code>123456</code>
+  &nbsp;·&nbsp;
+  👉 <strong>Entwicklungs- und Nutzungsdokumentation</strong>: <a href="http://doc.one-api.pro/">http://doc.one-api.pro/</a>
 </p>
 
 <p align="center">
