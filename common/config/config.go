@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var SystemName = "One Api Pro"
+var SystemName = "One-API-PRO"
 var ServerAddress = "http://localhost:3000"
 var Footer = ""
 var Logo = ""
