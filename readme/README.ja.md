@@ -13,6 +13,8 @@
   👉 <strong>オンライン Demo を見る</strong>：<a href="http://demo.one-api.pro">http://demo.one-api.pro</a>
   &nbsp;·&nbsp;
   👉 <strong>デモアカウント</strong>：<code>root</code> / <code>123456</code>
+  &nbsp;·&nbsp;
+  👉 <strong>開発・利用ドキュメント</strong>：<a href="http://doc.one-api.pro/">http://doc.one-api.pro/</a>
 </p>
 
 <p align="center">
