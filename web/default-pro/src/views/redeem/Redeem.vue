@@ -39,12 +39,12 @@
       <a-spin :loading="quotaLoading" style="width: 100%;">
         <div class="quota-info-row">
           <div class="quota-info-label">{{ $t('redeemPage.currentQuota') }}</div>
-          <div :class="['quota-info-value', 'quota-info-value-current', { flash: quotaFlash }]" :key="quotaFlashKey">{{ formatNumber(quota) }}</div>
+          <div :class="['quota-info-value', 'quota-info-value-current', { flash: quotaFlash }]" :key="quotaFlashKey">{{ fmtQuota(quota) }}</div>
         </div>
         <div class="quota-info-row" v-if="quotaUsed > 0 || quotaTotal > 0">
           <div class="quota-info-label">{{ $t('redeemPage.usage') }}</div>
           <div class="quota-info-value">
-            {{ formatNumber(quotaUsed) }} <span class="quota-divider">/</span> {{ formatNumber(quotaTotal) }}
+            {{ fmtQuota(quotaUsed) }} <span class="quota-divider">/</span> {{ fmtQuota(quotaTotal) }}
           </div>
         </div>
       </a-spin>
@@ -56,8 +56,11 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
+import { useStatusStore } from '@/stores/status'
+import { formatQuota } from '@/utils/quota'
 
 const { t } = useI18n()
+const statusStore = useStatusStore()
 
 const code = ref('')
 const loading = ref(false)
@@ -71,11 +74,10 @@ const quotaTotal = ref(0)
 const quotaFlash = ref(false)
 const quotaFlashKey = ref(0)
 
-const numberFormatter = new Intl.NumberFormat('en-US')
-
-function formatNumber(n) {
-  if (n == null || isNaN(n)) return '0'
-  return numberFormatter.format(Math.floor(Number(n)))
+// fmtQuota 将额度按系统基准折算为元展示，保证与充值/消费口径一致。
+function fmtQuota(n) {
+  if (n == null || isNaN(n)) return formatQuota(0, statusStore.status?.quota_per_unit)
+  return formatQuota(Number(n), statusStore.status?.quota_per_unit)
 }
 
 function validateCode(c) {
@@ -121,7 +123,7 @@ async function handleRedeem() {
     const { data } = await api.post('/api/user/topup', { key: code.value.trim() })
     if (data?.success) {
       const amount = data.data ?? 0
-      success.value = t('redeemPage.successInline', { amount: formatNumber(amount) })
+      success.value = t('redeemPage.successInline', { amount: fmtQuota(amount) })
       code.value = ''
       // Re-fetch quota so the "当前额度/已使用" panel reflects the
       // new balance immediately and the number visibly increases.
