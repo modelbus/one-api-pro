@@ -50,7 +50,7 @@ order: 17
 ```json
 {
   "name": "Redemption name",
-  "quota": 500000,
+  "quota": 1000000,
   "count": 10
 }
 ```
