@@ -5,10 +5,10 @@
             <h3>{{ $t('settingPage.operation.quotaSection') }}</h3>
             <a-form :model="form" layout="vertical" class="setting-form">
               <a-row :gutter="[24, 8]">
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForNewUser')"><a-input-number v-model="form.QuotaForNewUser" :precision="2" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.preConsumedQuota')"><a-input-number v-model="form.PreConsumedQuota" :precision="2" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInviter')"><a-input-number v-model="form.QuotaForInviter" :precision="2" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInvitee')"><a-input-number v-model="form.QuotaForInvitee" :precision="2" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForNewUser')"><a-input-number v-model="form.QuotaForNewUser" :precision="yuanInputPrecision(form.QuotaForNewUser, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.preConsumedQuota')"><a-input-number v-model="form.PreConsumedQuota" :precision="yuanInputPrecision(form.PreConsumedQuota, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInviter')"><a-input-number v-model="form.QuotaForInviter" :precision="yuanInputPrecision(form.QuotaForInviter, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInvitee')"><a-input-number v-model="form.QuotaForInvitee" :precision="yuanInputPrecision(form.QuotaForInvitee, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
               </a-row>
               <a-form-item><a-button type="primary" @click="saveSection(['QuotaForNewUser','PreConsumedQuota','QuotaForInviter','QuotaForInvitee'])">{{ $t('settingPage.operation.saveQuota') }}</a-button></a-form-item>
             </a-form>
@@ -20,7 +20,7 @@
             <a-form :model="form" layout="vertical" class="setting-form">
               <a-row :gutter="[24, 8]">
                 <a-col :span="6"><a-form-item :label="$t('settingPage.operation.channelDisableThreshold')"><a-input-number v-model="form.ChannelDisableThreshold" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaRemindThreshold')"><a-input-number v-model="form.QuotaRemindThreshold" :precision="2" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaRemindThreshold')"><a-input-number v-model="form.QuotaRemindThreshold" :precision="yuanInputPrecision(form.QuotaRemindThreshold, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
               </a-row>
               <a-row :gutter="[32, 8]">
                 <a-col :span="6"><a-form-item :label="$t('settingPage.operation.autoDisableChannel')"><a-switch v-model="form.AutomaticDisableChannelEnabled" @change="saveSwitch('AutomaticDisableChannelEnabled')" /></a-form-item></a-col>
@@ -116,7 +116,7 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import settingApi from '@/api/setting'
-import { resolveQuotaPerUnit, quotaToYuan, yuanToQuota } from '@/utils/quota'
+import { resolveQuotaPerUnit, quotaToYuanExact, yuanInputPrecision, yuanToQuota } from '@/utils/quota'
 import { useStatusStore } from '@/stores/status'
 
 const { t } = useI18n()
@@ -172,7 +172,7 @@ async function loadOps() {
       const items = Array.isArray(data.data) ? data.data : Object.entries(data.data).map(([k,v])=>({key:k,value:String(v)}))
       items.forEach(i => {
         if (!opKeys.includes(i.key)) return
-        if (yuanQuotaKeys.includes(i.key)) form[i.key] = Number(quotaToYuan(Number(i.value) || 0, quotaPerUnit.value).toFixed(2))
+        if (yuanQuotaKeys.includes(i.key)) form[i.key] = quotaToYuanExact(Number(i.value) || 0, quotaPerUnit.value)
         else if (i.value === 'true') form[i.key] = true
         else if (i.value === 'false') form[i.key] = false
         else if (numberKeys.includes(i.key)) form[i.key] = Number(i.value) || 0
