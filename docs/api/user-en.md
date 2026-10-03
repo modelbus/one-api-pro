@@ -160,7 +160,7 @@ order: 15
 ```json
 {
   "user_id": 2,
-  "quota": 500000,
+  "quota": 1000000,
   "remark": "Topup remark"
 }
 ```
