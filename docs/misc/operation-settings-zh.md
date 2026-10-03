@@ -26,10 +26,10 @@ order: 15
 
 | 分区 | 字段 |
 |---|---|
-| 额度策略 (Quota) | `QuotaForNewUser` / `PreConsumedQuota` / `QuotaForInviter` / `QuotaForInvitee` |
+| 额度策略 (Quota) | `QuotaForNewUser` / `PreConsumedQuota` / `QuotaForInviter` / `QuotaForInvitee`（UI 以元输入） |
 | 监控 (Monitor) | `ChannelDisableThreshold` / `QuotaRemindThreshold` + `AutomaticDisableChannelEnabled` / `AutomaticEnableChannelEnabled` / `LogConsumeEnabled` |
 | 日志清理 | 日期选择器 + 「清理日志」按钮（调 `DELETE /api/log/?target_timestamp=...`） |
-| 通用 (General) | `TopUpLink` / `ChatLink` / `QuotaPerUnit` / `RetryTimes` + `DisplayInCurrencyEnabled` / `DisplayTokenStatEnabled` / `ApproximateTokenEnabled` |
+| 通用 (General) | `TopUpLink` / `ChatLink` / `RetryTimes` + `DisplayInCurrencyEnabled` / `DisplayTokenStatEnabled` / `ApproximateTokenEnabled` |
 | 渠道路由 | `ChannelDefaultCooldownSeconds` / `ChannelMaxCooldownSeconds` + `ChannelConcurrencyEnabled` / `ChannelStickySessionEnabled` |
 | 错误处理策略 | `ErrorNext` JSON：`{ passthrough, retry, disable, cooldown }` |
 | 套餐 (Plan) | `plan.upgrade_mode`（详见 [plan-setting](plan-setting)） |
@@ -38,13 +38,13 @@ order: 15
 
 | 字段 | 默认 | 用途 |
 |---|---|---|
-| `QuotaForNewUser` | env 启动值 | 注册赠送额度（quota） |
+| `QuotaForNewUser` | env 启动值 | 注册赠送额度（UI 以元输入，¥1 = 1,000,000 quota） |
 | `PreConsumedQuota` | 0 | 每次请求前预扣的 quota（请求失败时回退） |
 | `QuotaForInviter` | 0 | 邀请人单次奖励 |
 | `QuotaForInvitee` | 0 | 被邀请人注册奖励 |
 | `ChannelDisableThreshold` | 0 | 单渠道连续失败 N 次自动禁用（需 `AutomaticDisableChannelEnabled=true`） |
-| `QuotaRemindThreshold` | 0 | 余额低于此值时弹出提醒 |
-| `QuotaPerUnit` | env 启动值 | UI 货币换算（每 `QuotaPerUnit` quota = 1 元） |
+| `QuotaRemindThreshold` | 0 | 余额低于此值时弹出提醒（UI 以元输入） |
+| `QuotaPerUnit` | — | **系统常量** `1,000,000`：1 元 = 1,000,000 quota；仅参与计算、不入库、不可修改 |
 | `RetryTimes` | env 启动值 | 渠道级重试次数 |
 | `ChannelDefaultCooldownSeconds` / `ChannelMaxCooldownSeconds` | env 启动值 | 渠道冷却区间 |
 | `ErrorNext` | `{passthrough:true,retry:true,disable:true,cooldown:true}` | relay 错误链处理顺序（详见下） |
