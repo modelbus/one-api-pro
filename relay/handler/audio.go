@@ -203,7 +203,14 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		if err != nil {
 			return openai.ErrorWrapper(err, "get_text_from_body_err", http.StatusInternalServerError)
 		}
-		quota = int64(float64(openai.CountTokenText(text, audioModel)) * priceResult.InputPrice / billingratio.Million * config.QuotaPerUnit * groupDiscount)
+		// per_request：费用为每次固定价，与转写文本长度无关，结算时
+		// 必须沿用按次价，否则会又变回按 token 扣费。
+		// per_request: flat per-call price, independent of transcript length.
+		if priceResult.BillingType == model.BillingTypePerRequest {
+			quota = billingratio.CalculatePerRequestQuota(priceResult.PerRequestPrice, 1, 1, groupDiscount)
+		} else {
+			quota = int64(float64(openai.CountTokenText(text, audioModel)) * priceResult.InputPrice / billingratio.Million * config.QuotaPerUnit * groupDiscount)
+		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	}
 	if resp.StatusCode != http.StatusOK {
