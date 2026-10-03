@@ -9,13 +9,6 @@ import (
 
 func TestCalculateTokenQuota(t *testing.T) {
 	Convey("CalculateTokenQuota", t, func() {
-		originalQuotaPerUnit := config.QuotaPerUnit
-		config.QuotaPerUnit = 500000
-
-		defer func() {
-			config.QuotaPerUnit = originalQuotaPerUnit
-		}()
-
 		Convey("basic token billing", func() {
 			quota := CalculateTokenQuota(2.5, 10, 1.25, 1000, 500, 0, 1.0)
 			So(quota, ShouldBeGreaterThan, 0)
@@ -34,7 +27,7 @@ func TestCalculateTokenQuota(t *testing.T) {
 
 		Convey("cached tokens at lower price", func() {
 			quotaAllCached := CalculateTokenQuota(2.5, 10, 1.25, 1000, 0, 1000, 1.0)
-			expected := int64(1.25 * 1000 / 1_000_000 * 500000)
+			expected := int64(1.25 * 1000 / 1_000_000 * config.QuotaPerUnit)
 			So(quotaAllCached, ShouldEqual, expected)
 		})
 
@@ -60,7 +53,7 @@ func TestCalculateTokenQuota(t *testing.T) {
 			outputPrice := 10.0
 			cachedPrice := 1.25
 			quota := CalculateTokenQuota(inputPrice, outputPrice, cachedPrice, 1000000, 1000000, 0, 1.0)
-			expected := int64((2.5*1000000+10.0*1000000)*1.0/1_000_000*500000)
+			expected := int64((2.5*1000000 + 10.0*1000000) * 1.0 / 1_000_000 * config.QuotaPerUnit)
 			So(quota, ShouldEqual, expected)
 		})
 
@@ -70,7 +63,7 @@ func TestCalculateTokenQuota(t *testing.T) {
 			cachedPrice := 1.25
 			quota := CalculateTokenQuota(inputPrice, outputPrice, cachedPrice, 1000000, 500000, 500000, 1.0)
 			inputTokens := 1000000 - 500000
-			expected := int64((2.5*float64(inputTokens)+10.0*500000+1.25*500000)*1.0/1_000_000*500000)
+			expected := int64((2.5*float64(inputTokens) + 10.0*500000 + 1.25*500000) * 1.0 / 1_000_000 * config.QuotaPerUnit)
 			So(quota, ShouldEqual, expected)
 		})
 	})
@@ -78,13 +71,6 @@ func TestCalculateTokenQuota(t *testing.T) {
 
 func TestCalculatePerRequestQuota(t *testing.T) {
 	Convey("CalculatePerRequestQuota", t, func() {
-		originalQuotaPerUnit := config.QuotaPerUnit
-		config.QuotaPerUnit = 500000
-
-		defer func() {
-			config.QuotaPerUnit = originalQuotaPerUnit
-		}()
-
 		Convey("basic per request billing", func() {
 			quota := CalculatePerRequestQuota(0.04, 1, 1, 1.0)
 			So(quota, ShouldBeGreaterThan, 0)
@@ -122,7 +108,7 @@ func TestCalculatePerRequestQuota(t *testing.T) {
 
 		Convey("dall-e-3 pricing example", func() {
 			quota := CalculatePerRequestQuota(0.04, 1, 1, 1.0)
-			expected := int64(0.04 * 1 * 1 * 1.0 * 500000)
+			expected := int64(0.04 * 1 * 1 * 1.0 * config.QuotaPerUnit)
 			So(quota, ShouldEqual, expected)
 		})
 
@@ -135,15 +121,8 @@ func TestCalculatePerRequestQuota(t *testing.T) {
 
 func TestQuotaToUnit(t *testing.T) {
 	Convey("QuotaToUnit", t, func() {
-		originalQuotaPerUnit := config.QuotaPerUnit
-		config.QuotaPerUnit = 500000
-
-		defer func() {
-			config.QuotaPerUnit = originalQuotaPerUnit
-		}()
-
 		Convey("converts quota to unit", func() {
-			unit := QuotaToUnit(500000)
+			unit := QuotaToUnit(int64(config.QuotaPerUnit))
 			So(unit, ShouldEqual, 1.0)
 		})
 
