@@ -7,7 +7,7 @@
 
     Props:
       modelValue: Boolean  - v-model 控制显示
-      settings: Object      - { enabled, allow_custom, exchange_rate, presets: [{amount, bonus_quota}] }
+      settings: Object      - { enabled, allow_custom, presets: [{amount, bonus_quota}] }
       title: String         - 弹窗标题（默认"在线充值"）
     Emits:
       update:modelValue     - v-model 关闭
@@ -39,7 +39,7 @@
             @click="selectPreset(idx)"
           >
             <span class="preset-amount">¥{{ p.amount }}</span>
-            <span class="preset-bonus">{{ $t('topupModalPage.bonus', { n: formatYuan(quotaToYuan(p.bonus_quota, quotaPerUnit)) }) }}</span>
+            <span class="preset-bonus">{{ $t('topupModalPage.credit', { n: formatYuan(quotaToYuan(p.bonus_quota, quotaPerUnit)) }) }}</span>
           </button>
           <!-- 最后一个固定为「自定义金额」chip（前提：allow_custom=true） -->
           <button
@@ -67,7 +67,7 @@
           style="width: 100%"
           @change="onCustomChange"
         />
-        <div class="topup-hint">{{ $t('topupModalPage.willReceive', { n: formatYuan(quotaToYuan(calcCustomBonus, quotaPerUnit)) }) }}</div>
+        <div class="topup-hint">{{ $t('topupModalPage.willReceive', { n: formatYuan(quotaToYuan(customQuota, quotaPerUnit)) }) }}</div>
       </div>
 
       <!-- 支付方式 -->
@@ -125,8 +125,8 @@ import { Message } from '@arco-design/web-vue'
 import { IconWechatpay, IconAlipayCircle, IconSafe } from '@arco-design/web-vue/es/icon'
 import topupApi from '@/api/topup'
 import paymentApi from '@/api/payment'
-import { formatAmount, calcCustomBonus as calcCustomBonusFn } from '@/utils/topup'
-import { formatYuan, quotaToYuan, resolveQuotaPerUnit } from '@/utils/quota'
+import { formatAmount } from '@/utils/topup'
+import { formatYuan, quotaToYuan, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
 import { useStatusStore } from '@/stores/status'
 
 const props = defineProps({
@@ -187,7 +187,8 @@ const finalPayAmount = computed(() => {
   return 0
 })
 
-const calcCustomBonus = computed(() => calcCustomBonusFn(customAmount.value, props.settings?.exchange_rate))
+// 自定义金额恒 1:1：到账额度 = 金额（元）× quotaPerUnit。
+const customQuota = computed(() => yuanToQuota(customAmount.value, quotaPerUnit.value))
 
 // 方法
 function close() {
