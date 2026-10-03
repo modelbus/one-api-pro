@@ -303,7 +303,7 @@
           <a-input-number
             :model-value="editQuotaYuan"
             :min="0"
-            :precision="2"
+            :precision="yuanInputPrecision(editQuotaYuan, quotaPerUnit)"
             :step="1"
             :placeholder="$t('userPage.quotaPlaceholder')"
             style="width: 100%"
@@ -342,7 +342,7 @@ import { IconPlus, IconUserGroup, IconDown, IconDelete, IconStop, IconExclamatio
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
-import { formatQuota as formatQuotaYuan, quotaToYuan, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
+import { formatQuota as formatQuotaYuan, quotaToYuanExact, yuanInputPrecision, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
 import api from '@/api'
 
 const authStore = useAuthStore()
@@ -469,7 +469,9 @@ const editForm = reactive({
 })
 
 // 管理端额度统一以元输入：展示时 quota → 元，提交时元 → quota。
-const editQuotaYuan = computed(() => Number(quotaToYuan(editForm.quota, quotaPerUnit.value).toFixed(2)))
+// 版本: v0.0.24
+// 日期: 2026-10-04
+const editQuotaYuan = computed(() => quotaToYuanExact(editForm.quota, quotaPerUnit.value))
 
 // fmtQuota 额度列按系统基准折算为元展示。
 function fmtQuota(val) {
