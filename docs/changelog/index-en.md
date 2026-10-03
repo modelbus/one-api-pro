@@ -9,6 +9,7 @@ order: 1
 
 Sorted by version, newest first. Click into a release for details and upgrade notes.
 
+- [v0.0.23](v0.0.23.md) — Unified top-up base unit (¥1 = ¥1) + CNY rendering
 - [v0.0.21](v0.0.21.md) — Full zh/en internationalization + quota cache consistency fixes + tiktoken offline embedding
 - [v0.0.20](v0.0.20.md) — Admin UI refinements + pricing id-zeroing safeguards
 - [v0.0.18](v0.0.18.md) — SSRF fix for vision API `image_url`
