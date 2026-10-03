@@ -24,7 +24,9 @@ order: 9
 - Amount resolution (`model.ResolveTopupAmount`):
   - `preset_amount > 0`: hit a preset; locate the preset whose `amount` matches and use its `bonus_quota`.
   - Otherwise use the custom `amount`, which requires `topup.allow_custom == true` and yields `bonus_quota = amount × exchange_rate`.
-- Default exchange rate `1:1` (1 CNY = 1 quota), only applied to the custom amount path.
+- The exchange rate means "1 CNY = X quota", anchored to the system `QuotaPerUnit` (default 500000).
+  A value below `QuotaPerUnit` is rejected; legacy sub-base values are normalized on read.
+  It only applies to the custom-amount path.
 - Activation goes through `model.ActivateTopupByOrder` (triggered by the async callback): calls `IncreaseUserQuota(bonus_quota)` and sets the order to `status=1`.
 
 
@@ -152,7 +154,7 @@ order: 9
 |-------|------|-------------|
 | enabled | bool | `topup.enabled`, master switch |
 | allow_custom | bool | `topup.allow_custom`, allow user-supplied custom amounts |
-| exchange_rate | int64 | `topup.exchange_rate`, CNY → quota ratio for custom amounts, default 1 |
+| exchange_rate | int64 | `topup.exchange_rate`, CNY → quota ratio for custom amounts, default `QuotaPerUnit` (e.g. 500000) |
 | presets | array | `topup.presets` (decoded from JSON). Each entry is a `TopupPreset`. |
 
 **`TopupPreset`:**
@@ -190,7 +192,7 @@ order: 9
 |-------|------|----------|-------------|
 | enabled | bool | no | Master switch, default false |
 | allow_custom | bool | no | Allow custom amounts, default false |
-| exchange_rate | int64 | no | CNY → quota ratio for custom amounts, must be > 0 |
+| exchange_rate | int64 | no | CNY → quota ratio for custom amounts, must be >= `QuotaPerUnit` |
 | presets | array | no | Preset list; the whole list replaces the previous one |
 
 **Validation rules** (`model.SaveTopupSettings`):
@@ -214,4 +216,4 @@ order: 9
 | Item N has `amount <= 0` | `第 N 项金额必须大于 0` |
 | Item N has `bonus_quota < 0` | `第 N 项额度不能为负数` |
 | Duplicate preset amount | `快捷金额重复：X.XX 元已存在` |
-| `exchange_rate <= 0` | `兑换比例必须大于 0` |
+| `exchange_rate < QuotaPerUnit` | `兑换比例不能低于 500000（1 元 = 500000 额度）` |
