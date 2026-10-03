@@ -1,7 +1,7 @@
 // settingPageB.js 设置页（套餐/运营/定价/充值/支付）i18n
 // Settings pages (plan/operation/pricing/topup/payment) i18n.
-// 版本: v0.0.21
-// 日期: 2026-09-17
+// 版本: v0.0.22
+// 日期: 2026-10-03
 // 作者: opencode
 export default {
   zh: {
@@ -131,8 +131,8 @@ export default {
         hint: '开启后，用户可在控制台通过微信/支付宝在线支付充值余额。',
         enabled: '启用在线充值',
         allowCustom: '允许用户自定义金额',
-        exchangeRate: '自定义金额 1 元 = (quota)',
-        exchangeRatePlaceholder: '默认 1（即 1:1 换算）',
+        exchangeRate: '自定义金额换算比例（1 元 = X 额度）',
+        exchangeRatePlaceholder: '默认与系统额度基准一致（如 500000）',
         presets: '快捷金额',
         add: '添加',
         delete: '删除',
@@ -308,8 +308,8 @@ export default {
         hint: 'When enabled, users can top up their balance online via WeChat/Alipay in the console.',
         enabled: 'Enable Online Top-up',
         allowCustom: 'Allow Custom Amount',
-        exchangeRate: 'Custom Amount 1 CNY = (quota)',
-        exchangeRatePlaceholder: 'Default 1 (1:1 conversion)',
+        exchangeRate: 'Custom Amount Rate (1 CNY = X quota)',
+        exchangeRatePlaceholder: 'Defaults to the system quota base (e.g. 500000)',
         presets: 'Quick Amounts',
         add: 'Add',
         delete: 'Delete',
