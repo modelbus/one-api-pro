@@ -134,12 +134,12 @@
               <div class="quota-cell">
                 <a-tooltip :content="$t('userPage.remainingQuota')">
                   <span :class="u.unlimited_quota ? 'quota-unlimited' : 'quota-value'">
-                    {{ u.unlimited_quota ? $t('userPage.unlimited') : formatNumber(u.quota) }}
+                    {{ u.unlimited_quota ? $t('userPage.unlimited') : fmtQuota(u.quota) }}
                   </span>
                 </a-tooltip>
                 <div class="quota-meta">
                   <a-tooltip :content="$t('userPage.usedQuota')">
-                    <span class="quota-used">{{ $t('userPage.used', { value: formatNumber(u.used_quota) }) }}</span>
+                    <span class="quota-used">{{ $t('userPage.used', { value: fmtQuota(u.used_quota) }) }}</span>
                   </a-tooltip>
                   <a-tooltip v-if="u.request_count !== undefined" :content="$t('userPage.requestCount')">
                     <span class="quota-used">{{ $t('userPage.requestTimes', { n: formatNumber(u.request_count) }) }}</span>
@@ -301,11 +301,13 @@
         </a-form-item>
         <a-form-item field="quota" :label="$t('userPage.quota')">
           <a-input-number
-            v-model="editForm.quota"
+            :model-value="editQuotaYuan"
             :min="0"
-            :max="99999999999"
+            :precision="2"
+            :step="1"
             :placeholder="$t('userPage.quotaPlaceholder')"
             style="width: 100%"
+            @change="onEditQuotaYuanChange"
           />
         </a-form-item>
       </a-form>
@@ -339,10 +341,16 @@ import { useI18n } from 'vue-i18n'
 import { IconPlus, IconUserGroup, IconDown, IconDelete, IconStop, IconExclamationCircle } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
+import { useStatusStore } from '@/stores/status'
+import { formatQuota as formatQuotaYuan, quotaToYuan, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
 import api from '@/api'
 
 const authStore = useAuthStore()
+const statusStore = useStatusStore()
 const { t } = useI18n()
+
+// quotaPerUnit：1 元 = quota_per_unit 额度（来自 /api/status 只读常量）。
+const quotaPerUnit = computed(() => resolveQuotaPerUnit(statusStore.status?.quota_per_unit))
 
 const ITEMS_PER_PAGE = 10
 
@@ -459,6 +467,20 @@ const editForm = reactive({
   group: '',
   quota: 0,
 })
+
+// 管理端额度统一以元输入：展示时 quota → 元，提交时元 → quota。
+const editQuotaYuan = computed(() => Number(quotaToYuan(editForm.quota, quotaPerUnit.value).toFixed(2)))
+
+// fmtQuota 额度列按系统基准折算为元展示。
+function fmtQuota(val) {
+  if (val == null || val === '') return '-'
+  return formatQuotaYuan(Number(val), quotaPerUnit.value)
+}
+
+// onEditQuotaYuanChange 将管理端输入的元换算回 quota 存入表单。
+function onEditQuotaYuanChange(v) {
+  editForm.quota = yuanToQuota(v, quotaPerUnit.value)
+}
 
 onMounted(async () => {
   await Promise.all([fetchUsers(), fetchGroups(), fetchSubscriptions()])
