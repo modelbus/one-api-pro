@@ -23,7 +23,9 @@ order: 9
 - 金额解析规则（见 `model.ResolveTopupAmount`）：
   - `preset_amount > 0`：命中预设，从配置中找 `amount` 相等的 preset，使用其 `bonus_quota`。
   - 否则使用 `amount` 自定义金额，需 `topup.allow_custom == true`，`bonus_quota = amount × exchange_rate`。
-- 兑换比例默认 `1:1`（1 元 = 1 quota），仅作用于自定义金额。
+- 兑换比例语义为「1 元 = X quota」，基准值为系统 `QuotaPerUnit`（默认 500000）；
+  `exchange_rate < QuotaPerUnit` 会被拒绝，低于基准值的存量配置在读取时自动归一。
+  仅作用于自定义金额。
 - 订单激活通过 `model.ActivateTopupByOrder`（异步回调时触发）：给用户 `IncreaseUserQuota(bonus_quota)` 并把订单置为 `status=1`。
 
 ## 1. 创建充值订单
@@ -99,7 +101,7 @@ order: 9
 |------|------|------|
 | enabled | bool | `topup.enabled`，总开关 |
 | allow_custom | bool | `topup.allow_custom`，是否允许用户输入自定义金额 |
-| exchange_rate | int64 | `topup.exchange_rate`，自定义金额 1 元 = X quota，默认 1 |
+| exchange_rate | int64 | `topup.exchange_rate`，自定义金额 1 元 = X quota，默认 `QuotaPerUnit`（如 500000） |
 | presets | array | `topup.presets`（JSON 反序列化结果），每项 `TopupPreset` |
 
 | 字段 | 类型 | 说明 |
@@ -123,7 +125,7 @@ order: 9
 |------|------|------|------|
 | enabled | bool | 否 | 总开关，默认 false |
 | allow_custom | bool | 否 | 是否允许自定义金额，默认 false |
-| exchange_rate | int64 | 否 | 自定义金额 1 元 = X quota，必须大于 0 |
+| exchange_rate | int64 | 否 | 自定义金额 1 元 = X quota，必须 >= `QuotaPerUnit` |
 | presets | array | 否 | 快捷金额列表，会整体覆盖原有列表 |
 
 **校验规则**（`model.SaveTopupSettings`）：
@@ -131,7 +133,7 @@ order: 9
 - `presets[i].amount > 0`
 - `presets[i].bonus_quota >= 0`
 - `presets` 内 `amount` 不可重复
-- `exchange_rate > 0`
+- `exchange_rate >= QuotaPerUnit`（低于基准值的值会被拒绝）
 
 **返回：**
 
@@ -147,4 +149,5 @@ order: 9
 | 第 N 项金额 <= 0 | `第 N 项金额必须大于 0` |
 | 第 N 项额度 < 0 | `第 N 项额度不能为负数` |
 | 快捷金额重复 X 元 | `快捷金额重复：X.XX 元已存在` |
+| 兑换比例低于基准值 | `兑换比例不能低于 500000（1 元 = 500000 额度）` |
 | 兑换比例 <= 0 | `兑换比例必须大于 0` |
