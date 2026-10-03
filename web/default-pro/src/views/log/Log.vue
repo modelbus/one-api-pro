@@ -22,11 +22,11 @@
     <div v-if="showStat" class="tip-bar">
       <span class="tip-dot"></span>
       <span class="tip-text">
-        {{ $t('logPage.totalQuota') }} <strong>{{ stat.quota || 0 }}</strong>
+        {{ $t('logPage.totalQuota') }} <strong>{{ formatQuota(stat.quota) }}</strong>
         <span class="meta-sep">·</span>
-        {{ $t('logPage.normalQuota') }} {{ stat.normal_quota || 0 }}
+        {{ $t('logPage.normalQuota') }} {{ formatQuota(stat.normal_quota) }}
         <span class="meta-sep">·</span>
-        {{ $t('logPage.subscriptionQuota') }} {{ stat.subscription_quota || 0 }}
+        {{ $t('logPage.subscriptionQuota') }} {{ formatQuota(stat.subscription_quota) }}
       </span>
     </div>
 
@@ -120,7 +120,7 @@
             <template v-if="logType !== 5">
               <div class="col col-num"><span class="cell-num">{{ r.prompt_tokens || 0 }}</span></div>
               <div class="col col-num"><span class="cell-num">{{ r.completion_tokens || 0 }}</span></div>
-              <div class="col col-num"><span class="cell-num">{{ r.quota || 0 }}</span></div>
+              <div class="col col-num"><span class="cell-num">{{ formatQuota(r.quota) }}</span></div>
             </template>
             <div class="col">
               <div class="detail-text">{{ r.content }}</div>
@@ -168,9 +168,19 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconSearch, IconFile } from '@arco-design/web-vue/es/icon'
 import { useAuthStore } from '@/stores/auth'
+import { useStatusStore } from '@/stores/status'
+import { formatQuota as formatQuotaYuan } from '@/utils/quota'
 import api from '@/api'
 
 const authStore = useAuthStore()
+const statusStore = useStatusStore()
+
+// formatQuota 按系统基准（quota_per_unit）把日志额度折算为元。
+// 版本: v0.0.23
+// 日期: 2026-10-03
+function formatQuota(quota) {
+  return formatQuotaYuan(quota, statusStore.status?.quota_per_unit)
+}
 const { t } = useI18n()
 const isAdmin = computed(() => authStore.isAdmin)
 
