@@ -35,7 +35,7 @@ order: 14
       "created_time": 1718000000,
       "accessed_time": 1718000000,
       "expired_time": -1,
-      "remain_quota": 500000,
+      "remain_quota": 1000000,
       "unlimited_quota": false,
       "used_quota": 100000,
       "models": null,
@@ -96,7 +96,7 @@ order: 14
 ```json
 {
   "name": "my-token",
-  "remain_quota": 500000,
+  "remain_quota": 1000000,
   "expired_time": -1,
   "unlimited_quota": false,
   "models": null,
