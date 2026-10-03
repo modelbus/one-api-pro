@@ -22,8 +22,8 @@ import (
 	"github.com/modelbus/one-api-pro/relay/billing"
 	billingratio "github.com/modelbus/one-api-pro/relay/billing/ratio"
 	"github.com/modelbus/one-api-pro/relay/meta"
-	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 	"github.com/modelbus/one-api-pro/relay/relaymode"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
@@ -213,18 +213,19 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	quotaDelta := quota - preConsumedQuota
 	defer func(ctx context.Context) {
 		go billing.PostConsumeQuota(ctx, &billing.ConsumeQuotaParams{
-			TokenId:       tokenId,
-			UserId:        userId,
-			ChannelId:     channelId,
-			QuotaDelta:    quotaDelta,
-			TotalQuota:    quota,
-			ModelName:     originAudioModel,
-			TokenName:     tokenName,
-			InputPrice:    priceResult.InputPrice,
-			OutputPrice:   priceResult.OutputPrice,
-			CachedPrice:   priceResult.CachedPrice,
-			GroupDiscount: groupDiscount,
-			BillingType:   priceResult.BillingType,
+			TokenId:         tokenId,
+			UserId:          userId,
+			ChannelId:       channelId,
+			QuotaDelta:      quotaDelta,
+			TotalQuota:      quota,
+			ModelName:       originAudioModel,
+			TokenName:       tokenName,
+			InputPrice:      priceResult.InputPrice,
+			OutputPrice:     priceResult.OutputPrice,
+			CachedPrice:     priceResult.CachedPrice,
+			PerRequestPrice: priceResult.PerRequestPrice,
+			GroupDiscount:   groupDiscount,
+			BillingType:     priceResult.BillingType,
 		})
 	}(c.Request.Context())
 
