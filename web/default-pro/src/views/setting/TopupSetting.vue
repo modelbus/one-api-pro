@@ -2,7 +2,7 @@
   <!--
     TopupSetting 充值设置页面
     版本: v0.0.24
-    日期: 2026-10-03
+    日期: 2026-10-04
     作者: opencode
 
     功能：
@@ -61,8 +61,8 @@
           <template #credit="{ record, rowIndex }">
             <a-input-number
               :model-value="record.credit"
-              :min="0.01"
-              :precision="2"
+              :min="0"
+              :precision="yuanInputPrecision(record.credit, quotaPerUnit)"
               :step="1"
               size="small"
               style="width: 100%"
@@ -89,7 +89,7 @@
 
 <script setup>
 // 版本: v0.0.24
-// 日期: 2026-10-03
+// 日期: 2026-10-04
 // 作者: opencode
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -97,7 +97,7 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import settingApi from '@/api/setting'
 import { validateTopupPresets } from '@/utils/topup'
-import { resolveQuotaPerUnit, quotaToYuan, yuanToQuota } from '@/utils/quota'
+import { resolveQuotaPerUnit, quotaToYuanExact, yuanInputPrecision, yuanToQuota } from '@/utils/quota'
 import { useStatusStore } from '@/stores/status'
 
 const { t } = useI18n()
@@ -122,9 +122,11 @@ const columns = computed(() => [
   { title: t('settingPage.topup.colAction'), slotName: 'action', width: 100, align: 'center' },
 ])
 
-// quotaToYuanText 将 quota 反算回两位小数的元，避免表格显示超长小数。
+// quotaToYuanText 将 quota 反算回元，保留 6 位小数避免小额点零；输入框再按精度自适应展示。
+// 版本: v0.0.24
+// 日期: 2026-10-04
 function quotaToYuanText(q) {
-  return Number(quotaToYuan(q, quotaPerUnit.value).toFixed(2))
+  return quotaToYuanExact(q, quotaPerUnit.value)
 }
 
 function addPreset() {
