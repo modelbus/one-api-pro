@@ -29,7 +29,7 @@ The UI splits settings by purpose; switches usually save on `@change`, while num
 | Quota policy | `QuotaForNewUser` / `PreConsumedQuota` / `QuotaForInviter` / `QuotaForInvitee` |
 | Monitor | `ChannelDisableThreshold` / `QuotaRemindThreshold` + `AutomaticDisableChannelEnabled` / `AutomaticEnableChannelEnabled` / `LogConsumeEnabled` |
 | Log pruning | Date picker + **Clean logs** button → `DELETE /api/log/?target_timestamp=…` |
-| General | `TopUpLink` / `ChatLink` / `QuotaPerUnit` / `RetryTimes` + `DisplayInCurrencyEnabled` / `DisplayTokenStatEnabled` / `ApproximateTokenEnabled` |
+| General | `TopUpLink` / `ChatLink` / `RetryTimes` + `DisplayInCurrencyEnabled` / `DisplayTokenStatEnabled` / `ApproximateTokenEnabled` |
 | Channel routing | `ChannelDefaultCooldownSeconds` / `ChannelMaxCooldownSeconds` + `ChannelConcurrencyEnabled` / `ChannelStickySessionEnabled` |
 | Error strategy | `ErrorNext` JSON: `{ passthrough, retry, disable, cooldown }` |
 | Plan | `plan.upgrade_mode` (see [plan-setting](plan-setting)) |
@@ -38,13 +38,13 @@ The UI splits settings by purpose; switches usually save on `@change`, while num
 
 | Field | Default | Notes |
 |---|---|---|
-| `QuotaForNewUser` | env | New-user signup bonus (quota) |
+| `QuotaForNewUser` | env | New-user signup bonus (CNY in the UI; stored as quota, ¥1 = 1,000,000 quota) |
 | `PreConsumedQuota` | 0 | Pre-deducted per request; refunded on failure |
 | `QuotaForInviter` | 0 | Bonus to the inviter when an invitee signs up |
 | `QuotaForInvitee` | 0 | Bonus to the invitee when signing up |
 | `ChannelDisableThreshold` | 0 | Auto-disable channel after N consecutive failures (requires `AutomaticDisableChannelEnabled=true`) |
-| `QuotaRemindThreshold` | 0 | UI low-balance alert |
-| `QuotaPerUnit` | env | Currency conversion: `QuotaPerUnit` quota = 1 CNY |
+| `QuotaRemindThreshold` | 0 | UI low-balance alert (CNY in the UI) |
+| `QuotaPerUnit` | — | **System constant** `1,000,000`: ¥1 = 1,000,000 quota. Computation only, never stored, never modifiable |
 | `RetryTimes` | env | Per-channel retry attempts |
 | `ChannelDefaultCooldownSeconds` / `ChannelMaxCooldownSeconds` | env | Channel cooldown window |
 | `ErrorNext` | `{passthrough:true,retry:true,disable:true,cooldown:true}` | Relay error-chain strategy (see below) |
