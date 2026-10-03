@@ -1,7 +1,10 @@
 // 充值模块纯函数工具（可在 Node 环境下单元测试，不依赖 Vue/Arco）
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// Top-up module pure helpers (unit-testable in Node, no Vue/Arco dependency).
+// 版本: v0.0.24
+// 日期: 2026-10-03
 // 作者: opencode
+
+import { resolveQuotaPerUnit, yuanToQuota } from './quota.js'
 
 // formatNumber 简写大数字（>=10000 折算为 w；其余使用千分位）
 //
@@ -24,18 +27,21 @@ export function formatAmount(n) {
 }
 
 // validateTopupPresets 前端预校验快捷金额，返回错误信息或 null。
-// 规则：金额必须大于 0；不允许重复金额。
+// 规则：金额必须大于 0；不允许重复金额；到账额度不得低于支付金额折算额度
+// （允许营销赠送，不允许缩水）。到账额度由「到账金额（元）」换算而来。
 // 可选传入 vue-i18n 的 t 函数以输出本地化文案（默认中文，便于单测）。
 //
-// 版本: v0.0.21
-// 日期: 2026-09-17
+// 版本: v0.0.24
+// 日期: 2026-10-03
 // 作者: opencode
-export function validateTopupPresets(presets, t) {
+export function validateTopupPresets(presets, t, quotaPerUnit) {
+  const rate = resolveQuotaPerUnit(quotaPerUnit)
   const tr = typeof t === 'function'
     ? t
     : (key, params) => {
         if (key === 'amountPositive') return `第 ${params.n} 行金额必须大于 0`
         if (key === 'duplicate') return `快捷金额重复：${params.amt} 元已存在`
+        if (key === 'bonusTooLow') return `第 ${params.n} 行到账金额不能低于支付金额`
         return key
       }
   const seen = new Set()
@@ -48,24 +54,10 @@ export function validateTopupPresets(presets, t) {
       return tr('duplicate', { amt })
     }
     seen.add(amt)
+    const bonus = Number(presets[i].bonus_quota)
+    if (!Number.isFinite(bonus) || bonus < yuanToQuota(amt, rate)) {
+      return tr('bonusTooLow', { n: i + 1 })
+    }
   }
   return null
-}
-
-// calcCustomBonus 自定义金额按 exchange_rate 算出到账 quota
-// amount 非法时按 0 计算；rate 非法时按 1 兜底；rate <= 0 时按 0 兜底（防配置错误）。
-//
-// 版本: v0.0.10
-// 日期: 2026-09-06
-// 作者: opencode
-export function calcCustomBonus(amount, exchangeRate) {
-  const amt = Number(amount) || 0
-  let rate
-  if (exchangeRate === undefined || exchangeRate === null || exchangeRate === '') {
-    rate = 1
-  } else {
-    rate = Number(exchangeRate)
-    if (!Number.isFinite(rate) || rate <= 0) rate = 0
-  }
-  return Math.round(amt * rate)
 }
