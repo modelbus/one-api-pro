@@ -379,6 +379,7 @@ import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/we
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
 import { buildTokenExpiredTime, formatExpiredTime } from '@/utils/token'
+import { formatQuota as formatQuotaYuan } from '@/utils/quota'
 
 const statusStore = useStatusStore()
 const { t } = useI18n()
@@ -538,14 +539,15 @@ function maskKey(key) {
   return `${k.substring(0, 4)}****${k.substring(k.length - 4)}`
 }
 
+// formatQuota 额度列按系统基准（quota_per_unit）折算为元；负数表示不限额。
+// 版本: v0.0.23
+// 日期: 2026-10-03
 function formatQuota(val) {
   if (val == null || val === '') return '-'
   const n = Number(val)
   if (isNaN(n)) return val
   if (n < 0) return t('token.unlimited')
-  if (n >= 1000000) return `${(n / 1000000).toFixed(2)}M`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
+  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
 }
 
 async function copyText(text, successMsg) {
