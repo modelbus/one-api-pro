@@ -67,41 +67,35 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 
 	var quota int64
 	var preConsumedQuota int64
-	switch relayMode {
-	case relaymode.AudioSpeech:
-		ratio := (priceResult.InputPrice + priceResult.OutputPrice) / 2.0 / billingratio.Million * config.QuotaPerUnit
-		if ratio == 0 {
-			ratio = 1.0
+	var bizErr *relaymodel.ErrorWithStatusCode
+	if priceResult.BillingType == model.BillingTypePerRequest {
+		// per_request：按次计费，费用在请求前已完全确定，精确预扣。
+		// 旧实现按 token 占比估算预扣、却按次全额结算，单次即可透支余额。
+		// per_request: flat price known upfront — pre-consume the exact amount
+		// so the settlement delta is 0 and the balance cannot go negative.
+		quota = billingratio.CalculatePerRequestQuota(priceResult.PerRequestPrice, 1, 1, groupDiscount)
+		preConsumedQuota, bizErr = preConsumeExactQuota(ctx, quota, meta)
+	} else {
+		switch relayMode {
+		case relaymode.AudioSpeech:
+			ratio := (priceResult.InputPrice + priceResult.OutputPrice) / 2.0 / billingratio.Million * config.QuotaPerUnit
+			if ratio == 0 {
+				ratio = 1.0
+			}
+			quota = int64(float64(len(ttsRequest.Input)) * ratio)
+			// 语音合成费用由输入文本长度在请求前确定，预扣即结算。
+			preConsumedQuota, bizErr = preConsumeExactQuota(ctx, quota, meta)
+		default:
+			ratio := (priceResult.InputPrice) / billingratio.Million * config.QuotaPerUnit
+			if ratio == 0 {
+				ratio = 1.0
+			}
+			estimate := int64(float64(config.PreConsumedQuota) * ratio)
+			preConsumedQuota, bizErr = preConsumeAmount(ctx, estimate, meta)
 		}
-		preConsumedQuota = int64(float64(len(ttsRequest.Input)) * ratio)
-		quota = preConsumedQuota
-	default:
-		ratio := (priceResult.InputPrice) / billingratio.Million * config.QuotaPerUnit
-		if ratio == 0 {
-			ratio = 1.0
-		}
-		preConsumedQuota = int64(float64(config.PreConsumedQuota) * ratio)
 	}
-	userQuota, err := model.CacheGetUserQuota(ctx, userId)
-	if err != nil {
-		return openai.ErrorWrapper(err, "get_user_quota_failed", http.StatusInternalServerError)
-	}
-
-	if userQuota-preConsumedQuota < 0 {
-		return openai.ErrorWrapper(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
-	}
-	err = model.CacheDecreaseUserQuota(userId, preConsumedQuota)
-	if err != nil {
-		return openai.ErrorWrapper(err, "decrease_user_quota_failed", http.StatusInternalServerError)
-	}
-	if userQuota > 100*preConsumedQuota {
-		preConsumedQuota = 0
-	}
-	if preConsumedQuota > 0 {
-		err := model.PreConsumeTokenQuota(tokenId, preConsumedQuota)
-		if err != nil {
-			return openai.ErrorWrapper(err, "pre_consume_token_quota_failed", http.StatusForbidden)
-		}
+	if bizErr != nil {
+		return bizErr
 	}
 	succeed := false
 	defer func() {
