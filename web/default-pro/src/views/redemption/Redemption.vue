@@ -180,7 +180,10 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconCopy, IconGift, IconRefresh } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
+import { useStatusStore } from '@/stores/status'
+import { formatQuota as formatQuotaYuan } from '@/utils/quota'
 
+const statusStore = useStatusStore()
 const { t } = useI18n()
 
 const ITEMS_PER_PAGE = 10
@@ -445,14 +448,14 @@ async function handleDelete(record) {
 }
 
 // ============ 格式化 ============
+// formatQuota 兑换额度按系统基准（quota_per_unit）折算为元。
+// 版本: v0.0.23
+// 日期: 2026-10-03
 function formatQuota(val) {
   if (val == null) return '-'
   const n = Number(val)
   if (isNaN(n)) return val
-  if (n >= 1000000) return `${(n / 1000000).toFixed(2)}M`
-  if (n >= 10000) return `${(n / 10000).toFixed(2)}w`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return n.toLocaleString()
+  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
 }
 
 function formatTime(ts) {
