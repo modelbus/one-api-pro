@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/modelbus/one-api-pro/common/config"
@@ -50,6 +51,17 @@ func UpdateOption(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无效的主题",
+			})
+			return
+		}
+	case "QuotaPerUnit":
+		// QuotaPerUnit 是所有计费/充值换算的分母，必须为正数；
+		// 设为 0 会导致除零与「1 元 = 1 quota」退化（v0.0.22 2026-10-03 新增校验）。
+		v, parseErr := strconv.ParseFloat(option.Value, 64)
+		if parseErr != nil || v <= 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "QuotaPerUnit 必须为大于 0 的数字",
 			})
 			return
 		}
