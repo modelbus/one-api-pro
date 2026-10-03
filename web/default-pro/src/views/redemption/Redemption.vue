@@ -164,7 +164,7 @@
           <a-input-number
             v-model="form.quota_yuan"
             :min="0"
-            :precision="2"
+            :precision="yuanInputPrecision(form.quota_yuan, quotaPerUnit)"
             :step="1"
             :placeholder="$t('redemptionPage.quotaPlaceholder')"
             style="width: 100%"
@@ -182,7 +182,7 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconCopy, IconGift, IconRefresh } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
-import { formatQuota as formatQuotaYuan, yuanToQuota, quotaToYuan, resolveQuotaPerUnit } from '@/utils/quota'
+import { formatQuota as formatQuotaYuan, quotaToYuanExact, yuanInputPrecision, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
 
 const statusStore = useStatusStore()
 const { t } = useI18n()
@@ -390,7 +390,7 @@ async function openCreateModal() {
 async function openEditModal(record) {
   editingRecord.value = record
   form.name = record.name || ''
-  form.quota_yuan = Number(quotaToYuan(record.quota ?? 0, quotaPerUnit.value).toFixed(2))
+  form.quota_yuan = quotaToYuanExact(record.quota ?? 0, quotaPerUnit.value)
   modalVisible.value = true
 }
 
