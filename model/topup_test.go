@@ -1,30 +1,36 @@
 // Topup business unit tests
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 // 作者: opencode
 //
 // 覆盖：
-//   - SaveTopupSettings 的去重/非负/正数校验
-//   - GetTopupSettings 的默认值
+//   - SaveTopupSettings 的去重/非负/正数校验、兑换比例下限校验
+//   - GetTopupSettings 的默认值（QuotaPerUnit）与存量脏数据自愈
+//   - 赠送倍率（> QuotaPerUnit）保留
 //   - ResolveTopupAmount 在 preset 命中、自定义换算、关闭自定义等情况的行为
 //   - ActivateTopupByOrder 的幂等
 
 package model
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
+
+	"github.com/modelbus/one-api-pro/common"
 )
 
 // setupTopupTestDB 初始化一个 in-memory sqlite + system_settings 表。
 // 返回 DB 引用，由调用方赋值给 model.DB。
+// 关闭 Redis 缓存，避免本包测试在 RDB 未初始化时 panic（与其他测试一致）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 func setupTopupTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
+	common.RedisEnabled = false
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
@@ -61,7 +67,7 @@ func TestSaveTopupSettings_OK(t *testing.T) {
 	err := SaveTopupSettings(true, true, []TopupPreset{
 		{Amount: 10, BonusQuota: 10},
 		{Amount: 50, BonusQuota: 60},
-	}, 1)
+	}, topupQuotaPerUnit())
 	if err != nil {
 		t.Fatalf("save: %v", err)
 	}
@@ -73,8 +79,8 @@ func TestSaveTopupSettings_OK(t *testing.T) {
 	if len(presets) != 2 {
 		t.Fatalf("期望 2 条 preset，实际 %d", len(presets))
 	}
-	if rate != 1 {
-		t.Fatalf("exchange_rate 期望 1，实际 %d", rate)
+	if rate != topupQuotaPerUnit() {
+		t.Fatalf("exchange_rate 期望 %d，实际 %d", topupQuotaPerUnit(), rate)
 	}
 }
 
@@ -92,8 +98,8 @@ func TestSaveTopupSettings_Defaults(t *testing.T) {
 	if presets == nil {
 		t.Fatal("presets 应返回空切片而不是 nil")
 	}
-	if rate != 1 {
-		t.Fatalf("exchange_rate 默认应为 1，实际 %d", rate)
+	if rate != topupQuotaPerUnit() {
+		t.Fatalf("exchange_rate 默认应为 %d，实际 %d", topupQuotaPerUnit(), rate)
 	}
 }
 
@@ -106,7 +112,7 @@ func TestSaveTopupSettings_NegativeQuota(t *testing.T) {
 
 	err := SaveTopupSettings(true, true, []TopupPreset{
 		{Amount: 10, BonusQuota: -1},
-	}, 1)
+	}, topupQuotaPerUnit())
 	if err == nil {
 		t.Fatal("期望返回错误，但通过了")
 	}
@@ -121,7 +127,7 @@ func TestSaveTopupSettings_ZeroAmount(t *testing.T) {
 
 	err := SaveTopupSettings(true, true, []TopupPreset{
 		{Amount: 0, BonusQuota: 10},
-	}, 1)
+	}, topupQuotaPerUnit())
 	if err == nil {
 		t.Fatal("期望返回错误，但通过了")
 	}
@@ -165,22 +171,23 @@ func TestResolveTopupAmount_CustomDisabled(t *testing.T) {
 	}
 }
 
-// TestResolveTopupAmount_CustomOK 自定义金额 1:1 换算。
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// TestResolveTopupAmount_CustomOK 自定义金额按基准单位换算（1 元 = QuotaPerUnit 额度）。
+// 版本: v0.0.22
+// 日期: 2026-10-03
 func TestResolveTopupAmount_CustomOK(t *testing.T) {
-	amt, bonus, err := ResolveTopupAmount(CreateTopupOrderInput{Amount: 25}, nil, true, 1)
+	base := topupQuotaPerUnit()
+	amt, bonus, err := ResolveTopupAmount(CreateTopupOrderInput{Amount: 25}, nil, true, base)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if amt != 25 || bonus != 25 {
-		t.Fatalf("amt=%v bonus=%v（期望 1:1）", amt, bonus)
+	if amt != 25 || bonus != 25*base {
+		t.Fatalf("amt=%v bonus=%v（期望 25 元 → %d 额度）", amt, bonus, 25*base)
 	}
 }
 
-// TestResolveTopupAmount_CustomRate 自定义金额按 exchange_rate 换算。
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// TestResolveTopupAmount_CustomRate 自定义金额按 exchange_rate 换算（10 元 × 500000）。
+// 版本: v0.0.22
+// 日期: 2026-10-03
 func TestResolveTopupAmount_CustomRate(t *testing.T) {
 	amt, bonus, err := ResolveTopupAmount(CreateTopupOrderInput{Amount: 10}, nil, true, 500000)
 	if err != nil {
@@ -188,6 +195,66 @@ func TestResolveTopupAmount_CustomRate(t *testing.T) {
 	}
 	if amt != 10 || bonus != 5_000_000 {
 		t.Fatalf("amt=%v bonus=%v（期望 5000000）", amt, bonus)
+	}
+}
+
+// TestResolveTopupAmount_BelowBaseHealed 低于基准单位的比例被自愈为基准值。
+// 版本: v0.0.22
+// 日期: 2026-10-03
+func TestResolveTopupAmount_BelowBaseHealed(t *testing.T) {
+	base := topupQuotaPerUnit()
+	amt, bonus, err := ResolveTopupAmount(CreateTopupOrderInput{Amount: 10}, nil, true, 1)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if amt != 10 || bonus != 10*base {
+		t.Fatalf("amt=%v bonus=%v（期望 10 元 → %d 额度）", amt, bonus, 10*base)
+	}
+}
+
+// TestGetTopupSettings_LegacyRateSelfHeal 存量脏数据（1 / 100000）读取时自愈为基准值。
+// 版本: v0.0.22
+// 日期: 2026-10-03
+func TestGetTopupSettings_LegacyRateSelfHeal(t *testing.T) {
+	for _, legacy := range []string{"1", "100000"} {
+		db := setupTopupTestDB(t)
+		DB = db
+		if err := UpsertSystemSetting(SystemSettingKeyTopupExchangeRate, legacy,
+			SystemSettingCategoryTopup, "legacy"); err != nil {
+			t.Fatalf("seed legacy %s: %v", legacy, err)
+		}
+		_, _, _, rate := GetTopupSettings()
+		if rate != topupQuotaPerUnit() {
+			t.Fatalf("legacy %s 应自愈为 %d，实际 %d", legacy, topupQuotaPerUnit(), rate)
+		}
+	}
+}
+
+// TestGetTopupSettings_BonusMultiplierKept 高于基准单位的比例视为赠送倍率并保留。
+// 版本: v0.0.22
+// 日期: 2026-10-03
+func TestGetTopupSettings_BonusMultiplierKept(t *testing.T) {
+	db := setupTopupTestDB(t)
+	DB = db
+	multiplier := topupQuotaPerUnit() * 2
+	if err := UpsertSystemSetting(SystemSettingKeyTopupExchangeRate,
+		fmt.Sprintf("%d", multiplier), SystemSettingCategoryTopup, "bonus"); err != nil {
+		t.Fatalf("seed bonus: %v", err)
+	}
+	_, _, _, rate := GetTopupSettings()
+	if rate != multiplier {
+		t.Fatalf("赠送倍率应保留 %d，实际 %d", multiplier, rate)
+	}
+}
+
+// TestSaveTopupSettings_BelowBaseRejected 低于基准单位直接拒绝。
+// 版本: v0.0.22
+// 日期: 2026-10-03
+func TestSaveTopupSettings_BelowBaseRejected(t *testing.T) {
+	db := setupTopupTestDB(t)
+	DB = db
+	if err := SaveTopupSettings(true, true, nil, 1); err == nil {
+		t.Fatal("期望拒绝低于基准单位的兑换比例")
 	}
 }
 
@@ -201,7 +268,7 @@ func TestActivateTopupByOrder_Idempotent(t *testing.T) {
 	// 保存设置（开启）
 	if err := SaveTopupSettings(true, true, []TopupPreset{
 		{Amount: 10, BonusQuota: 100},
-	}, 1); err != nil {
+	}, topupQuotaPerUnit()); err != nil {
 		t.Fatalf("save settings: %v", err)
 	}
 
