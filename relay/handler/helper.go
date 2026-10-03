@@ -63,12 +63,51 @@ func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTok
 	return int64(float64(preConsumedTokens) * ratio)
 }
 
+// preConsumeQuota pre-consumes an *estimated* quota derived from the token
+// pricing ratio. Used for token-billed models, where the final cost is only
+// known after the upstream returns its usage.
+//
+// preConsumeQuota 按 token 定价 ratio 估算并预扣额度，用于 token 计费模型
+// （最终费用需等上游返回 usage 才能确定）。
 func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, ratio float64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {
+	preConsumedQuota := getPreConsumedQuota(textRequest, promptTokens, ratio)
+	return preConsumeAmount(ctx, preConsumedQuota, meta)
+}
+
+// preConsumeExactQuota pre-consumes an *exact* quota that is fully
+// deterministic before the upstream call. Used for per_request billing, where
+// the cost is a flat price per call — pre-consume and settlement use the very
+// same amount, so the settlement delta is always 0.
+//
+// Why this matters: with the old code the per_request path reused the
+// token-based estimate as the pre-consume amount (a few hundred quota) while
+// settlement charged the full per-request price (tens of thousands of quota).
+// The delta was applied straight to users.quota, draining the balance into the
+// negative on a single call, and the "is balance enough" guard compared the
+// balance against the tiny estimate, so it never rejected.
+//
+// preConsumeExactQuota 按请求价格精确预扣，用于 per_request 计费：费用在请求前
+// 已完全确定，预扣与结算使用同一金额，结算 delta 恒为 0。
+//
+// 版本: v0.0.24
+// 日期: 2026-10-03
+func preConsumeExactQuota(ctx context.Context, preConsumedQuota int64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {
+	return preConsumeAmount(ctx, preConsumedQuota, meta)
+}
+
+// preConsumeAmount applies the shared pre-consume guards and DB writes for an
+// already-computed quota amount:
+//
+//  1. balance is insufficient → reject with 403, do NOT touch Redis/DB
+//  2. balance is large enough (100×) → trust the user and skip pre-consume
+//  3. otherwise → decrease Redis + token remain_quota, roll back on failure
+//
+// preConsumeAmount 对已计算好的预扣额度执行统一守卫与落库：余额不足 → 403；
+// 余额足够大（100×）→ 免预扣；否则正常预扣，失败时回滚。
+func preConsumeAmount(ctx context.Context, preConsumedQuota int64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {
 	if meta.PlanId > 0 {
 		return 0, nil
 	}
-
-	preConsumedQuota := getPreConsumedQuota(textRequest, promptTokens, ratio)
 
 	userQuota, err := dbmodel.CacheGetUserQuota(ctx, meta.UserId)
 	if err != nil {
@@ -133,9 +172,20 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		)
 	}
 
-	totalTokens := promptTokens + completionTokens
-	if totalTokens == 0 {
-		quota = 0
+	// A zero-token usage means the upstream reported no billable token usage
+	// (e.g. an empty/aborted stream). For token billing there is nothing to
+	// charge, so zero the quota out. per_request billing is a flat per-call
+	// price that does not depend on tokens — zeroing it here would silently
+	// refund the exact amount pre-consumed in RelayTextHelper and make the
+	// call free, so it must be exempted.
+	//
+	// usage 为 0 token 表示上游未上报可计费 token（空响应/中断流）。token 计费
+	// 下无费用可收，置 0 合理；per_request 是「每次固定价」，与 token 无关，
+	// 置 0 会把精确预扣的按次费用全额退回，因此必须豁免。
+	if priceResult.BillingType != dbmodel.BillingTypePerRequest {
+		if promptTokens+completionTokens == 0 {
+			quota = 0
+		}
 	}
 
 	planId := meta.PlanId
@@ -187,10 +237,15 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		}
 	}
 
-	logContent := fmt.Sprintf("定价：输入¥%.4f/百万tokens × %d + 输出¥%.4f/百万tokens × %d",
+	logContent := fmt.Sprintf("定价：输入¥%.6f/百万tokens × %d + 输出¥%.6f/百万tokens × %d",
 		priceResult.InputPrice, promptTokens, priceResult.OutputPrice, completionTokens)
-	if cachedTokens > 0 {
-		logContent += fmt.Sprintf(" + 缓存¥%.4f/百万tokens × %d", priceResult.CachedPrice, cachedTokens)
+	if priceResult.BillingType == dbmodel.BillingTypePerRequest {
+		// per_request prices are per call, not per token — reporting the token
+		// formula here would be misleading, and the token counts are irrelevant.
+		// per_request 为「每次固定价」，日志不应展示 token 公式。
+		logContent = fmt.Sprintf("按次计费：¥%.6f/次", priceResult.PerRequestPrice)
+	} else if cachedTokens > 0 {
+		logContent += fmt.Sprintf(" + 缓存¥%.6f/百万tokens × %d", priceResult.CachedPrice, cachedTokens)
 	}
 	if groupDiscount != 1.0 {
 		logContent += fmt.Sprintf(" × 分组折扣%.2f", groupDiscount)
