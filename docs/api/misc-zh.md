@@ -66,7 +66,6 @@ order: 22
 | PreConsumedQuota | 预消耗额度 |
 | TopUpLink | 充值链接 |
 | ChatLink | 聊天链接 |
-| QuotaPerUnit | 单位额度（1元=多少内部额度） |
 | DisplayInCurrencyEnabled | 是否以货币显示（true/false） |
 | DisplayTokenStatEnabled | 是否显示Token统计（true/false） |
 | ApproximateTokenEnabled | 是否使用近似Token计算（true/false） |
@@ -136,7 +135,7 @@ order: 22
 2. `GroupName + ""(空)` → 使用该分组默认折扣
 3. 无匹配 → 折扣为 1.0（无折扣）
 
-**QuotaPerUnit 说明：** 默认 500,000，表示 500,000 内部额度 = 1 元人民币。
+**QuotaPerUnit 说明：** 系统常量 `1,000,000`，表示 1 元人民币 = 1,000,000 内部额度（1 额度 = 1e-6 元）。该值仅参与计算，**不入库、不可通过 `PUT /api/option/` 修改**；需要展示时可通过 `/api/status` 的只读字段 `quota_per_unit` 获取。
 
 ## 附录 D：渠道类型对照表
 
