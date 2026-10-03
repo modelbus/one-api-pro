@@ -72,7 +72,8 @@ func InitOptionMap() {
 	config.OptionMap["PreConsumedQuota"] = strconv.FormatInt(config.PreConsumedQuota, 10)
 	config.OptionMap["TopUpLink"] = config.TopUpLink
 	config.OptionMap["ChatLink"] = config.ChatLink
-	config.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(config.QuotaPerUnit, 'f', -1, 64)
+	// QuotaPerUnit 为系统常量（1 元 = 1_000_000 额度），不写入 OptionMap、不入库、不可修改。
+	// 前端如需展示基准，可通过 /api/status 的 quota_per_unit 只读获取。
 	config.OptionMap["RetryTimes"] = strconv.Itoa(config.RetryTimes)
 	config.OptionMap["ChannelDefaultCooldownSeconds"] = strconv.Itoa(config.ChannelDefaultCooldownSeconds)
 	config.OptionMap["ChannelMaxCooldownSeconds"] = strconv.Itoa(config.ChannelMaxCooldownSeconds)
@@ -245,8 +246,6 @@ func updateOptionMap(key string, value string) (err error) {
 		config.ChatLink = value
 	case "ChannelDisableThreshold":
 		config.ChannelDisableThreshold, _ = strconv.ParseFloat(value, 64)
-	case "QuotaPerUnit":
-		config.QuotaPerUnit, _ = strconv.ParseFloat(value, 64)
 	case "Theme":
 		config.Theme = value
 	}
