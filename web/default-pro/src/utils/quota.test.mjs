@@ -1,7 +1,7 @@
 // quota.test.mjs quota.js 的 Node 内置测试
 // Node built-in tests for quota.js.
 // 版本: v0.0.24
-// 日期: 2026-10-03
+// 日期: 2026-10-04
 // 作者: opencode
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -9,6 +9,8 @@ import {
   DEFAULT_QUOTA_PER_UNIT,
   resolveQuotaPerUnit,
   quotaToYuan,
+  quotaToYuanExact,
+  yuanInputPrecision,
   yuanToQuota,
   formatYuan,
   formatQuota,
@@ -39,6 +41,26 @@ test('yuanToQuota converts and rounds float error', () => {
   assert.equal(yuanToQuota(0, 1000000), 0)
   assert.equal(yuanToQuota(-1, 1000000), 0)
   assert.equal(yuanToQuota('abc', 1000000), 0)
+})
+
+test('quotaToYuanExact keeps sub-cent quota lossless', () => {
+  // 500 额度 = ¥0.0005，旧实现 toFixed(2) 会截断为 0，导致保存时静默清零
+  assert.equal(quotaToYuanExact(500, 1000000), 0.0005)
+  assert.equal(quotaToYuanExact(1000, 1000000), 0.001)
+  assert.equal(quotaToYuanExact(0, 1000000), 0)
+  assert.equal(quotaToYuanExact(10000000, 1000000), 10)
+  // 回填后再换算必须与原额度一致（无损往返）
+  assert.equal(yuanToQuota(quotaToYuanExact(500, 1000000), 1000000), 500)
+  assert.equal(yuanToQuota(quotaToYuanExact(123456, 1000000), 1000000), 123456)
+})
+
+test('yuanInputPrecision uses 2 decimals for whole cents, 6 otherwise', () => {
+  assert.equal(yuanInputPrecision(10, 1000000), 2)
+  assert.equal(yuanInputPrecision(0.07, 1000000), 2)
+  assert.equal(yuanInputPrecision(0, 1000000), 2)
+  assert.equal(yuanInputPrecision(0.0005, 1000000), 6)
+  assert.equal(yuanInputPrecision(0.001, 1000000), 6)
+  assert.equal(yuanInputPrecision(10.000001, 1000000), 6)
 })
 
 test('formatYuan adapts decimals to magnitude', () => {
