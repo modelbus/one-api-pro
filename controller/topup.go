@@ -4,8 +4,8 @@
 //   - GetTopupSettings: 管理员读取充值设置（GET /api/setting/topup）
 //   - PutTopupSettings: 管理员保存充值设置（PUT /api/setting/topup）
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 // 作者: opencode
 package controller
 
@@ -21,9 +21,11 @@ import (
 // CreateTopupOrderRequest 是 POST /api/topup/order 的请求体。
 // Amount 与 PresetAmount 至少传一个：PresetAmount > 0 命中预设；
 // 否则按 Amount × exchange_rate 算 bonus_quota（需开启 allow_custom）。
+// exchange_rate 语义为「1 元 = 多少 quota」，基准值为系统的 QuotaPerUnit，
+// 保证充 1 元至少到账 1 元额度（>= QuotaPerUnit 时才允许生效）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 type CreateTopupOrderRequest struct {
 	Amount       float64 `json:"amount"`
 	PresetAmount float64 `json:"preset_amount"`
