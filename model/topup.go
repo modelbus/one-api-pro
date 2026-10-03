@@ -4,8 +4,8 @@
 // 命名沿用历史 topup 命名（与 LogTypeTopup/AdminTopUp/TopUp 等保持全局一致），
 // 仅 UI 文案对外显示为"充值"。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 // 作者: opencode
 package model
 
@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/helper"
 )
 
@@ -55,19 +56,42 @@ type TopupOrderPlanInfo struct {
 	ExchangeRate int64   `json:"exchange_rate"`
 }
 
-// defaultTopupExchangeRate 默认自定义金额换算比例 1:1（即 1 元 = 1 quota）。
-// 版本: v0.0.10
-const defaultTopupExchangeRate int64 = 1
+// defaultTopupQuotaPerUnit 是 QuotaPerUnit 缺失或非法时的兜底基准：1 元 = 500000 额度。
+// 与 common/config 中 QuotaPerUnit 的默认值（500 * 1000）保持一致，避免两侧脱钩。
+// 版本: v0.0.22
+const defaultTopupQuotaPerUnit int64 = 500000
+
+// topupQuotaPerUnit 返回当前系统的「1 元 = 多少 quota」基准单位。
+// QuotaPerUnit <= 0 时回退到 defaultTopupQuotaPerUnit，防止除零与退化为 1。
+//
+// 版本: v0.0.22
+// 日期: 2026-10-03
+func topupQuotaPerUnit() int64 {
+	if config.QuotaPerUnit > 0 {
+		return int64(config.QuotaPerUnit)
+	}
+	return defaultTopupQuotaPerUnit
+}
 
 // GetTopupSettings 读取充值设置。返回结构化对象，便于上层直接使用。
 // presets 为空时返回空切片（不是 nil）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 兑换比例低于基准单位（QuotaPerUnit）视为存量脏数据，读取时自愈为基准值：
+// 历史默认值 1 / 文档推荐的 100000 都会在此被归一，保证「1 元 = 1 元额度」。
+//
+// 版本: v0.0.22
+// 日期: 2026-10-03
 func GetTopupSettings() (enabled bool, allowCustom bool, presets []TopupPreset, exchangeRate int64) {
 	enabled = GetSystemSettingString(SystemSettingKeyTopupEnabled) == "true"
 	allowCustom = GetSystemSettingString(SystemSettingKeyTopupAllowCustom) == "true"
-	exchangeRate = parseInt64Setting(SystemSettingKeyTopupExchangeRate, defaultTopupExchangeRate)
+	exchangeRate = parseInt64Setting(SystemSettingKeyTopupExchangeRate, 0)
+
+	// 存量自愈：低于基准单位的比例会让「充 1 元 ≠ 到账 1 元」，统一归一到基准值。
+	// 高于基准单位的比例视为管理员主动配置的赠送倍率，原样保留。
+	base := topupQuotaPerUnit()
+	if exchangeRate < base {
+		exchangeRate = base
+	}
 
 	raw := GetSystemSettingString(SystemSettingKeyTopupPresets)
 	if raw == "" {
@@ -105,8 +129,11 @@ func SaveTopupSettings(enabled, allowCustom bool, presets []TopupPreset, exchang
 		}
 		seenAmounts[p.Amount] = true
 	}
-	if exchangeRate <= 0 {
-		return fmt.Errorf("兑换比例必须大于 0")
+	// 兑换比例必须 >= 基准单位（1 元 = QuotaPerUnit 额度）。
+	// 低于基准值等价于「充 1 元到账不足 1 元」，直接拒绝，避免脏数据再次落库。
+	base := topupQuotaPerUnit()
+	if exchangeRate < base {
+		return fmt.Errorf("兑换比例不能低于 %d（1 元 = %d 额度）", base, base)
 	}
 	presetsJSON, err := json.Marshal(presets)
 	if err != nil {
@@ -150,8 +177,8 @@ func ResolveTopupAmount(in CreateTopupOrderInput, presets []TopupPreset, allowCu
 	if in.Amount <= 0 {
 		return 0, 0, errors.New("充值金额必须大于 0")
 	}
-	if exchangeRate <= 0 {
-		exchangeRate = defaultTopupExchangeRate
+	if base := topupQuotaPerUnit(); exchangeRate < base {
+		exchangeRate = base
 	}
 	bonus := int64(in.Amount * float64(exchangeRate))
 	return in.Amount, bonus, nil
@@ -240,8 +267,8 @@ func ActivateTopupByOrder(order *Order) error {
 		bonusQuota = info.BonusQuota
 	} else {
 		_, _, _, exchangeRate := GetTopupSettings()
-		if exchangeRate <= 0 {
-			exchangeRate = defaultTopupExchangeRate
+		if base := topupQuotaPerUnit(); exchangeRate < base {
+			exchangeRate = base
 		}
 		bonusQuota = int64(order.Amount * float64(exchangeRate))
 	}
