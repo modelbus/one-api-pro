@@ -1,8 +1,8 @@
 <template>
   <!--
     TopupSetting 充值设置页面
-    版本: v0.0.10
-    日期: 2026-09-06
+    版本: v0.0.22
+    日期: 2026-10-03
     作者: opencode
 
     功能：
@@ -28,8 +28,8 @@
           <a-form-item :label="$t('settingPage.topup.exchangeRate')">
             <a-input-number
               v-model="form.exchange_rate"
-              :min="1"
-              :step="1"
+              :min="quotaPerUnit"
+              :step="1000"
               :precision="0"
               :placeholder="$t('settingPage.topup.exchangeRatePlaceholder')"
               style="width: 320px"
@@ -98,8 +98,8 @@
 </template>
 
 <script setup>
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 // 作者: opencode
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -107,8 +107,14 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import settingApi from '@/api/setting'
 import { validateTopupPresets } from '@/utils/topup'
+import { useStatusStore } from '@/stores/status'
 
 const { t } = useI18n()
+const statusStore = useStatusStore()
+
+// quotaPerUnit：1 元对应的额度基准（来自 /api/status 的 quota_per_unit）。
+// 后端未下发时回退 500000，与 common/config 默认值一致。
+const quotaPerUnit = computed(() => Number(statusStore.status?.quota_per_unit) || 500000)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -116,7 +122,7 @@ const saving = ref(false)
 const form = reactive({
   enabled: false,
   allow_custom: true,
-  exchange_rate: 1,
+  exchange_rate: 0,
   presets: [],
 })
 
@@ -127,7 +133,9 @@ const columns = computed(() => [
 ])
 
 function addPreset() {
-  form.presets.push({ amount: 10, bonus_quota: 10 })
+  // 默认按基准比例生成：10 元 → 10 × quota_per_unit 额度
+  const rate = Number(form.exchange_rate) || quotaPerUnit.value
+  form.presets.push({ amount: 10, bonus_quota: Math.round(10 * rate) })
 }
 
 function removePreset(idx) {
@@ -146,7 +154,7 @@ async function loadSettings() {
       const d = data.data
       form.enabled = !!d.enabled
       form.allow_custom = !!d.allow_custom
-      form.exchange_rate = Number(d.exchange_rate || 1)
+      form.exchange_rate = Number(d.exchange_rate || quotaPerUnit.value)
       form.presets = Array.isArray(d.presets) ? d.presets.map(p => ({
         amount: Number(p.amount),
         bonus_quota: Number(p.bonus_quota),
@@ -171,7 +179,7 @@ async function save() {
     const payload = {
       enabled: form.enabled,
       allow_custom: form.allow_custom,
-      exchange_rate: Number(form.exchange_rate || 1),
+      exchange_rate: Number(form.exchange_rate || quotaPerUnit.value),
       presets: form.presets.map(p => ({
         amount: Number(p.amount),
         bonus_quota: Number(p.bonus_quota),
