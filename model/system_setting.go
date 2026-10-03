@@ -36,7 +36,7 @@ const (
 	SystemSettingKeyTopupEnabled      = "topup.enabled"       // 充值总开关（bool: true/false）
 	SystemSettingKeyTopupAllowCustom  = "topup.allow_custom"  // 是否允许用户输入自定义金额（bool）
 	SystemSettingKeyTopupPresets      = "topup.presets"       // 快捷金额列表（JSON: [{amount, bonus_quota}, ...]）
-	SystemSettingKeyTopupExchangeRate = "topup.exchange_rate" // 自定义金额 1 元 = X quota（int，默认 1 即 1:1）
+	SystemSettingKeyTopupExchangeRate = "topup.exchange_rate" // 自定义金额 1 元 = X quota（int，基准为 QuotaPerUnit，低于基准值会被拒绝/自愈）
 )
 
 // SystemSetting is a generic key-value configuration row.
