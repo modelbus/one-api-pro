@@ -371,9 +371,12 @@ import {
 import VChart from 'vue-echarts'
 import 'echarts'
 import adminApi from '@/api/admin'
+import { useStatusStore } from '@/stores/status'
+import { formatQuota as formatQuotaYuan } from '@/utils/quota'
 
 const { t } = useI18n()
 const router = useRouter()
+const statusStore = useStatusStore()
 
 // ---------- 状态 ----------
 const range = ref('7d')
@@ -412,14 +415,12 @@ function numFmt(n) {
   return v.toLocaleString()
 }
 
-// formatQuota: 按 1e3/1e6/1e9 自动换算到 K/M/B。
-// formatQuota: auto-suffix K/M/B for big numbers.
+// formatQuota: 按系统基准（quota_per_unit）折算为元展示。
+// formatQuota: render quota as CNY via the system quota_per_unit base.
+// 版本: v0.0.23
+// 日期: 2026-10-03
 function formatQuota(n) {
-  const num = Number(n) || 0
-  if (num < 10000) return num.toLocaleString()
-  if (num < 1e6) return (num / 1e3).toFixed(2) + 'K'
-  if (num < 1e9) return (num / 1e6).toFixed(2) + 'M'
-  return (num / 1e9).toFixed(2) + 'B'
+  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
 }
 
 // formatTokens: K/M/B 与 Dashboard.vue 一致，专用于「Token」卡片。

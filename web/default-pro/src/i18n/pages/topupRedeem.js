@@ -1,6 +1,6 @@
 // topupRedeem.js 充值弹窗与兑换页 i18n
 // Top-up modal and redeem page i18n.
-// 版本: v0.0.21
+// 版本: v0.0.23
 // 日期: 2026-09-17
 // 作者: opencode
 export default {
@@ -8,11 +8,11 @@ export default {
     topupModalPage: {
       title: '在线充值',
       selectAmount: '选择金额',
-      bonus: '送 {n}',
+      credit: '到账 {n}',
       custom: '自定义',
       inputAmount: '输入金额',
       amountPlaceholder: '请输入充值金额',
-      willReceive: '将获得 {n} 额度',
+      willReceive: '将获得 {n}',
       payMethod: '支付方式',
       noPayMethods: '暂无可用的支付方式',
       payAmount: '支付金额',
@@ -32,7 +32,7 @@ export default {
       usage: '已使用',
       enterCode: '请输入兑换码',
       invalidCode: '兑换码格式不正确',
-      successInline: '兑换成功，已到账 {amount} 额度',
+      successInline: '兑换成功，已到账 {amount}',
       failed: '兑换失败',
     },
   },
@@ -40,11 +40,11 @@ export default {
     topupModalPage: {
       title: 'Online Top-up',
       selectAmount: 'Select Amount',
-      bonus: 'Bonus {n}',
+      credit: 'Credits {n}',
       custom: 'Custom',
       inputAmount: 'Enter amount',
       amountPlaceholder: 'Enter top-up amount',
-      willReceive: 'You will receive {n} credits',
+      willReceive: 'You will receive {n}',
       payMethod: 'Payment Method',
       noPayMethods: 'No payment methods available',
       payAmount: 'Pay Amount',
@@ -64,7 +64,7 @@ export default {
       usage: 'Used',
       enterCode: 'Please enter a redemption code',
       invalidCode: 'Invalid redemption code format',
-      successInline: 'Redeemed successfully — {amount} credits added',
+      successInline: 'Redeemed successfully — {amount} added',
       failed: 'Redemption failed',
     },
   },

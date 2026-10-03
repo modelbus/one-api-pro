@@ -33,7 +33,7 @@ order: 1
 
 | 类型 | 用户兑换后得到 |
 |---|---|
-| **额度码** | [用户余额](../schema/redemption) 直接 +N（按 `QuotaPerUnit` 换算） |
+| **额度码** | [用户余额](../schema/redemption) 直接 +N（按固定基准 1 元 = 1,000,000 quota 换算） |
 | **套餐码** | 激活 [Subscription](../schema/subscription)，按该套餐的 duration_days 算到期时间 |
 | **限免码** | 内部用的「限时免费」标记（开发中） |
 

@@ -5,10 +5,10 @@
             <h3>{{ $t('settingPage.operation.quotaSection') }}</h3>
             <a-form :model="form" layout="vertical" class="setting-form">
               <a-row :gutter="[24, 8]">
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForNewUser')"><a-input-number v-model="form.QuotaForNewUser" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.preConsumedQuota')"><a-input-number v-model="form.PreConsumedQuota" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInviter')"><a-input-number v-model="form.QuotaForInviter" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInvitee')"><a-input-number v-model="form.QuotaForInvitee" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForNewUser')"><a-input-number v-model="form.QuotaForNewUser" :precision="yuanInputPrecision(form.QuotaForNewUser, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.preConsumedQuota')"><a-input-number v-model="form.PreConsumedQuota" :precision="yuanInputPrecision(form.PreConsumedQuota, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInviter')"><a-input-number v-model="form.QuotaForInviter" :precision="yuanInputPrecision(form.QuotaForInviter, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaForInvitee')"><a-input-number v-model="form.QuotaForInvitee" :precision="yuanInputPrecision(form.QuotaForInvitee, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
               </a-row>
               <a-form-item><a-button type="primary" @click="saveSection(['QuotaForNewUser','PreConsumedQuota','QuotaForInviter','QuotaForInvitee'])">{{ $t('settingPage.operation.saveQuota') }}</a-button></a-form-item>
             </a-form>
@@ -20,7 +20,7 @@
             <a-form :model="form" layout="vertical" class="setting-form">
               <a-row :gutter="[24, 8]">
                 <a-col :span="6"><a-form-item :label="$t('settingPage.operation.channelDisableThreshold')"><a-input-number v-model="form.ChannelDisableThreshold" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
-                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaRemindThreshold')"><a-input-number v-model="form.QuotaRemindThreshold" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="6"><a-form-item :label="$t('settingPage.operation.quotaRemindThreshold')"><a-input-number v-model="form.QuotaRemindThreshold" :precision="yuanInputPrecision(form.QuotaRemindThreshold, quotaPerUnit)" :min="0" :step="1" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
               </a-row>
               <a-row :gutter="[32, 8]">
                 <a-col :span="6"><a-form-item :label="$t('settingPage.operation.autoDisableChannel')"><a-switch v-model="form.AutomaticDisableChannelEnabled" @change="saveSwitch('AutomaticDisableChannelEnabled')" /></a-form-item></a-col>
@@ -49,8 +49,7 @@
               <a-row :gutter="[24, 8]">
                 <a-col :span="8"><a-form-item :label="$t('settingPage.operation.topUpLink')"><a-input v-model="form.TopUpLink" :placeholder="$t('settingPage.operation.topUpLinkPlaceholder')" size="large" /></a-form-item></a-col>
                 <a-col :span="8"><a-form-item :label="$t('settingPage.operation.chatLink')"><a-input v-model="form.ChatLink" :placeholder="$t('settingPage.operation.chatLinkPlaceholder')" size="large" /></a-form-item></a-col>
-                <a-col :span="4"><a-form-item :label="$t('settingPage.operation.quotaPerUnit')"><a-input-number v-model="form.QuotaPerUnit" :style="{width:'100%'}" :precision="2" size="large" /></a-form-item></a-col>
-                <a-col :span="4"><a-form-item :label="$t('settingPage.operation.retryTimes')"><a-input-number v-model="form.RetryTimes" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
+                <a-col :span="8"><a-form-item :label="$t('settingPage.operation.retryTimes')"><a-input-number v-model="form.RetryTimes" :style="{width:'100%'}" size="large" /></a-form-item></a-col>
               </a-row>
               <a-row :gutter="[32, 8]">
                 <a-col :span="6"><a-form-item :label="$t('settingPage.operation.displayInCurrency')"><a-switch v-model="form.DisplayInCurrencyEnabled" @change="saveSwitch('DisplayInCurrencyEnabled')" /></a-form-item></a-col>
@@ -111,21 +110,27 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
 import settingApi from '@/api/setting'
+import { resolveQuotaPerUnit, quotaToYuanExact, yuanInputPrecision, yuanToQuota } from '@/utils/quota'
+import { useStatusStore } from '@/stores/status'
 
 const { t } = useI18n()
+const statusStore = useStatusStore()
+
+// quotaPerUnit：1 元 = quota_per_unit 额度（来自 /api/status 只读常量）。
+const quotaPerUnit = computed(() => resolveQuotaPerUnit(statusStore.status?.quota_per_unit))
 
 const loading = ref(false), logCleanDate = ref(''), logCleaning = ref(false)
 const form = reactive({
   QuotaForNewUser: '', PreConsumedQuota: '', QuotaForInviter: '', QuotaForInvitee: '',
   ChannelDisableThreshold: '', QuotaRemindThreshold: '',
   AutomaticDisableChannelEnabled: false, AutomaticEnableChannelEnabled: false, LogConsumeEnabled: false,
-  TopUpLink: '', ChatLink: '', QuotaPerUnit: '', RetryTimes: '',
+  TopUpLink: '', ChatLink: '', RetryTimes: '',
   DisplayInCurrencyEnabled: false, DisplayTokenStatEnabled: false, ApproximateTokenEnabled: false,
   ChannelDefaultCooldownSeconds: '', ChannelMaxCooldownSeconds: '',
   ChannelConcurrencyEnabled: false, ChannelStickySessionEnabled: false
@@ -151,9 +156,13 @@ async function savePlanSettings() {
   } catch (e) { Message.error(t('settingPage.operation.saveFailed')) }
 }
 
-const opKeys = ['QuotaForNewUser','PreConsumedQuota','QuotaForInviter','QuotaForInvitee','ChannelDisableThreshold','QuotaRemindThreshold','AutomaticDisableChannelEnabled','AutomaticEnableChannelEnabled','LogConsumeEnabled','TopUpLink','ChatLink','QuotaPerUnit','RetryTimes','DisplayInCurrencyEnabled','DisplayTokenStatEnabled','ApproximateTokenEnabled','ChannelDefaultCooldownSeconds','ChannelMaxCooldownSeconds','ChannelConcurrencyEnabled','ChannelStickySessionEnabled','ErrorNext']
+const opKeys = ['QuotaForNewUser','PreConsumedQuota','QuotaForInviter','QuotaForInvitee','ChannelDisableThreshold','QuotaRemindThreshold','AutomaticDisableChannelEnabled','AutomaticEnableChannelEnabled','LogConsumeEnabled','TopUpLink','ChatLink','RetryTimes','DisplayInCurrencyEnabled','DisplayTokenStatEnabled','ApproximateTokenEnabled','ChannelDefaultCooldownSeconds','ChannelMaxCooldownSeconds','ChannelConcurrencyEnabled','ChannelStickySessionEnabled','ErrorNext']
 
-const numberKeys = ['QuotaForNewUser','PreConsumedQuota','QuotaForInviter','QuotaForInvitee','ChannelDisableThreshold','QuotaRemindThreshold','QuotaPerUnit','RetryTimes','ChannelDefaultCooldownSeconds','ChannelMaxCooldownSeconds']
+// 非额度类纯数字选项（直接按数字处理）
+const numberKeys = ['ChannelDisableThreshold','RetryTimes','ChannelDefaultCooldownSeconds','ChannelMaxCooldownSeconds']
+
+// 额度类选项：DB 存 quota 整数，UI 统一以元（¥）输入/展示，读写时换算。
+const yuanQuotaKeys = ['QuotaForNewUser','PreConsumedQuota','QuotaForInviter','QuotaForInvitee','QuotaRemindThreshold']
 
 async function loadOps() {
   loading.value = true
@@ -163,7 +172,8 @@ async function loadOps() {
       const items = Array.isArray(data.data) ? data.data : Object.entries(data.data).map(([k,v])=>({key:k,value:String(v)}))
       items.forEach(i => {
         if (!opKeys.includes(i.key)) return
-        if (i.value === 'true') form[i.key] = true
+        if (yuanQuotaKeys.includes(i.key)) form[i.key] = quotaToYuanExact(Number(i.value) || 0, quotaPerUnit.value)
+        else if (i.value === 'true') form[i.key] = true
         else if (i.value === 'false') form[i.key] = false
         else if (numberKeys.includes(i.key)) form[i.key] = Number(i.value) || 0
         else form[i.key] = i.value
@@ -175,7 +185,11 @@ async function loadOps() {
 async function saveSwitch(key) { try { await api.put('/api/option/', { key, value: form[key] ? 'true' : 'false' }); Message.success(t('settingPage.operation.saved')) } catch(e){ Message.error(t('settingPage.operation.saveFailed')) } }
 
 async function saveSection(keys) {
-  for (const k of keys) { try { await api.put('/api/option/', { key: k, value: String(form[k]??'') }) } catch(e){ /* continue */ } }
+  for (const k of keys) {
+    // 额度类字段以元输入，提交前换算回 quota 整数
+    const value = yuanQuotaKeys.includes(k) ? String(yuanToQuota(form[k], quotaPerUnit.value)) : String(form[k] ?? '')
+    try { await api.put('/api/option/', { key: k, value }) } catch(e){ /* continue */ }
+  }
   Message.success(t('settingPage.operation.saved'))
 }
 
@@ -186,7 +200,7 @@ async function cleanLogs() {
 }
 
 async function saveAll() {
-  await saveSection(['TopUpLink','ChatLink','QuotaPerUnit','RetryTimes','ChannelDefaultCooldownSeconds','ChannelMaxCooldownSeconds'])
+  await saveSection(['TopUpLink','ChatLink','RetryTimes','ChannelDefaultCooldownSeconds','ChannelMaxCooldownSeconds'])
   try { await api.put('/api/option/', { key: 'ErrorNext', value: JSON.stringify({...errorNext}) }); Message.success(t('settingPage.operation.allSaved')) } catch(e){ Message.error(t('settingPage.operation.saveFailed')) }
 }
 

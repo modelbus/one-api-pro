@@ -312,6 +312,7 @@ import ModelIcon from '@/components/ModelIcon.vue'
 import TopupModal from '@/components/TopupModal.vue'
 import settingApi from '@/api/setting'
 import { findProviderByName } from '@/constants/providers'
+import { formatQuota as formatQuotaYuan } from '@/utils/quota'
 
 const authStore = useAuthStore()
 const statusStore = useStatusStore()
@@ -458,10 +459,11 @@ const columns = computed(() => [
 ])
 
 function fmtNum(n) { return Number(n || 0).toLocaleString() }
+// fmtQuota 按系统基准（quota_per_unit）将额度折算为元展示。
+// 版本: v0.0.23
+// 日期: 2026-10-03
 function fmtQuota(n) {
-  const v = Number(n) || 0
-  if (v >= 10000) return (v / 10000).toFixed(2) + 'w'
-  return v.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
 }
 function fmtTokens(n) {
   const v = Number(n) || 0

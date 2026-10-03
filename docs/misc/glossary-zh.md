@@ -104,8 +104,9 @@ OrderPayMethodFree    = "free"      // 管理员免费赠送 / admin free grant
 | `plan.upgrade_mode` | `price_diff` | plan | `price_diff` / `stack` |
 | `topup.enabled` | true | topup | 充值总开关 |
 | `topup.allow_custom` | true | topup | 是否允许自定义金额 |
-| `topup.presets` | — | topup | JSON: `[{amount, bonus_quota}, ...]` |
-| `topup.exchange_rate` | 1 | topup | 1 元 = X quota |
+| `topup.presets` | — | topup | JSON: `[{amount, bonus_quota}, ...]`（UI 以「支付金额 / 到账金额」双列编辑） |
+| `topup.exchange_rate` | — | topup | **已废弃**：v0.0.24 起移除，自定义金额恒 1:1 |
+| `QuotaPerUnit` | 1_000_000 | （常量） | 系统常量：1 元 = 1,000,000 quota，仅参与计算、不入库、不可修改 |
 
 ## 套餐升级模式
 

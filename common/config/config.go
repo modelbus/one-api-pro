@@ -18,7 +18,16 @@ var Footer = ""
 var Logo = ""
 var TopUpLink = ""
 var ChatLink = ""
-var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
+
+// QuotaPerUnit 是额度与货币的换算基准，语义同微信支付的「分」：
+// 1 元 = 1_000_000 quota（即 1 quota = 1e-6 元）。
+// 该值为系统常量，仅参与内部计算，不对外展示、不入库、不可修改；
+// 与「模型定价保留 6 位小数」以及「¥/1M tokens」三者精度对齐。
+//
+// 版本: v0.0.24
+// 日期: 2026-10-03
+const QuotaPerUnit = 1_000_000.0
+
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
 

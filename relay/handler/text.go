@@ -45,19 +45,32 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	}
 	groupDiscount := billingratio.GetGroupDiscount(meta.Group, textRequest.Model, meta.OriginModelName)
 
-	ratio := 1.0
-	if priceResult.BillingType == dbmodel.BillingTypeToken {
-		ratio = (priceResult.InputPrice + priceResult.OutputPrice) / 2.0 / billingratio.Million * config.QuotaPerUnit
+	// Pre-consume amount differs by billing type:
+	//   - per_request: the cost is a flat, fully-known price per call, so
+	//     pre-consume the exact amount. Settlement then computes the same
+	//     amount and the delta is 0 — the balance can never be drained into
+	//     the negative by the "estimate now, settle later" mismatch.
+	//   - token: the cost depends on the upstream usage, so pre-consume an
+	//     estimate and settle the difference afterwards.
+	//
+	// 预扣口径按计费方式区分：per_request 请求前即可确定精确费用，按按次价格
+	// 精确预扣（结算 delta 恒为 0，不会透支）；token 计费则按估算预扣、结算补差。
+	promptTokens := getPromptTokens(textRequest, meta.Mode)
+	meta.PromptTokens = promptTokens
+	var preConsumedQuota int64
+	var bizErr *model.ErrorWithStatusCode
+	if priceResult.BillingType == dbmodel.BillingTypePerRequest {
+		exactQuota := billingratio.CalculatePerRequestQuota(priceResult.PerRequestPrice, 1, 1, groupDiscount)
+		preConsumedQuota, bizErr = preConsumeExactQuota(ctx, exactQuota, meta)
+	} else {
+		ratio := (priceResult.InputPrice + priceResult.OutputPrice) / 2.0 / billingratio.Million * config.QuotaPerUnit
 		if ratio == 0 {
 			ratio = 1.0
 		}
+		preConsumedQuota, bizErr = preConsumeQuota(ctx, textRequest, promptTokens, ratio, meta)
 	}
-
-	promptTokens := getPromptTokens(textRequest, meta.Mode)
-	meta.PromptTokens = promptTokens
-	preConsumedQuota, bizErr := preConsumeQuota(ctx, textRequest, promptTokens, ratio, meta)
 	if bizErr != nil {
-		logger.Warnf(ctx, "preConsumeQuota failed: %+v", *bizErr)
+		logger.Warnf(ctx, "pre-consume quota failed: %+v", *bizErr)
 		return bizErr
 	}
 

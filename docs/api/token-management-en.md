@@ -49,7 +49,7 @@ Implementation: `controller/token.go`.
 {
   "name": "my-bot",
   "expired_time": -1,
-  "remain_quota": 500000,
+  "remain_quota": 1000000,
   "unlimited_quota": false,
   "models": "gpt-4o,gpt-4o-mini",
   "subnet": "10.0.0.0/8"

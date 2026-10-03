@@ -4,18 +4,13 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/model"
 )
 
 func TestModelPriceIntegration(t *testing.T) {
 	Convey("Model Price Integration Tests", t, func() {
-		originalQuotaPerUnit := config.QuotaPerUnit
-		config.QuotaPerUnit = 500000
-		defer func() {
-			config.QuotaPerUnit = originalQuotaPerUnit
-		}()
-
 		Convey("full token billing pipeline", func() {
 			inputPrice := 2.5
 			outputPrice := 10.0
@@ -28,7 +23,7 @@ func TestModelPriceIntegration(t *testing.T) {
 			quota := CalculateTokenQuota(inputPrice, outputPrice, cachedPrice, promptTokens, completionTokens, cachedTokens, groupDiscount)
 
 			inputTokens := promptTokens - cachedTokens
-			expected := int64((inputPrice*float64(inputTokens) + outputPrice*float64(completionTokens) + cachedPrice*float64(cachedTokens)) * groupDiscount / 1_000_000 * 500000)
+			expected := int64((inputPrice*float64(inputTokens) + outputPrice*float64(completionTokens) + cachedPrice*float64(cachedTokens)) * groupDiscount / 1_000_000 * config.QuotaPerUnit)
 			So(quota, ShouldEqual, expected)
 		})
 
@@ -39,7 +34,7 @@ func TestModelPriceIntegration(t *testing.T) {
 			groupDiscount := 0.9
 
 			quota := CalculatePerRequestQuota(perRequestPrice, sizeRatio, n, groupDiscount)
-			expected := int64(perRequestPrice * sizeRatio * float64(n) * groupDiscount * 500000)
+			expected := int64(perRequestPrice * sizeRatio * float64(n) * groupDiscount * config.QuotaPerUnit)
 			So(quota, ShouldEqual, expected)
 		})
 
@@ -56,7 +51,7 @@ func TestModelPriceIntegration(t *testing.T) {
 			quota := CalculateTokenQuota(inputPrice, outputPrice, cachedPrice, promptTokens, completionTokens, cachedTokens, groupDiscount)
 
 			inputTokens := promptTokens - cachedTokens
-			expected := int64((inputPrice*float64(inputTokens) + outputPrice*float64(completionTokens) + cachedPrice*float64(cachedTokens)) * groupDiscount / 1_000_000 * 500000)
+			expected := int64((inputPrice*float64(inputTokens) + outputPrice*float64(completionTokens) + cachedPrice*float64(cachedTokens)) * groupDiscount / 1_000_000 * config.QuotaPerUnit)
 			So(quota, ShouldEqual, expected)
 			So(quota, ShouldBeGreaterThan, 0)
 		})
@@ -72,12 +67,6 @@ func TestModelPriceConstants(t *testing.T) {
 
 func TestEdgeCases(t *testing.T) {
 	Convey("Edge cases", t, func() {
-		originalQuotaPerUnit := config.QuotaPerUnit
-		config.QuotaPerUnit = 500000
-		defer func() {
-			config.QuotaPerUnit = originalQuotaPerUnit
-		}()
-
 		Convey("all cached tokens", func() {
 			quota := CalculateTokenQuota(2.5, 10, 1.25, 1000, 0, 1000, 1.0)
 			So(quota, ShouldBeGreaterThan, 0)

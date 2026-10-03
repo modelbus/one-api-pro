@@ -32,11 +32,11 @@ const (
 
 // SystemSetting key constants — topup.*（用户在线支付充值）
 // 版本 v0.0.10  2026-09-06  新增
+// 版本 v0.0.24  2026-10-03  移除 topup.exchange_rate（自定义金额恒 1:1）
 const (
-	SystemSettingKeyTopupEnabled      = "topup.enabled"       // 充值总开关（bool: true/false）
-	SystemSettingKeyTopupAllowCustom  = "topup.allow_custom"  // 是否允许用户输入自定义金额（bool）
-	SystemSettingKeyTopupPresets      = "topup.presets"       // 快捷金额列表（JSON: [{amount, bonus_quota}, ...]）
-	SystemSettingKeyTopupExchangeRate = "topup.exchange_rate" // 自定义金额 1 元 = X quota（int，默认 1 即 1:1）
+	SystemSettingKeyTopupEnabled     = "topup.enabled"      // 充值总开关（bool: true/false）
+	SystemSettingKeyTopupAllowCustom = "topup.allow_custom" // 是否允许用户输入自定义金额（bool）
+	SystemSettingKeyTopupPresets     = "topup.presets"      // 快捷金额列表（JSON: [{amount, bonus_quota}, ...]）
 )
 
 // SystemSetting is a generic key-value configuration row.

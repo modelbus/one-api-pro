@@ -13,16 +13,15 @@ order: 4
 
 ### Quota codes
 
-- The code stores an integer
-- Balance credited = integer × `QuotaPerUnit` (configured in System Settings)
-- Default: 1 quota unit = ¥1
+- The code stores an integer quota value
+- Balance credited = integer × 1e-6 CNY (the quota base is a system constant)
+- The base is `QuotaPerUnit = 1,000,000`, not configurable
 
 Example:
-- Code quota value = 100,000
-- `QuotaPerUnit` = 500,000 (default)
-- 100,000 quota units credited (per the system's current rate)
+- Code quota value = 1,000,000
+- ¥1 credit (1,000,000 × 1e-6 CNY)
 
-Changing `QuotaPerUnit` in [System Settings](../misc/system-settings) affects how all future codes are credited.
+> `QuotaPerUnit` is the system constant `1,000,000` (1 quota = 1e-6 CNY) and cannot be changed in System Settings. Admins enter CNY when creating codes; the frontend converts to internal quota automatically.
 
 ### Plan codes
 
@@ -42,7 +41,7 @@ Admin sets expiry when generating (default 30 days).
 
 ## FAQ
 
-- **Want to give a user ¥5 balance**: create 5 quota codes, each 100,000 (= ¥5 worth at default rate)
+- **Want to give a user ¥5 balance**: create 1 quota code with the value 5 (CNY)
 - **Want to give a monthly plan instead**: pick the plan when generating the code; a quota code can't activate a plan
 - **Code credit doesn't match the plan price**: the code credit is integer × `QuotaPerUnit`; it doesn't depend on plan prices
 

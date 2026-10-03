@@ -1,15 +1,14 @@
 <template>
   <!--
     TopupSetting 充值设置页面
-    版本: v0.0.10
-    日期: 2026-09-06
+    版本: v0.0.24
+    日期: 2026-10-04
     作者: opencode
 
     功能：
       - 总开关
-      - 是否允许用户自定义金额
-      - 自定义金额换算比例（1 元 = X quota）
-      - 快捷金额列表（可增删改）
+      - 是否允许用户自定义金额（恒 1:1，支付多少到账多少）
+      - 快捷金额列表（支付金额 / 到账金额，均以元输入，支持「充 10 得 15」赠送）
   -->
   <div class="topup-setting-page">
     <a-spin :loading="loading" style="width: 100%">
@@ -25,16 +24,6 @@
           <a-form-item :label="$t('settingPage.topup.allowCustom')">
             <a-switch v-model="form.allow_custom" />
           </a-form-item>
-          <a-form-item :label="$t('settingPage.topup.exchangeRate')">
-            <a-input-number
-              v-model="form.exchange_rate"
-              :min="1"
-              :step="1"
-              :precision="0"
-              :placeholder="$t('settingPage.topup.exchangeRatePlaceholder')"
-              style="width: 320px"
-            />
-          </a-form-item>
         </a-form>
 
         <a-divider :margin="20" />
@@ -47,6 +36,7 @@
             {{ $t('settingPage.topup.add') }}
           </a-button>
         </div>
+        <p class="section-hint">{{ $t('settingPage.topup.presetsHint') }}</p>
 
         <a-table
           :columns="columns"
@@ -68,15 +58,15 @@
               @change="(v) => updatePreset(rowIndex, 'amount', v)"
             />
           </template>
-          <template #bonus_quota="{ record, rowIndex }">
+          <template #credit="{ record, rowIndex }">
             <a-input-number
-              :model-value="record.bonus_quota"
+              :model-value="record.credit"
               :min="0"
-              :precision="0"
-              :step="1000"
+              :precision="yuanInputPrecision(record.credit, quotaPerUnit)"
+              :step="1"
               size="small"
               style="width: 100%"
-              @change="(v) => updatePreset(rowIndex, 'bonus_quota', v)"
+              @change="(v) => updatePreset(rowIndex, 'credit', v)"
             />
           </template>
           <template #action="{ rowIndex }">
@@ -98,8 +88,8 @@
 </template>
 
 <script setup>
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.24
+// 日期: 2026-10-04
 // 作者: opencode
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -107,27 +97,41 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import settingApi from '@/api/setting'
 import { validateTopupPresets } from '@/utils/topup'
+import { resolveQuotaPerUnit, quotaToYuanExact, yuanInputPrecision, yuanToQuota } from '@/utils/quota'
+import { useStatusStore } from '@/stores/status'
 
 const { t } = useI18n()
+const statusStore = useStatusStore()
+
+// quotaPerUnit：1 元对应的额度基准常量（来自 /api/status 的 quota_per_unit 只读输出）。
+const quotaPerUnit = computed(() => resolveQuotaPerUnit(statusStore.status?.quota_per_unit))
 
 const loading = ref(false)
 const saving = ref(false)
 
+// presets 以「元」为单位在前端编辑（amount = 支付金额，credit = 到账金额），提交时换算为 quota。
 const form = reactive({
   enabled: false,
   allow_custom: true,
-  exchange_rate: 1,
   presets: [],
 })
 
 const columns = computed(() => [
   { title: t('settingPage.topup.colAmount'), slotName: 'amount', width: 200 },
-  { title: t('settingPage.topup.colBonusQuota'), slotName: 'bonus_quota', width: 220 },
+  { title: t('settingPage.topup.colCredit'), slotName: 'credit', width: 220 },
   { title: t('settingPage.topup.colAction'), slotName: 'action', width: 100, align: 'center' },
 ])
 
+// quotaToYuanText 将 quota 反算回元，保留 6 位小数避免小额点零；输入框再按精度自适应展示。
+// 版本: v0.0.24
+// 日期: 2026-10-04
+function quotaToYuanText(q) {
+  return quotaToYuanExact(q, quotaPerUnit.value)
+}
+
 function addPreset() {
-  form.presets.push({ amount: 10, bonus_quota: 10 })
+  // 默认 1:1：充 10 元到账 10 元
+  form.presets.push({ amount: 10, credit: 10 })
 }
 
 function removePreset(idx) {
@@ -146,10 +150,9 @@ async function loadSettings() {
       const d = data.data
       form.enabled = !!d.enabled
       form.allow_custom = !!d.allow_custom
-      form.exchange_rate = Number(d.exchange_rate || 1)
       form.presets = Array.isArray(d.presets) ? d.presets.map(p => ({
-        amount: Number(p.amount),
-        bonus_quota: Number(p.bonus_quota),
+        amount: Number(Number(p.amount).toFixed(2)),
+        credit: quotaToYuanText(p.bonus_quota),
       })) : []
     }
   } catch (e) {
@@ -160,8 +163,12 @@ async function loadSettings() {
 }
 
 async function save() {
-  // 前端预校验：快捷金额金额不允许重复（v0.0.10 2026-09-06 新增）
-  const err = validateTopupPresets(form.presets, t)
+  // 前端预校验：金额 > 0、金额不重复、到账金额不低于支付金额
+  const payloadPresets = form.presets.map(p => ({
+    amount: Number(p.amount),
+    bonus_quota: yuanToQuota(p.credit, quotaPerUnit.value),
+  }))
+  const err = validateTopupPresets(payloadPresets, t, quotaPerUnit.value)
   if (err) {
     Message.error(err)
     return
@@ -171,11 +178,7 @@ async function save() {
     const payload = {
       enabled: form.enabled,
       allow_custom: form.allow_custom,
-      exchange_rate: Number(form.exchange_rate || 1),
-      presets: form.presets.map(p => ({
-        amount: Number(p.amount),
-        bonus_quota: Number(p.bonus_quota),
-      })),
+      presets: payloadPresets,
     }
     const { data } = await settingApi.putTopup(payload)
     if (data.success) {

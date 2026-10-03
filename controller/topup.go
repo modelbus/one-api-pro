@@ -4,8 +4,8 @@
 //   - GetTopupSettings: 管理员读取充值设置（GET /api/setting/topup）
 //   - PutTopupSettings: 管理员保存充值设置（PUT /api/setting/topup）
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.22
+// 日期: 2026-10-03
 // 作者: opencode
 package controller
 
@@ -19,11 +19,11 @@ import (
 )
 
 // CreateTopupOrderRequest 是 POST /api/topup/order 的请求体。
-// Amount 与 PresetAmount 至少传一个：PresetAmount > 0 命中预设；
-// 否则按 Amount × exchange_rate 算 bonus_quota（需开启 allow_custom）。
+// Amount 与 PresetAmount 至少传一个：PresetAmount > 0 命中预设（按预设的到账额度发放）；
+// 否则按 Amount 走自定义金额（恒 1:1，到账 = Amount × QuotaPerUnit，需开启 allow_custom）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.24
+// 日期: 2026-10-03
 type CreateTopupOrderRequest struct {
 	Amount       float64 `json:"amount"`
 	PresetAmount float64 `json:"preset_amount"`
@@ -89,8 +89,6 @@ func CreateTopupOrder(c *gin.Context) {
 	}
 
 	payInfo := buildPayInfo(req.PayMethod, order.OrderNo, order.Amount, "余额充值")
-	_ = payAmount
-	_ = bonusQuota
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":     true,
@@ -104,13 +102,12 @@ func CreateTopupOrder(c *gin.Context) {
 
 // TopupSettingsResponse 充值设置的 API 响应结构。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.24
+// 日期: 2026-10-03
 type TopupSettingsResponse struct {
-	Enabled      bool              `json:"enabled"`
-	AllowCustom  bool              `json:"allow_custom"`
-	ExchangeRate int64             `json:"exchange_rate"`
-	Presets      []model.TopupPreset `json:"presets"`
+	Enabled     bool                `json:"enabled"`
+	AllowCustom bool                `json:"allow_custom"`
+	Presets     []model.TopupPreset `json:"presets"`
 }
 
 // GetTopupSettings handles GET /api/setting/topup (root only).
@@ -118,28 +115,26 @@ type TopupSettingsResponse struct {
 // 版本: v0.0.10
 // 日期: 2026-09-06
 func GetTopupSettings(c *gin.Context) {
-	enabled, allowCustom, presets, exchangeRate := model.GetTopupSettings()
+	enabled, allowCustom, presets := model.GetTopupSettings()
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": TopupSettingsResponse{
-			Enabled:      enabled,
-			AllowCustom:  allowCustom,
-			ExchangeRate: exchangeRate,
-			Presets:      presets,
+			Enabled:     enabled,
+			AllowCustom: allowCustom,
+			Presets:     presets,
 		},
 	})
 }
 
 // PutTopupSettingsRequest 是 PUT /api/setting/topup 的请求体。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.24
+// 日期: 2026-10-03
 type PutTopupSettingsRequest struct {
-	Enabled      bool                `json:"enabled"`
-	AllowCustom  bool                `json:"allow_custom"`
-	ExchangeRate int64               `json:"exchange_rate"`
-	Presets      []model.TopupPreset `json:"presets"`
+	Enabled     bool                `json:"enabled"`
+	AllowCustom bool                `json:"allow_custom"`
+	Presets     []model.TopupPreset `json:"presets"`
 }
 
 // PutTopupSettings handles PUT /api/setting/topup (root only).
@@ -152,7 +147,7 @@ func PutTopupSettings(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "无效的参数"})
 		return
 	}
-	if err := model.SaveTopupSettings(req.Enabled, req.AllowCustom, req.Presets, req.ExchangeRate); err != nil {
+	if err := model.SaveTopupSettings(req.Enabled, req.AllowCustom, req.Presets); err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}

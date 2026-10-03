@@ -242,12 +242,14 @@
         <a-form-item field="remain_quota" :label="$t('token.quotaLabel')">
           <div class="input-with-checkbox">
             <a-input-number
-              v-model="form.remain_quota"
-              :min="-1"
-              :precision="0"
-              placeholder="500000"
+              :model-value="quotaYuan"
+              :min="0"
+              :precision="yuanInputPrecision(quotaYuan, quotaPerUnit)"
+              :step="1"
+              placeholder="1.00"
               :disabled="form.unlimited_quota"
               style="flex: 1"
+              @change="onQuotaYuanChange"
             />
             <a-checkbox v-model="form.unlimited_quota">{{ $t('token.noQuotaLimit') }}</a-checkbox>
           </div>
@@ -379,6 +381,7 @@ import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/we
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
 import { buildTokenExpiredTime, formatExpiredTime } from '@/utils/token'
+import { formatQuota as formatQuotaYuan, quotaToYuanExact, yuanInputPrecision, yuanToQuota, resolveQuotaPerUnit, DEFAULT_QUOTA_PER_UNIT } from '@/utils/quota'
 
 const statusStore = useStatusStore()
 const { t } = useI18n()
@@ -429,9 +432,19 @@ const form = reactive({
   subnet: '',
   expired_time: null,
   never_expire: false,
-  remain_quota: 500000,
+  remain_quota: DEFAULT_QUOTA_PER_UNIT,
   unlimited_quota: false,
 })
+
+// quotaYuan 将表单中的 quota 换算为元用于输入展示（管理端统一以元填写额度）。
+// 版本: v0.0.24
+// 日期: 2026-10-04
+const quotaYuan = computed(() => quotaToYuanExact(form.remain_quota, quotaPerUnit.value))
+
+// onQuotaYuanChange 将输入的元换算回 quota。
+function onQuotaYuanChange(v) {
+  form.remain_quota = yuanToQuota(v, quotaPerUnit.value)
+}
 
 const rules = {
   name: [{ required: true, message: t('token.nameRequired') }],
@@ -538,14 +551,15 @@ function maskKey(key) {
   return `${k.substring(0, 4)}****${k.substring(k.length - 4)}`
 }
 
+// formatQuota 额度列按系统基准（quota_per_unit）折算为元；负数表示不限额。
+// 版本: v0.0.23
+// 日期: 2026-10-03
 function formatQuota(val) {
   if (val == null || val === '') return '-'
   const n = Number(val)
   if (isNaN(n)) return val
   if (n < 0) return t('token.unlimited')
-  if (n >= 1000000) return `${(n / 1000000).toFixed(2)}M`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
-  return String(n)
+  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
 }
 
 async function copyText(text, successMsg) {
@@ -631,7 +645,7 @@ function openCreateModal() {
   form.subnet = ''
   form.expired_time = null
   form.never_expire = false
-  form.remain_quota = 500000
+  form.remain_quota = DEFAULT_QUOTA_PER_UNIT
   form.unlimited_quota = false
   modalVisible.value = true
 }
@@ -645,7 +659,7 @@ function openEditModal(record) {
   const exp = record.expired_time ? record.expired_time * 1000 : null
   form.expired_time = exp
   form.never_expire = !exp
-  form.remain_quota = record.remain_quota ?? 500000
+  form.remain_quota = record.remain_quota ?? DEFAULT_QUOTA_PER_UNIT
   form.unlimited_quota = !!record.unlimited_quota
   modalVisible.value = true
 }

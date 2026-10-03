@@ -51,7 +51,6 @@ order: 22
   "message": "",
   "data": [
     { "key": "QuotaForNewUser", "value": "1000000" },
-    { "key": "QuotaPerUnit", "value": "500000" },
     { "key": "TopUpLink", "value": "" },
     ...
   ]
@@ -71,10 +70,12 @@ order: 22
 
 ```json
 {
-  "key": "QuotaPerUnit",
-  "value": "500000"
+  "key": "RetryTimes",
+  "value": "3"
 }
 ```
+
+> `QuotaPerUnit` is a system constant and cannot be updated: sending it returns `QuotaPerUnit 为系统常量，不可修改`.
 
 **Request fields:**
 
@@ -179,7 +180,7 @@ quota = ceil(perRequestPrice × sizeRatio × N × groupDiscount × QuotaPerUnit)
 2. `GroupName + ""` (empty) → use that group's default discount.
 3. No match → discount is 1.0 (no discount).
 
-**`QuotaPerUnit`:** Default 500,000, meaning 500,000 internal quota equals ¥1.
+**`QuotaPerUnit`:** system constant `1,000,000`, meaning ¥1 = 1,000,000 internal quota (1 quota = 1e-6 CNY). It takes part in computation only, is **never stored** and **cannot be changed via `PUT /api/option/`**; read it from `/api/status` as the read-only `quota_per_unit` field when rendering.
 
 
 ## Appendix D: Channel Type Reference

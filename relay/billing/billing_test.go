@@ -66,17 +66,20 @@ func TestConsumeQuotaParamsLogContent(t *testing.T) {
 
 		Convey("per_request billing log format", func() {
 			params := &ConsumeQuotaParams{
-				InputPrice:    0.04,
-				GroupDiscount: 0.9,
-				BillingType:   "per_request",
+				InputPrice:      2.5,
+				PerRequestPrice: 0.04,
+				GroupDiscount:   0.9,
+				BillingType:     "per_request",
 			}
 			logContent := ""
 			if params.BillingType == "per_request" {
-				logContent = fmt.Sprintf("按次计费：¥%.4f × 分组折扣%.2f", params.InputPrice, params.GroupDiscount)
+				logContent = fmt.Sprintf("按次计费：¥%.6f × 分组折扣%.2f", params.PerRequestPrice, params.GroupDiscount)
 			}
 			So(logContent, ShouldContainSubstring, "按次计费")
-			So(logContent, ShouldContainSubstring, "¥0.0400")
+			So(logContent, ShouldContainSubstring, "¥0.040000")
 			So(logContent, ShouldContainSubstring, "分组折扣0.90")
+			// per_request 日志必须用按次单价，不能回落到 InputPrice
+			So(logContent, ShouldNotContainSubstring, "2.500000")
 		})
 
 		Convey("no group discount when discount is 1.0", func() {

@@ -236,9 +236,9 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		model.UpdateChannelUsedQuota(channelId, quota)
 		if quota != 0 {
 			tokenName := c.GetString(ctxkey.TokenName)
-			logContent := fmt.Sprintf("按次计费：¥%.4f/次", priceResult.PerRequestPrice)
+			logContent := fmt.Sprintf("按次计费：¥%.6f/次", priceResult.PerRequestPrice)
 			if priceResult.BillingType == model.BillingTypeToken {
-				logContent = fmt.Sprintf("定价：输入¥%.4f/百万tokens × 1", priceResult.InputPrice)
+				logContent = fmt.Sprintf("定价：输入¥%.6f/百万tokens × 1", priceResult.InputPrice)
 			}
 			if groupDiscount != 1.0 {
 				logContent += fmt.Sprintf(" × 分组折扣%.2f", groupDiscount)

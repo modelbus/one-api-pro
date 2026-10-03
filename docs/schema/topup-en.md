@@ -28,15 +28,15 @@ Admin → Top-up Settings:
 | Master switch | Enabled / not | Off hides the public entry. |
 | Preset amounts | e.g. 10 / 50 / 100 | Quick-pick options in the UI. |
 | Custom amount | Toggle | Off forces users to pick a preset. |
-| Exchange rate | Quota per ¥ | A ¥10 top-up adds `10 × rate` to the user's quota. |
-| Min / max amount | Number | Bounds on what users can enter. |
+| Credit amount | CNY | Credit per preset in CNY; may exceed the pay amount as a bonus. |
+| Min / max amount | Number | Bounds on what users can enter (reserved). |
 
 A sane starter:
 
 - Enabled
-- Presets: 10 / 50 / 100 / 500
+- Presets: pay 10 / 50 / 100 / 500, credit the same (1:1); use e.g. pay 10 / credit 15 for a bonus
 - Custom allowed, min ¥1, max ¥10 000
-- Rate `100000` (matches default `QuotaPerUnit=500000`)
+- The quota base is a system constant: ¥1 = 1,000,000 internal quota (not configurable)
 
 ## Operator-relevant fields (per order)
 

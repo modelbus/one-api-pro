@@ -169,7 +169,7 @@ order: 15
         "email": "alice@example.com",
         "request_count": 1230,
         "quota": 800000,
-        "balance": 5000000,
+        "balance": 10000000,
         "current_plan_name": "Pro Plan"
       }
     ]

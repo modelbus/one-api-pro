@@ -113,8 +113,9 @@ The `system_settings` table is a KV store with `(key, value, category)`. Common 
 | `plan.upgrade_mode` | `price_diff` | plan | `price_diff` / `stack` |
 | `topup.enabled` | true | topup | Master switch for top-up |
 | `topup.allow_custom` | true | topup | Allow custom amount |
-| `topup.presets` | — | topup | JSON: `[{amount, bonus_quota}, ...]` |
-| `topup.exchange_rate` | 1 | topup | 1 CNY = X quota |
+| `topup.presets` | — | topup | JSON: `[{amount, bonus_quota}, ...]` (edited in the UI as a pay/credit pair) |
+| `topup.exchange_rate` | — | topup | **Deprecated**: removed in v0.0.24; custom amounts are always 1:1 |
+| `QuotaPerUnit` | 1_000_000 | (constant) | System constant: ¥1 = 1,000,000 quota; computation only, never stored, never modifiable |
 
 ## Plan Upgrade Mode / 套餐升级模式
 
