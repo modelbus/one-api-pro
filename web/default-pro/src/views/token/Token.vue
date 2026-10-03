@@ -244,7 +244,7 @@
             <a-input-number
               :model-value="quotaYuan"
               :min="0"
-              :precision="2"
+              :precision="yuanInputPrecision(quotaYuan, quotaPerUnit)"
               :step="1"
               placeholder="1.00"
               :disabled="form.unlimited_quota"
@@ -381,7 +381,7 @@ import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/we
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
 import { buildTokenExpiredTime, formatExpiredTime } from '@/utils/token'
-import { formatQuota as formatQuotaYuan, quotaToYuan, yuanToQuota, resolveQuotaPerUnit, DEFAULT_QUOTA_PER_UNIT } from '@/utils/quota'
+import { formatQuota as formatQuotaYuan, quotaToYuanExact, yuanInputPrecision, yuanToQuota, resolveQuotaPerUnit, DEFAULT_QUOTA_PER_UNIT } from '@/utils/quota'
 
 const statusStore = useStatusStore()
 const { t } = useI18n()
@@ -437,7 +437,9 @@ const form = reactive({
 })
 
 // quotaYuan 将表单中的 quota 换算为元用于输入展示（管理端统一以元填写额度）。
-const quotaYuan = computed(() => Number(quotaToYuan(form.remain_quota, quotaPerUnit.value).toFixed(2)))
+// 版本: v0.0.24
+// 日期: 2026-10-04
+const quotaYuan = computed(() => quotaToYuanExact(form.remain_quota, quotaPerUnit.value))
 
 // onQuotaYuanChange 将输入的元换算回 quota。
 function onQuotaYuanChange(v) {
