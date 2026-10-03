@@ -4,7 +4,10 @@
 // 命名沿用历史 topup 命名（与 LogTypeTopup/AdminTopUp/TopUp 等保持全局一致），
 // 仅 UI 文案对外显示为"充值"。
 //
-// 版本: v0.0.22
+// 口径约定：1 元 = config.QuotaPerUnit 额度（常量 1_000_000），
+// 即「充值支付金额」与「到账额度」1:1 对齐；赠送能力通过快捷金额的到账金额体现。
+//
+// 版本: v0.0.24
 // 日期: 2026-10-03
 // 作者: opencode
 package model
@@ -13,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/helper"
@@ -20,7 +24,7 @@ import (
 
 // TopupPreset 表示一个充值快捷金额配置项。
 // amount: 用户需支付的金额（元，浮点，保留两位小数）
-// bonus_quota: 用户实际获得的系统额度（quota 整数）
+// bonus_quota: 用户实际到账的系统额度（quota 整数，>= amount 折算额度）
 //
 // 版本: v0.0.10
 // 日期: 2026-09-06
@@ -45,53 +49,40 @@ type CreateTopupOrderInput struct {
 }
 
 // TopupOrderPlanInfo 写入 orders.plan_info 字段的 JSON 结构。
-// 用于对账时还原下单时的金额与配额快照。
+// 用于对账时还原下单时的金额与额度快照。
+// CreditAmount 为到账金额（元），与 BonusQuota 等价表述，便于人工对账；
+// 历史订单中多余的 exchange_rate 字段会被 JSON 解码器自动忽略（安全兼容）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
+// 版本: v0.0.24
+// 日期: 2026-10-03
 type TopupOrderPlanInfo struct {
 	Amount       float64 `json:"amount"`
 	PresetAmount float64 `json:"preset_amount,omitempty"`
+	CreditAmount float64 `json:"credit_amount"`
 	BonusQuota   int64   `json:"bonus_quota"`
-	ExchangeRate int64   `json:"exchange_rate"`
 }
 
-// defaultTopupQuotaPerUnit 是 QuotaPerUnit 缺失或非法时的兜底基准：1 元 = 500000 额度。
-// 与 common/config 中 QuotaPerUnit 的默认值（500 * 1000）保持一致，避免两侧脱钩。
-// 版本: v0.0.22
-const defaultTopupQuotaPerUnit int64 = 500000
-
-// topupQuotaPerUnit 返回当前系统的「1 元 = 多少 quota」基准单位。
-// QuotaPerUnit <= 0 时回退到 defaultTopupQuotaPerUnit，防止除零与退化为 1。
+// YuanToQuota 将金额（元）按系统常量基准换算为额度（quota）。
+// 1 元 = config.QuotaPerUnit 额度；使用 math.Round 消除浮点截断误差
+// （例如 0.07 元 × 1e6 在浮点下为 69999.99…，直接取整会少 1）。
 //
-// 版本: v0.0.22
+// 版本: v0.0.24
 // 日期: 2026-10-03
-func topupQuotaPerUnit() int64 {
-	if config.QuotaPerUnit > 0 {
-		return int64(config.QuotaPerUnit)
+func YuanToQuota(amount float64) int64 {
+	if amount <= 0 {
+		return 0
 	}
-	return defaultTopupQuotaPerUnit
+	return int64(math.Round(amount * config.QuotaPerUnit))
 }
 
 // GetTopupSettings 读取充值设置。返回结构化对象，便于上层直接使用。
 // presets 为空时返回空切片（不是 nil）。
 //
-// 兑换比例低于基准单位（QuotaPerUnit）视为存量脏数据，读取时自愈为基准值：
-// 历史默认值 1 / 文档推荐的 100000 都会在此被归一，保证「1 元 = 1 元额度」。
-//
-// 版本: v0.0.22
+// 版本: v0.0.24
 // 日期: 2026-10-03
-func GetTopupSettings() (enabled bool, allowCustom bool, presets []TopupPreset, exchangeRate int64) {
+func GetTopupSettings() (enabled bool, allowCustom bool, presets []TopupPreset) {
 	enabled = GetSystemSettingString(SystemSettingKeyTopupEnabled) == "true"
 	allowCustom = GetSystemSettingString(SystemSettingKeyTopupAllowCustom) == "true"
-	exchangeRate = parseInt64Setting(SystemSettingKeyTopupExchangeRate, 0)
-
-	// 存量自愈：低于基准单位的比例会让「充 1 元 ≠ 到账 1 元」，统一归一到基准值。
-	// 高于基准单位的比例视为管理员主动配置的赠送倍率，原样保留。
-	base := topupQuotaPerUnit()
-	if exchangeRate < base {
-		exchangeRate = base
-	}
 
 	raw := GetSystemSettingString(SystemSettingKeyTopupPresets)
 	if raw == "" {
@@ -108,10 +99,12 @@ func GetTopupSettings() (enabled bool, allowCustom bool, presets []TopupPreset, 
 }
 
 // SaveTopupSettings 整体覆盖保存充值设置。
+// 校验规则：金额必须大于 0；金额不允许重复；
+// 到账额度不得低于支付金额按基准折算的额度（允许赠送，不允许缩水）。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
-func SaveTopupSettings(enabled, allowCustom bool, presets []TopupPreset, exchangeRate int64) error {
+// 版本: v0.0.24
+// 日期: 2026-10-03
+func SaveTopupSettings(enabled, allowCustom bool, presets []TopupPreset) error {
 	if presets == nil {
 		presets = []TopupPreset{}
 	}
@@ -120,20 +113,17 @@ func SaveTopupSettings(enabled, allowCustom bool, presets []TopupPreset, exchang
 		if p.Amount <= 0 {
 			return fmt.Errorf("第 %d 项金额必须大于 0", i+1)
 		}
-		if p.BonusQuota < 0 {
-			return fmt.Errorf("第 %d 项额度不能为负数", i+1)
-		}
 		// 快捷金额金额不允许重复（v0.0.10 2026-09-06 新增校验）
 		if seenAmounts[p.Amount] {
 			return fmt.Errorf("快捷金额重复：%.2f 元已存在", p.Amount)
 		}
 		seenAmounts[p.Amount] = true
-	}
-	// 兑换比例必须 >= 基准单位（1 元 = QuotaPerUnit 额度）。
-	// 低于基准值等价于「充 1 元到账不足 1 元」，直接拒绝，避免脏数据再次落库。
-	base := topupQuotaPerUnit()
-	if exchangeRate < base {
-		return fmt.Errorf("兑换比例不能低于 %d（1 元 = %d 额度）", base, base)
+		// 到账额度不得低于支付金额折算额度（营销赠送允许高于）。
+		minQuota := YuanToQuota(p.Amount)
+		if p.BonusQuota < minQuota {
+			return fmt.Errorf("第 %d 项到账额度不能低于支付金额折算额度（%.2f 元 = %d 额度）",
+				i+1, p.Amount, minQuota)
+		}
 	}
 	presetsJSON, err := json.Marshal(presets)
 	if err != nil {
@@ -147,20 +137,17 @@ func SaveTopupSettings(enabled, allowCustom bool, presets []TopupPreset, exchang
 		fmt.Sprintf("%t", allowCustom), SystemSettingCategoryTopup, "允许自定义金额"); err != nil {
 		return err
 	}
-	if err := UpsertSystemSetting(SystemSettingKeyTopupPresets,
-		string(presetsJSON), SystemSettingCategoryTopup, "充值快捷金额"); err != nil {
-		return err
-	}
-	return UpsertSystemSetting(SystemSettingKeyTopupExchangeRate,
-		fmt.Sprintf("%d", exchangeRate), SystemSettingCategoryTopup, "自定义金额 1 元 = X quota")
+	return UpsertSystemSetting(SystemSettingKeyTopupPresets,
+		string(presetsJSON), SystemSettingCategoryTopup, "充值快捷金额（支付金额 / 到账金额）")
 }
 
 // ResolveTopupAmount 根据入参解析实际支付金额与到账 quota。
-// 返回值：payAmount(元), bonusQuota(quota), presetMatched(bool)
+// 返回值：payAmount(元), bonusQuota(quota), error
+// 自定义金额恒 1:1（不提供兑换比例配置），到账额度 = 金额 × QuotaPerUnit。
 //
-// 版本: v0.0.10
-// 日期: 2026-09-06
-func ResolveTopupAmount(in CreateTopupOrderInput, presets []TopupPreset, allowCustom bool, exchangeRate int64) (float64, int64, error) {
+// 版本: v0.0.24
+// 日期: 2026-10-03
+func ResolveTopupAmount(in CreateTopupOrderInput, presets []TopupPreset, allowCustom bool) (float64, int64, error) {
 	if in.PresetAmount > 0 {
 		// 命中预设：从列表中找到对应金额的 preset
 		for _, p := range presets {
@@ -177,11 +164,7 @@ func ResolveTopupAmount(in CreateTopupOrderInput, presets []TopupPreset, allowCu
 	if in.Amount <= 0 {
 		return 0, 0, errors.New("充值金额必须大于 0")
 	}
-	if base := topupQuotaPerUnit(); exchangeRate < base {
-		exchangeRate = base
-	}
-	bonus := int64(in.Amount * float64(exchangeRate))
-	return in.Amount, bonus, nil
+	return in.Amount, YuanToQuota(in.Amount), nil
 }
 
 // CreateTopupOrder 创建充值订单（type=2）。
@@ -200,12 +183,12 @@ func CreateTopupOrder(in CreateTopupOrderInput) (*Order, float64, int64, error) 
 		in.Source = OrderSourceUserSelf
 	}
 
-	enabled, allowCustom, presets, exchangeRate := GetTopupSettings()
+	enabled, allowCustom, presets := GetTopupSettings()
 	if !enabled {
 		return nil, 0, 0, errors.New("充值功能未开启")
 	}
 
-	payAmount, bonusQuota, err := ResolveTopupAmount(in, presets, allowCustom, exchangeRate)
+	payAmount, bonusQuota, err := ResolveTopupAmount(in, presets, allowCustom)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -219,8 +202,8 @@ func CreateTopupOrder(in CreateTopupOrderInput) (*Order, float64, int64, error) 
 	info := TopupOrderPlanInfo{
 		Amount:       payAmount,
 		PresetAmount: in.PresetAmount,
+		CreditAmount: float64(bonusQuota) / config.QuotaPerUnit,
 		BonusQuota:   bonusQuota,
-		ExchangeRate: exchangeRate,
 	}
 	infoJSON, _ := json.Marshal(info)
 
@@ -261,16 +244,12 @@ func ActivateTopupByOrder(order *Order) error {
 		return nil // already activated
 	}
 
-	// 解析快照获取到账 quota；若快照缺失则按 amount × exchange_rate 兜底
+	// 解析快照获取到账 quota；若快照缺失则按 1:1（金额 × QuotaPerUnit）兜底
 	bonusQuota := int64(0)
 	if info := parseTopupOrderPlanInfo(order.PlanInfo); info != nil {
 		bonusQuota = info.BonusQuota
 	} else {
-		_, _, _, exchangeRate := GetTopupSettings()
-		if base := topupQuotaPerUnit(); exchangeRate < base {
-			exchangeRate = base
-		}
-		bonusQuota = int64(order.Amount * float64(exchangeRate))
+		bonusQuota = YuanToQuota(order.Amount)
 	}
 
 	if bonusQuota > 0 {
@@ -296,25 +275,4 @@ func parseTopupOrderPlanInfo(raw string) *TopupOrderPlanInfo {
 		return nil
 	}
 	return &info
-}
-
-// parseInt64Setting 读取一个 int64 系统设置；缺失或解析失败时返回 def。
-//
-// 版本: v0.0.10
-// 日期: 2026-09-06
-func parseInt64Setting(key string, def int64) int64 {
-	raw := GetSystemSettingString(key)
-	if raw == "" {
-		return def
-	}
-	var v int64
-	if err := json.Unmarshal([]byte(raw), &v); err == nil {
-		return v
-	}
-	// 兼容纯数字字符串
-	var n int64
-	if _, err := fmt.Sscanf(raw, "%d", &n); err == nil {
-		return n
-	}
-	return def
 }
