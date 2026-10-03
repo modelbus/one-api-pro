@@ -242,12 +242,14 @@
         <a-form-item field="remain_quota" :label="$t('token.quotaLabel')">
           <div class="input-with-checkbox">
             <a-input-number
-              v-model="form.remain_quota"
-              :min="-1"
-              :precision="0"
-              placeholder="500000"
+              :model-value="quotaYuan"
+              :min="0"
+              :precision="2"
+              :step="1"
+              placeholder="1.00"
               :disabled="form.unlimited_quota"
               style="flex: 1"
+              @change="onQuotaYuanChange"
             />
             <a-checkbox v-model="form.unlimited_quota">{{ $t('token.noQuotaLimit') }}</a-checkbox>
           </div>
@@ -379,7 +381,7 @@ import { IconPlus, IconCopy, IconBook, IconLock, IconEye } from '@arco-design/we
 import api from '@/api'
 import { useStatusStore } from '@/stores/status'
 import { buildTokenExpiredTime, formatExpiredTime } from '@/utils/token'
-import { formatQuota as formatQuotaYuan } from '@/utils/quota'
+import { formatQuota as formatQuotaYuan, quotaToYuan, yuanToQuota, resolveQuotaPerUnit, DEFAULT_QUOTA_PER_UNIT } from '@/utils/quota'
 
 const statusStore = useStatusStore()
 const { t } = useI18n()
@@ -430,9 +432,17 @@ const form = reactive({
   subnet: '',
   expired_time: null,
   never_expire: false,
-  remain_quota: 500000,
+  remain_quota: DEFAULT_QUOTA_PER_UNIT,
   unlimited_quota: false,
 })
+
+// quotaYuan 将表单中的 quota 换算为元用于输入展示（管理端统一以元填写额度）。
+const quotaYuan = computed(() => Number(quotaToYuan(form.remain_quota, quotaPerUnit.value).toFixed(2)))
+
+// onQuotaYuanChange 将输入的元换算回 quota。
+function onQuotaYuanChange(v) {
+  form.remain_quota = yuanToQuota(v, quotaPerUnit.value)
+}
 
 const rules = {
   name: [{ required: true, message: t('token.nameRequired') }],
@@ -633,7 +643,7 @@ function openCreateModal() {
   form.subnet = ''
   form.expired_time = null
   form.never_expire = false
-  form.remain_quota = 500000
+  form.remain_quota = DEFAULT_QUOTA_PER_UNIT
   form.unlimited_quota = false
   modalVisible.value = true
 }
@@ -647,7 +657,7 @@ function openEditModal(record) {
   const exp = record.expired_time ? record.expired_time * 1000 : null
   form.expired_time = exp
   form.never_expire = !exp
-  form.remain_quota = record.remain_quota ?? 500000
+  form.remain_quota = record.remain_quota ?? DEFAULT_QUOTA_PER_UNIT
   form.unlimited_quota = !!record.unlimited_quota
   modalVisible.value = true
 }
