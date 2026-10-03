@@ -519,14 +519,13 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
   "message": "",
   "data": [
     { "key": "QuotaForNewUser", "value": "1000000" },
-    { "key": "QuotaPerUnit", "value": "500000" },
     { "key": "TopUpLink", "value": "" },
     ...
   ]
 }
 ```
 
-**说明：** 敏感选项（如 Token、SMTP 密码等）的值会被过滤或脱敏。
+**说明：** 敏感选项（如 Token、SMTP 密码等）的值会被过滤或脱敏。`QuotaPerUnit` 为系统常量，不出现在选项列表中。
 
 ---
 
@@ -540,10 +539,12 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 
 ```json
 {
-  "key": "QuotaPerUnit",
-  "value": "500000"
+  "key": "RetryTimes",
+  "value": "3"
 }
 ```
+
+> `QuotaPerUnit` 为系统常量，不可修改；提交该 key 会返回 `QuotaPerUnit 为系统常量，不可修改`。
 
 **请求字段说明：**
 
@@ -833,7 +834,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
       "created_time": 1718000000,
       "accessed_time": 1718000000,
       "expired_time": -1,
-      "remain_quota": 500000,
+      "remain_quota": 1000000,
       "unlimited_quota": false,
       "used_quota": 100000,
       "models": null,
@@ -897,7 +898,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 ```json
 {
   "name": "my-token",
-  "remain_quota": 500000,
+  "remain_quota": 1000000,
   "expired_time": -1,
   "unlimited_quota": false,
   "models": null,
@@ -1091,7 +1092,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 ```json
 {
   "user_id": 2,
-  "quota": 500000,
+  "quota": 1000000,
   "remark": "充值备注"
 }
 ```
@@ -1271,7 +1272,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 ```json
 {
   "name": "兑换码名称",
-  "quota": 500000,
+  "quota": 1000000,
   "count": 10
 }
 ```
@@ -2014,7 +2015,7 @@ quota = ceil(perRequestPrice × sizeRatio × N × groupDiscount × QuotaPerUnit)
 2. `GroupName + ""(空)` → 使用该分组默认折扣
 3. 无匹配 → 折扣为 1.0（无折扣）
 
-**QuotaPerUnit 说明：** 默认 500,000，表示 500,000 内部额度 = 1 元人民币。
+**QuotaPerUnit 说明：** 系统常量 `1,000,000`，表示 1 元人民币 = 1,000,000 内部额度（1 额度 = 1e-6 元）。该值仅参与计算，不入库、不可通过 `PUT /api/option/` 修改；需要展示时可通过 `/api/status` 的只读字段 `quota_per_unit` 获取。
 
 ---
 
