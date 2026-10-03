@@ -1,6 +1,6 @@
 // topupRedeem.js 充值弹窗与兑换页 i18n
 // Top-up modal and redeem page i18n.
-// 版本: v0.0.21
+// 版本: v0.0.23
 // 日期: 2026-09-17
 // 作者: opencode
 export default {
@@ -12,7 +12,7 @@ export default {
       custom: '自定义',
       inputAmount: '输入金额',
       amountPlaceholder: '请输入充值金额',
-      willReceive: '将获得 {n} 额度',
+      willReceive: '将获得 {n}',
       payMethod: '支付方式',
       noPayMethods: '暂无可用的支付方式',
       payAmount: '支付金额',
@@ -44,7 +44,7 @@ export default {
       custom: 'Custom',
       inputAmount: 'Enter amount',
       amountPlaceholder: 'Enter top-up amount',
-      willReceive: 'You will receive {n} credits',
+      willReceive: 'You will receive {n}',
       payMethod: 'Payment Method',
       noPayMethods: 'No payment methods available',
       payAmount: 'Pay Amount',
