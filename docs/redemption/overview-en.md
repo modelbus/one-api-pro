@@ -33,7 +33,7 @@ When creating in the admin:
 
 | Type | What the user gets on redeem |
 |---|---|
-| **Quota code** | [User balance](../schema/redemption) += N (converted via `QuotaPerUnit`) |
+| **Quota code** | [User balance](../schema/redemption) += N (converted via the fixed 1 CNY = 1,000,000 quota base) |
 | **Plan code** | A new [Subscription](../schema/subscription) with the plan's `duration_days` |
 | **Free-trial code** | Internal "limited free" marker (in development) |
 
