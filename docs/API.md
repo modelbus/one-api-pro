@@ -557,14 +557,13 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 
 | 选项名 | 说明 |
 |--------|------|
-| QuotaForNewUser | 新用户赠送额度 |
-| QuotaForInviter | 邀请人奖励额度 |
-| QuotaForInvitee | 被邀请人奖励额度 |
-| QuotaRemindThreshold | 额度提醒阈值 |
-| PreConsumedQuota | 预消耗额度 |
+| QuotaForNewUser | 新用户赠送额度（后台按「元」填写，¥1 = 1,000,000 quota） |
+| QuotaForInviter | 邀请人奖励额度（后台按「元」填写） |
+| QuotaForInvitee | 被邀请人奖励额度（后台按「元」填写） |
+| QuotaRemindThreshold | 额度提醒阈值（后台按「元」填写） |
+| PreConsumedQuota | 预消耗额度（后台按「元」填写） |
 | TopUpLink | 充值链接 |
 | ChatLink | 聊天链接 |
-| QuotaPerUnit | 单位额度（1元=多少内部额度） |
 | DisplayInCurrencyEnabled | 是否以货币显示（true/false） |
 | DisplayTokenStatEnabled | 是否显示Token统计（true/false） |
 | ApproximateTokenEnabled | 是否使用近似Token计算（true/false） |
