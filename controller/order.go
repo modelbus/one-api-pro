@@ -175,7 +175,8 @@ func GetMyOrders(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": orders})
+	// plan_info 快照内的 bonus_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toOrderDTOs(orders)})
 }
 
 // GetMyOrder handles GET /api/order/self/:id (user, ownership enforced).
@@ -195,7 +196,8 @@ func GetMyOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "无权访问此订单"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": o})
+	// plan_info 快照内的 bonus_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toOrderDTO(o)})
 }
 
 // CancelMyOrder handles POST /api/order/self/:id/cancel (user).
@@ -323,7 +325,8 @@ func GetAllOrders(c *gin.Context) {
 		return
 	}
 	enrichOrdersWithUserBrief(orders)
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": orders})
+	// plan_info 快照内的 bonus_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toOrderDTOs(orders)})
 }
 
 // SearchOrders handles GET /api/order/search?keyword=... (admin).
@@ -336,7 +339,8 @@ func SearchOrders(c *gin.Context) {
 		return
 	}
 	enrichOrdersWithUserBrief(orders)
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": orders})
+	// plan_info 快照内的 bonus_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toOrderDTOs(orders)})
 }
 
 // parseOrderAdminFilter 从 query string 解析 admin 订单列表过滤条件。
@@ -405,7 +409,8 @@ func GetOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "订单不存在"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": o})
+	// plan_info 快照内的 bonus_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toOrderDTO(o)})
 }
 
 // MarkOrderPaidRequest is the body of PUT /api/order/:id (admin).

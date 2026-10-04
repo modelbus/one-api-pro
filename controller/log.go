@@ -72,10 +72,11 @@ func GetAllLogs(c *gin.Context) {
 		return
 	}
 	enrichLogs(logs)
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    logs,
+		"data":    toLogDTOs(logs),
 	})
 	return
 }
@@ -100,10 +101,11 @@ func GetUserLogs(c *gin.Context) {
 		return
 	}
 	enrichLogs(logs)
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    logs,
+		"data":    toLogDTOs(logs),
 	})
 	return
 }
@@ -119,10 +121,11 @@ func SearchAllLogs(c *gin.Context) {
 		return
 	}
 	enrichLogs(logs)
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    logs,
+		"data":    toLogDTOs(logs),
 	})
 	return
 }
@@ -139,10 +142,11 @@ func SearchUserLogs(c *gin.Context) {
 		return
 	}
 	enrichLogs(logs)
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    logs,
+		"data":    toLogDTOs(logs),
 	})
 	return
 }
@@ -158,14 +162,11 @@ func GetLogsStat(c *gin.Context) {
 	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel)
 	normalQuota := model.SumUsedQuotaByBillingSource(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, 0)
 	subscriptionQuota := model.SumUsedQuotaByBillingSource(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, 1)
+	// quota/normal_quota/subscription_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": gin.H{
-			"quota":              quotaNum,
-			"normal_quota":       normalQuota,
-			"subscription_quota": subscriptionQuota,
-		},
+		"data":    toQuotaStatDTO(quotaNum, normalQuota, subscriptionQuota),
 	})
 	return
 }
@@ -181,14 +182,11 @@ func GetLogsSelfStat(c *gin.Context) {
 	quotaNum := model.SumUsedQuota(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel)
 	normalQuota := model.SumUsedQuotaByBillingSource(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, 0)
 	subscriptionQuota := model.SumUsedQuotaByBillingSource(logType, startTimestamp, endTimestamp, modelName, username, tokenName, channel, 1)
+	// quota/normal_quota/subscription_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": gin.H{
-			"quota":              quotaNum,
-			"normal_quota":       normalQuota,
-			"subscription_quota": subscriptionQuota,
-		},
+		"data":    toQuotaStatDTO(quotaNum, normalQuota, subscriptionQuota),
 	})
 	return
 }

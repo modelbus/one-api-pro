@@ -214,10 +214,11 @@ func GetAllUsers(c *gin.Context) {
 		u.AccessToken = ""
 	}
 
+	// quota/used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    users,
+		"data":    toUserDTOs(users),
 	})
 }
 
@@ -244,10 +245,11 @@ func SearchUsers(c *gin.Context) {
 		u.AccessToken = ""
 	}
 
+	// quota/used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    users,
+		"data":    toUserDTOs(users),
 	})
 	return
 }
@@ -277,10 +279,11 @@ func GetUser(c *gin.Context) {
 		})
 		return
 	}
+	// quota/used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    user,
+		"data":    toUserDTO(user),
 	})
 	return
 }
@@ -303,7 +306,7 @@ func GetUserDashboard(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    dashboards,
+		"data":    toLogStatisticDTOs(dashboards),
 	})
 	return
 }
@@ -382,25 +385,28 @@ func GetSelf(c *gin.Context) {
 		})
 		return
 	}
+	// quota/used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    user,
+		"data":    toUserDTO(user),
 	})
 	return
 }
 
 func UpdateUser(c *gin.Context) {
 	ctx := c.Request.Context()
-	var updatedUser model.User
-	err := json.NewDecoder(c.Request.Body).Decode(&updatedUser)
-	if err != nil || updatedUser.Id == 0 {
+	// quota 以「元」传入，解析后换算回微元（见 quota_dto.go）。
+	var req updateUserRequest
+	err := json.NewDecoder(c.Request.Body).Decode(&req)
+	if err != nil || req.Id == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": i18n.Translate(c, "invalid_parameter"),
 		})
 		return
 	}
+	updatedUser := req.toModel()
 	if updatedUser.Password == "" {
 		updatedUser.Password = "$I_LOVE_U" // make Validator happy :)
 	}
@@ -965,18 +971,19 @@ func TopUp(c *gin.Context) {
 		})
 		return
 	}
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    quota,
+		"data":    quotaToYuan(quota),
 	})
 	return
 }
 
 type adminTopUpRequest struct {
-	UserId int    `json:"user_id"`
-	Quota  int    `json:"quota"`
-	Remark string `json:"remark"`
+	UserId int     `json:"user_id"`
+	Quota  float64 `json:"quota"` // 单位：元（见 quota_dto.go）
+	Remark string  `json:"remark"`
 }
 
 func AdminTopUp(c *gin.Context) {
@@ -990,7 +997,9 @@ func AdminTopUp(c *gin.Context) {
 		})
 		return
 	}
-	err = model.IncreaseUserQuota(req.UserId, int64(req.Quota))
+	// quota 以「元」传入，换算回微元后再入库（见 quota_dto.go）。
+	quotaMicro := yuanToQuota(req.Quota)
+	err = model.IncreaseUserQuota(req.UserId, quotaMicro)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -999,9 +1008,9 @@ func AdminTopUp(c *gin.Context) {
 		return
 	}
 	if req.Remark == "" {
-		req.Remark = fmt.Sprintf("通过 API 充值 %s", common.LogQuota(int64(req.Quota)))
+		req.Remark = fmt.Sprintf("通过 API 充值 %s", common.LogQuota(quotaMicro))
 	}
-	model.RecordTopupLog(ctx, req.UserId, req.Remark, req.Quota)
+	model.RecordTopupLog(ctx, req.UserId, req.Remark, int(quotaMicro))
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

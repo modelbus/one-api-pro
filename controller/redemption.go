@@ -24,10 +24,11 @@ func GetAllRedemptions(c *gin.Context) {
 		})
 		return
 	}
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    redemptions,
+		"data":    toRedemptionDTOs(redemptions),
 	})
 	return
 }
@@ -42,10 +43,11 @@ func SearchRedemptions(c *gin.Context) {
 		})
 		return
 	}
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    redemptions,
+		"data":    toRedemptionDTOs(redemptions),
 	})
 	return
 }
@@ -67,17 +69,19 @@ func GetRedemption(c *gin.Context) {
 		})
 		return
 	}
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    redemption,
+		"data":    toRedemptionDTO(redemption),
 	})
 	return
 }
 
 func AddRedemption(c *gin.Context) {
-	redemption := model.Redemption{}
-	err := c.ShouldBindJSON(&redemption)
+	// quota 以「元」传入，解析后换算回微元（见 quota_dto.go）。
+	var req redemptionWriteRequest
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -85,6 +89,7 @@ func AddRedemption(c *gin.Context) {
 		})
 		return
 	}
+	redemption := req.toRedemption()
 	if len(redemption.Name) == 0 || len(redemption.Name) > 20 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -154,8 +159,9 @@ func DeleteRedemption(c *gin.Context) {
 
 func UpdateRedemption(c *gin.Context) {
 	statusOnly := c.Query("status_only")
-	redemption := model.Redemption{}
-	err := c.ShouldBindJSON(&redemption)
+	// quota 以「元」传入，解析后换算回微元（见 quota_dto.go）。
+	var req redemptionWriteRequest
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -163,6 +169,7 @@ func UpdateRedemption(c *gin.Context) {
 		})
 		return
 	}
+	redemption := req.toRedemption()
 	cleanRedemption, err := model.GetRedemptionById(redemption.Id)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -186,10 +193,11 @@ func UpdateRedemption(c *gin.Context) {
 		})
 		return
 	}
+	// quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    cleanRedemption,
+		"data":    toRedemptionDTO(cleanRedemption),
 	})
 	return
 }

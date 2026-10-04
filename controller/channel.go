@@ -26,10 +26,12 @@ func GetAllChannels(c *gin.Context) {
 		})
 		return
 	}
+	// used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	// Balance 保持上游账户原币种（USD），不做换算。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channels,
+		"data":    toChannelDTOs(channels),
 	})
 	return
 }
@@ -44,10 +46,11 @@ func SearchChannels(c *gin.Context) {
 		})
 		return
 	}
+	// used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channels,
+		"data":    toChannelDTOs(channels),
 	})
 	return
 }
@@ -69,10 +72,11 @@ func GetChannel(c *gin.Context) {
 		})
 		return
 	}
+	// used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channel,
+		"data":    toChannelDTO(channel),
 	})
 	return
 }
@@ -183,10 +187,11 @@ func UpdateChannel(c *gin.Context) {
 		})
 		return
 	}
+	// used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channel,
+		"data":    toChannelDTO(&channel),
 	})
 	return
 }

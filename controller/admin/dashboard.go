@@ -32,10 +32,11 @@ func GetOverview(c *gin.Context) {
 		})
 		return
 	}
+	// quota 聚合在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    overview,
+		"data":    toAdminOverviewDTO(overview),
 	})
 }
 
@@ -56,12 +57,13 @@ func GetTopUsers(c *gin.Context) {
 		})
 		return
 	}
+	// quota / balance 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data": gin.H{
 			"range": preset,
-			"items": rows,
+			"items": toAdminTopUserDTOs(rows),
 		},
 	})
 }
@@ -89,9 +91,10 @@ func GetCharts(c *gin.Context) {
 	if rows == nil {
 		rows = []*model.LogStatistic{}
 	}
+	// Quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    rows,
+		"data":    toLogStatisticDTOs(rows),
 	})
 }
