@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 
@@ -55,12 +56,24 @@ func getPromptTokens(textRequest *relaymodel.GeneralOpenAIRequest, relayMode int
 	return 0
 }
 
+// getPreConsumedQuota 估算预扣额度（微元）。
+//
+// 口径：config.PreConsumedQuota 是「额外预留的额度（微元）」，不是 token 数。
+// 历史实现把它当成 token 数加进 promptTokens（500 被当成 500 个 token），
+// 与配置端「按元输入、× QuotaPerUnit 落库」的口径冲突，会使运营设置里
+// 填写的金额被放大 ratio 倍。此处修正为：额外预留额度 + 预估 token 费用。
+//
+// ratio 是「元 / 每百万 token」的定价数值（price/Million*QuotaPerUnit），
+// 因此 tokens × ratio 直接得到微元。
+//
+// Estimate the quota to pre-consume (micro-quota). config.PreConsumedQuota is an extra
+// reserved quota in micro-quota, NOT a token count.
 func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, ratio float64) int64 {
-	preConsumedTokens := config.PreConsumedQuota + int64(promptTokens)
+	preConsumedTokens := int64(promptTokens)
 	if textRequest.MaxTokens != 0 {
 		preConsumedTokens += int64(textRequest.MaxTokens)
 	}
-	return int64(float64(preConsumedTokens) * ratio)
+	return config.PreConsumedQuota + int64(math.Round(float64(preConsumedTokens)*ratio))
 }
 
 // preConsumeQuota pre-consumes an *estimated* quota derived from the token

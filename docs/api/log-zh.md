@@ -38,7 +38,7 @@ order: 16
 | username | string | 用户名 |
 | token_name | string | 令牌名 |
 | model_name | string | 模型名 |
-| quota | int | 消耗额度 |
+| quota | number | 消耗金额（元） |
 | prompt_tokens | int | 输入Token数 |
 | completion_tokens | int | 输出Token数 |
 | cached_tokens | int | 缓存Token数 |

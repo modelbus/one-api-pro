@@ -303,7 +303,7 @@
           <a-input-number
             :model-value="editQuotaYuan"
             :min="0"
-            :precision="yuanInputPrecision(editQuotaYuan, quotaPerUnit)"
+            :precision="yuanInputPrecision(editQuotaYuan)"
             :step="1"
             :placeholder="$t('userPage.quotaPlaceholder')"
             style="width: 100%"
@@ -341,16 +341,11 @@ import { useI18n } from 'vue-i18n'
 import { IconPlus, IconUserGroup, IconDown, IconDelete, IconStop, IconExclamationCircle } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
-import { useStatusStore } from '@/stores/status'
-import { formatQuota as formatQuotaYuan, quotaToYuanExact, yuanInputPrecision, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
+import { formatQuota as formatQuotaYuan, yuanInputPrecision } from '@/utils/quota'
 import api from '@/api'
 
 const authStore = useAuthStore()
-const statusStore = useStatusStore()
 const { t } = useI18n()
-
-// quotaPerUnit：1 元 = quota_per_unit 额度（来自 /api/status 只读常量）。
-const quotaPerUnit = computed(() => resolveQuotaPerUnit(statusStore.status?.quota_per_unit))
 
 const ITEMS_PER_PAGE = 10
 
@@ -468,20 +463,20 @@ const editForm = reactive({
   quota: 0,
 })
 
-// 管理端额度统一以元输入：展示时 quota → 元，提交时元 → quota。
-// 版本: v0.0.24
+// 管理端额度统一以「元」输入与提交（后端 API 自 v0.0.25 起同样使用元）。
+// 版本: v0.0.25
 // 日期: 2026-10-04
-const editQuotaYuan = computed(() => quotaToYuanExact(editForm.quota, quotaPerUnit.value))
+const editQuotaYuan = computed(() => Number(editForm.quota) || 0)
 
-// fmtQuota 额度列按系统基准折算为元展示。
+// fmtQuota 额度列直接展示（后端口径已是「元」）。
 function fmtQuota(val) {
   if (val == null || val === '') return '-'
-  return formatQuotaYuan(Number(val), quotaPerUnit.value)
+  return formatQuotaYuan(Number(val))
 }
 
-// onEditQuotaYuanChange 将管理端输入的元换算回 quota 存入表单。
+// onEditQuotaYuanChange 直接写入表单中的额度（元）。
 function onEditQuotaYuanChange(v) {
-  editForm.quota = yuanToQuota(v, quotaPerUnit.value)
+  editForm.quota = Number(v) || 0
 }
 
 onMounted(async () => {

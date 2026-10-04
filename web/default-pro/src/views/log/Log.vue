@@ -168,18 +168,16 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconSearch, IconFile } from '@arco-design/web-vue/es/icon'
 import { useAuthStore } from '@/stores/auth'
-import { useStatusStore } from '@/stores/status'
 import { formatQuota as formatQuotaYuan } from '@/utils/quota'
 import api from '@/api'
 
 const authStore = useAuthStore()
-const statusStore = useStatusStore()
 
-// formatQuota 按系统基准（quota_per_unit）把日志额度折算为元。
-// 版本: v0.0.23
-// 日期: 2026-10-03
+// formatQuota 日志金额直接展示（后端 API 自 v0.0.25 起统一返回「元」）。
+// 版本: v0.0.25
+// 日期: 2026-10-04
 function formatQuota(quota) {
-  return formatQuotaYuan(quota, statusStore.status?.quota_per_unit)
+  return formatQuotaYuan(quota)
 }
 const { t } = useI18n()
 const isAdmin = computed(() => authStore.isAdmin)

@@ -78,7 +78,7 @@ order: 15
 | day | string | 日期（YYYY-MM-DD，UTC 截断到天） |
 | model_name | string | 模型名 |
 | request_count | int | 当天该模型的请求数 |
-| quota | int | 当天该模型消费的 quota 合计 |
+| quota | number | 当天该模型消费金额合计（元） |
 | prompt_tokens | int | 输入 Token 合计 |
 | completion_tokens | int | 输出 Token 合计 |
 
@@ -109,7 +109,7 @@ order: 15
 | username | string | 用户名 |
 | email | string | 邮箱 |
 | request_count | int64 | 窗口内的请求数 |
-| quota | int64 | 窗口内消费的 quota 合计 |
+| quota | number | 窗口内消费金额合计（元） |
 | balance | int64 | 当前账户剩余 quota |
 | current_plan_name | string | 当前激活的最早到期订阅的套餐名 |
 

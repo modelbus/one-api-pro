@@ -38,7 +38,7 @@ order: 16
 | username | string | Username |
 | token_name | string | Token name |
 | model_name | string | Model name |
-| quota | int | Quota consumed |
+| quota | number | Amount consumed (CNY) |
 | prompt_tokens | int | Input tokens |
 | completion_tokens | int | Output tokens |
 | cached_tokens | int | Cached tokens |

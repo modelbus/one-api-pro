@@ -2,6 +2,7 @@ package ratio
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/modelbus/one-api-pro/common/config"
@@ -86,7 +87,9 @@ func CalculateTokenQuota(inputPrice float64, outputPrice float64, cachedPrice fl
 	}
 	inputTokens := promptTokens - cachedTokens
 	quota := (inputPrice*float64(inputTokens) + outputPrice*float64(completionTokens) + cachedPrice*float64(cachedTokens)) * groupDiscount / Million * config.QuotaPerUnit
-	result := int64(quota)
+	// 用 math.Round 而非直接截断：前端/管理端也用 Round（model.YuanToQuota、
+	// utils/quota.js），两端取整口径必须一致，否则同一笔消费会相差 1 微元。
+	result := int64(math.Round(quota))
 	if result <= 0 && (promptTokens+completionTokens) > 0 {
 		result = 1
 	}
@@ -101,7 +104,8 @@ func CalculatePerRequestQuota(perRequestPrice float64, sizeRatio float64, n int,
 		n = 1
 	}
 	quota := perRequestPrice * sizeRatio * float64(n) * groupDiscount * config.QuotaPerUnit
-	result := int64(quota)
+	// 同 CalculateTokenQuota：统一用 math.Round，与前端/管理端取整口径一致。
+	result := int64(math.Round(quota))
 	if result <= 0 {
 		result = 1
 	}

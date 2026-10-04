@@ -56,11 +56,9 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import api from '@/api'
-import { useStatusStore } from '@/stores/status'
 import { formatQuota } from '@/utils/quota'
 
 const { t } = useI18n()
-const statusStore = useStatusStore()
 
 const code = ref('')
 const loading = ref(false)
@@ -74,10 +72,10 @@ const quotaTotal = ref(0)
 const quotaFlash = ref(false)
 const quotaFlashKey = ref(0)
 
-// fmtQuota 将额度按系统基准折算为元展示，保证与充值/消费口径一致。
+// fmtQuota 金额直接展示（后端 API 自 v0.0.25 起统一返回「元」）。
 function fmtQuota(n) {
-  if (n == null || isNaN(n)) return formatQuota(0, statusStore.status?.quota_per_unit)
-  return formatQuota(Number(n), statusStore.status?.quota_per_unit)
+  if (n == null || isNaN(n)) return formatQuota(0)
+  return formatQuota(Number(n))
 }
 
 function validateCode(c) {

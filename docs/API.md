@@ -856,9 +856,9 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 | created_time | int64 | 创建时间 |
 | accessed_time | int64 | 最后访问时间 |
 | expired_time | int64 | 过期时间，-1=永不过期 |
-| remain_quota | int64 | 剩余额度 |
+| remain_quota | number | 剩余金额（元） |
 | unlimited_quota | bool | 是否无限额度 |
-| used_quota | int64 | 已用额度 |
+| used_quota | number | 已用金额（元） |
 | models | string/null | 允许的模型（逗号分隔），null=全部 |
 | subnet | string/null | 允许的子网 |
 
@@ -1143,7 +1143,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 | username | string | 用户名 |
 | token_name | string | 令牌名 |
 | model_name | string | 模型名 |
-| quota | int | 消耗额度 |
+| quota | number | 消耗金额（元） |
 | prompt_tokens | int | 输入Token数 |
 | completion_tokens | int | 输出Token数 |
 | cached_tokens | int | 缓存Token数 |
@@ -1281,7 +1281,7 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | name | string | 是 | 兑换码名称 |
-| quota | int64 | 是 | 兑换额度 |
+| quota | number | 是 | 兑换金额（元） |
 | count | int | 否 | 批量创建数量（1-100），默认 1 |
 
 **返回值：** 返回创建的兑换码列表，包含自动生成的 `key`。

@@ -22,7 +22,7 @@ order: 10
 | `key` | `varchar` UNIQUE | 密钥本体（`sk-` 前缀在请求头中拼接） |
 | `status` | `int` | `TokenStatusEnabled=1` / `Disabled=2` / `Expired=3` / `Exhausted=4` |
 | `expired_time` | `int64` | unix 秒；`-1` 表示永不过期 |
-| `remain_quota` | `int64` | 剩余额度（quota） |
+| `remain_quota` | `number` | 剩余金额（元） |
 | `unlimited_quota` | `bool` | 无限额度开关 |
 | `models` | `text`（逗号分隔） | 允许使用的模型白名单；空字符串表示全部 |
 | `subnet` | `text` | 客户端子网白名单（如 `10.0.0.0/8,192.168.0.0/16`） |

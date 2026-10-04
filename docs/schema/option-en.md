@@ -22,7 +22,7 @@ order: 14
 |---|---|---|
 | Site name | Browser title, mail, PDF | Immediate. |
 | Logo URL | Header logo | Immediate. |
-| Default new-user quota | `QuotaForNewUser` | Initial `User.quota` for newly registered users. |
+| Default new-user quota (CNY) | `QuotaForNewUser` | Initial `User.quota` for newly registered users. |
 | Signup switch | Allow new registrations | Off → register page returns 403. |
 | Invite reward | Bonus for both inviter and invitee | Applies on the next signup. |
 | Turnstile / Captcha | Cloudflare key | Anti-bot signup; leave blank to disable. |

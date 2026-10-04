@@ -180,7 +180,7 @@ quota = ceil(perRequestPrice × sizeRatio × N × groupDiscount × QuotaPerUnit)
 2. `GroupName + ""` (empty) → use that group's default discount.
 3. No match → discount is 1.0 (no discount).
 
-**`QuotaPerUnit`:** system constant `1,000,000`, meaning ¥1 = 1,000,000 internal quota (1 quota = 1e-6 CNY). It takes part in computation only, is **never stored** and **cannot be changed via `PUT /api/option/`**; read it from `/api/status` as the read-only `quota_per_unit` field when rendering.
+**`QuotaPerUnit`:** system constant `1,000,000`, meaning ¥1 = 1,000,000 internal quota (1 quota = 1e-6 CNY). **This constant describes the storage layer only: since v0.0.25 every amount-bearing API returns and accepts CNY yuan** (converted in the controller layer), so the frontend performs no conversion. It takes part in computation only, is **never stored** and **cannot be changed via `PUT /api/option/`**; `/api/status` still exposes it as the read-only `quota_per_unit` field for backward compatibility.
 
 
 ## Appendix D: Channel Type Reference

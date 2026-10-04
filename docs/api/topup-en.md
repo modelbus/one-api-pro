@@ -18,7 +18,7 @@ order: 9
 
 ## Conventions
 
-- **The quota base is a system constant**: ¥1 = `QuotaPerUnit` = `1,000,000` quota (1 quota = 1e-6 CNY), conceptually like WeChat Pay's "cent". It takes part in computation only, is never stored in the DB and cannot be modified; `/api/status` returns it read-only as `quota_per_unit` for frontend rendering.
+- **The quota base is a system constant**: ¥1 = `QuotaPerUnit` = `1,000,000` quota (1 quota = 1e-6 CNY), conceptually like WeChat Pay's "cent". It describes the storage layer only; **since v0.0.25 every amount field on this page is returned and accepted in CNY yuan**, so no frontend conversion is needed.
 - Top-up order-number prefix: `TP` (see `model.GenerateOrderNo("TP")`).
 - An order is only accepted when at least one payment channel is enabled (`payment.AnyChannelEnabled().any_enabled == true`) and `topup.enabled == true`.
 - Amount resolution (see `model.ResolveTopupAmount`):
@@ -151,7 +151,7 @@ order: 9
 | Field | Type | Description |
 |------|------|------|
 | amount | float64 | Pay amount (CNY) |
-| bonus_quota | int64 | Credited quota; must be >= `round(amount × 1000000)` |
+| bonus_quota | number | Credited amount (CNY); must be >= `amount` |
 
 ## 3. Save top-up settings
 

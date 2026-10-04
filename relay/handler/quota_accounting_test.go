@@ -85,9 +85,9 @@ func TestConsumePipeline_NetDeductionEqualsActual(t *testing.T) {
 	if errObj != nil {
 		t.Fatalf("preConsumeQuota 失败：%+v", errObj)
 	}
-	// (500 + 1000) × 6.25 = 9375
-	if preConsumed != 9375 {
-		t.Fatalf("preConsumed = %d，期望 9375", preConsumed)
+	// 500（额外预留额度）+ round(1000 × 6.25) = 6750
+	if preConsumed != 6750 {
+		t.Fatalf("preConsumed = %d，期望 6750", preConsumed)
 	}
 	if got := readUserQuota(t, uid); got != initialUserQuota-preConsumed {
 		t.Fatalf("预扣后 user.quota = %d，期望 %d", got, initialUserQuota-preConsumed)
@@ -168,9 +168,9 @@ func TestConsumePipeline_ReturningPreconsume(t *testing.T) {
 	if errObj != nil {
 		t.Fatalf("preConsumeQuota 失败：%+v", errObj)
 	}
-	// (500 + 100 + 1000) × 6.25 = 10000
-	if preConsumed != 10000 {
-		t.Fatalf("preConsumed = %d，期望 10000", preConsumed)
+	// 500（额外预留额度）+ round((100 + 1000) × 6.25) = 7375
+	if preConsumed != 7375 {
+		t.Fatalf("preConsumed = %d，期望 7375", preConsumed)
 	}
 
 	// 实际只用了 100 prompt + 50 completion → 8250 quota
