@@ -4,7 +4,8 @@
 // 作者: opencode
 //
 // 覆盖：
-//   - getPreConsumedQuota 的纯函数公式（PreConsumedQuota + promptTokens + MaxTokens）× ratio
+//   - getPreConsumedQuota 的纯函数公式：PreConsumedQuota + round((promptTokens + MaxTokens) × ratio)
+//     （PreConsumedQuota 是「额外预留额度（微元）」，不参与乘法）
 //   - preConsumeQuota 在 Redis 关闭 + SQLite 内存库下的三条分支：
 //     (1) 余额不足 → 403 不动 DB
 //     (2) 余额充足（> 100×preConsumedQuota）→ 免预扣，不动 DB
@@ -88,27 +89,31 @@ func randSuffix() string {
 	return "uniq"
 }
 
-// TestGetPreConsumedQuota_BasicFormula 验证公式：preConsumed = (PreConsumedQuota + promptTokens + MaxTokens) * ratio。
-// 版本: v0.0.20
+// TestGetPreConsumedQuota_BasicFormula 验证公式：
+// preConsumed = PreConsumedQuota + round((promptTokens + MaxTokens) × ratio)。
+//
+// v0.0.25 修正：PreConsumedQuota 是「额外预留的额度（微元）」，不是 token 数，
+// 不再被加进 promptTokens 参与乘法（旧实现会使运营设置里填的金额被放大 ratio 倍）。
+// 版本: v0.0.25
 func TestGetPreConsumedQuota_BasicFormula(t *testing.T) {
 	req := &relaymodel.GeneralOpenAIRequest{MaxTokens: 100}
-	// ratio=1 → preConsumed = 500 + 1000 + 100 = 1600
+	// ratio=1 → 500 + (1000 + 100) × 1 = 1600
 	got := getPreConsumedQuota(req, 1000, 1.0)
 	if got != 1600 {
 		t.Fatalf("ratio=1 want 1600, got %d", got)
 	}
 
-	// ratio=2.625 → 1600 * 2.625 = 4200
+	// ratio=2.625 → 500 + round(1100 × 2.625) = 500 + 2888 = 3388
 	got = getPreConsumedQuota(req, 1000, 2.625)
-	if got != 4200 {
-		t.Fatalf("ratio=2.625 want 4200, got %d", got)
+	if got != 3388 {
+		t.Fatalf("ratio=2.625 want 3388, got %d", got)
 	}
 
-	// MaxTokens=0 不加入 → preConsumed = (500 + 1000) * 2.625 = 3937
+	// MaxTokens=0 不加入 → 500 + round(1000 × 2.625) = 500 + 2625 = 3125
 	req2 := &relaymodel.GeneralOpenAIRequest{MaxTokens: 0}
 	got = getPreConsumedQuota(req2, 1000, 2.625)
-	if got != 3937 {
-		t.Fatalf("ratio=2.625 no MaxTokens want 3937, got %d", got)
+	if got != 3125 {
+		t.Fatalf("ratio=2.625 no MaxTokens want 3125, got %d", got)
 	}
 }
 
@@ -124,7 +129,7 @@ func TestPreConsumeQuota_InsufficientBalance(t *testing.T) {
 	req := &relaymodel.GeneralOpenAIRequest{MaxTokens: 0}
 	m := &meta.Meta{UserId: uid, TokenId: tid, PlanId: 0}
 
-	// preConsumed = (500 + 5000) * 2.625 = 14437 > 1000
+	// preConsumed = 500 + round(5000 × 2.625) = 13625 > 1000
 	preConsumed, errObj := preConsumeQuota(context.Background(), req, 5000, 2.625, m)
 	if errObj == nil {
 		t.Fatalf("expected insufficient_user_quota error, got nil (preConsumed=%d)", preConsumed)
@@ -167,8 +172,8 @@ func TestPreConsumeQuota_TrustedDoesNotMutate(t *testing.T) {
 	req := &relaymodel.GeneralOpenAIRequest{MaxTokens: 0}
 	m := &meta.Meta{UserId: uid, TokenId: tid, PlanId: 0}
 
-	// preConsumed = (500 + 30340) * 2.625 = 80_955
-	// 17_678_941 > 100 * 80_955 = 8_095_500 → 守卫 2 触发
+	// preConsumed = (500 + 30340) * 2.625 = 80_955 → 修正后 500 + round(30340 × 2.625) = 80_143
+	// 17_678_941 > 100 * 80_143 = 8_014_300 → 守卫 2 触发
 	preConsumed, errObj := preConsumeQuota(context.Background(), req, 30340, 2.625, m)
 	if errObj != nil {
 		t.Fatalf("expected nil error, got %+v", errObj)
@@ -211,14 +216,14 @@ func TestPreConsumeQuota_NormalPreConsume(t *testing.T) {
 	req := &relaymodel.GeneralOpenAIRequest{MaxTokens: 0}
 	m := &meta.Meta{UserId: uid, TokenId: tid, PlanId: 0}
 
-	// preConsumed = (500 + 1000) * 2.625 = 3937
-	// 200_000 < 100 * 3937 = 393_700 → 守卫 2 不触发，正常预扣
+	// preConsumed = 500 + round(1000 × 2.625) = 3125
+	// 200_000 < 100 * 3125 = 312_500 → 守卫 2 不触发，正常预扣
 	preConsumed, errObj := preConsumeQuota(context.Background(), req, 1000, 2.625, m)
 	if errObj != nil {
 		t.Fatalf("unexpected error: %+v", errObj)
 	}
-	if preConsumed != 3937 {
-		t.Fatalf("expected preConsumed=3937, got %d", preConsumed)
+	if preConsumed != 3125 {
+		t.Fatalf("expected preConsumed=3125, got %d", preConsumed)
 	}
 
 	// DB user.quota 在 pre-consume 阶段就被 DecreaseUserQuota 减去 preConsumed
@@ -226,8 +231,8 @@ func TestPreConsumeQuota_NormalPreConsume(t *testing.T) {
 	if err := dbmodel.DB.First(&user, "id = ?", uid).Error; err != nil {
 		t.Fatalf("read user: %v", err)
 	}
-	if user.Quota != 200_000-3937 {
-		t.Fatalf("user.quota should be reduced by preConsumed after pre-consume; got %d, want %d", user.Quota, 200_000-3937)
+	if user.Quota != 200_000-3125 {
+		t.Fatalf("user.quota should be reduced by preConsumed after pre-consume; got %d, want %d", user.Quota, 200_000-3125)
 	}
 
 	// DB token.remain_quota 也减少 preConsumed
@@ -235,8 +240,8 @@ func TestPreConsumeQuota_NormalPreConsume(t *testing.T) {
 	if err := dbmodel.DB.First(&token, "id = ?", tid).Error; err != nil {
 		t.Fatalf("read token: %v", err)
 	}
-	if token.RemainQuota != 5_000_000-3937 {
-		t.Fatalf("token.remain_quota want %d, got %d", 5_000_000-3937, token.RemainQuota)
+	if token.RemainQuota != 5_000_000-3125 {
+		t.Fatalf("token.remain_quota want %d, got %d", 5_000_000-3125, token.RemainQuota)
 	}
 }
 
