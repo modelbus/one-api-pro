@@ -29,7 +29,7 @@ order: 13
 | Status code | 200 / 401 / 429 / 5xx | First place to look on failure. |
 | Error message | Text | Raw error from the upstream provider. |
 | Latency | ms | Locate slow requests. |
-| Quota charged | Number | Final deduction for this call. |
+| Quota charged | Number (CNY) | Final deduction for this call. |
 
 ## Common troubleshooting paths
 

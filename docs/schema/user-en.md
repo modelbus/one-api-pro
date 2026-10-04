@@ -28,8 +28,8 @@ These are the fields that actually change behavior. Most issues only need one of
 | Password | Login secret | User is forced offline. |
 | Group | `default` / `vip` / `svip` | Drives [Group Price](/en/schema/group-price) lookup and allowed-model scope. |
 | Status | Enabled / Disabled | Disabled users cannot call any API or log in. |
-| Quota `quota` | Balance (internal units) | First source billed; 0 rejects calls. |
-| Used quota | Cumulative spent | Recorded only, no behavior. |
+| Quota `quota` | Balance (CNY) | First source billed; 0 rejects calls. |
+| Used quota | Cumulative spent (CNY) | Recorded only, no behavior. |
 | Role | User / Admin / Root | Root-only access to the admin console. |
 | Invite code / invitee | Invite relationship | Both sides earn bonus quota at signup. |
 

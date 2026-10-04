@@ -18,7 +18,7 @@ order: 9
 
 ## 公共约定
 
-- **额度基准为系统常量**：1 元 = `QuotaPerUnit` = `1,000,000` quota（1 quota = 1e-6 元），语义同微信支付的「分」。该常量仅参与计算，不入库、不可修改；`/api/status` 以只读字段 `quota_per_unit` 下发，供前端折算展示。
+- **额度基准为系统常量**：1 元 = `QuotaPerUnit` = `1,000,000` quota（1 quota = 1e-6 元），语义同微信支付的「分」。该常量仅描述存储层；**自 v0.0.25 起，本页所有金额字段一律以「元」返回与接收**，前端无需折算。
 - 充值订单号前缀：`TP`（参见 `model.GenerateOrderNo("TP")`）。
 - 任意支付通道已启用（`payment.AnyChannelEnabled().any_enabled == true`）且 `topup.enabled == true` 才允许下单，否则拒绝。
 - 金额解析规则（见 `model.ResolveTopupAmount`）：
@@ -151,7 +151,7 @@ order: 9
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | amount | float64 | 支付金额（元） |
-| bonus_quota | int64 | 到账额度（quota），必须 >= `round(amount × 1000000)` |
+| bonus_quota | number | 到账金额（元），必须 >= `amount`（允许赠送，不允许缩水） |
 
 ## 3. 保存充值设置
 

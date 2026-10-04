@@ -60,7 +60,7 @@ order: 17
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | string | yes | Redemption name |
-| quota | int64 | yes | Redemption quota |
+| quota | number | yes | Redemption amount (CNY) |
 | count | int | no | Batch size (1-100), default 1 |
 
 **Response:** Returns the list of created redemption codes, including the auto-generated `key`.

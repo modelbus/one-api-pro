@@ -45,7 +45,7 @@ A sane starter:
 | Order number | `TP` prefix | Changing it breaks the callback. |
 | Parent | User FK | Cascade-delete with user. |
 | Amount | ¥ | Paid amount. |
-| Quota | amount × rate | Credited on payment. |
+| Credit amount | CNY | Stored in the order snapshot `plan_info`; credited to `User.quota` once paid. |
 | Status | Unpaid / Paid / Cancelled | Drives crediting. |
 | Pay method | WeChat / Alipay / Bank / Mock | Which callback URL. |
 

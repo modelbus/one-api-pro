@@ -22,7 +22,7 @@ order: 14
 |---|---|---|
 | `SiteName` | 站点名 | 显示在浏览器标题、邮件、PDF |
 | `LogoURL` | Logo URL | 顶部 logo |
-| `QuotaForNewUser` | 默认新用户额度 | 新注册用户初始 `quota` |
+| `QuotaForNewUser` | 默认新用户额度（元） | 新注册用户初始 `quota` |
 | `RegisterEnabled` | 注册开关 | 允许新用户注册；关闭后注册页面返回 403 |
 | `QuotaForInviter` / `QuotaForInvitee` | 邀请奖励 | 注册邀请双方各得多少 |
 | `TurnstileSiteKey` / `TurnstileSecretKey` | Turnstile / Captcha | Cloudflare 验证码 key；防止机器人注册；留空则禁用 |

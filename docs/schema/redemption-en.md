@@ -33,7 +33,7 @@ order: 11
 |---|---|---|
 | Code | The string | Changing it after issuance breaks distribution. |
 | Type | Quota / Plan | Drives the redeem action. |
-| Quota amount | Number | Credited (quota type only). |
+| Quota amount | Number (CNY) | Credited to the user balance (quota type only). |
 | Plan FK | Plan | Activated (plan type only). |
 | Total redemptions | Default 1 | Larger numbers mean "multi-redeem code". |
 | Redeemed | Number | Increments automatically; maxed-out codes stop working. |

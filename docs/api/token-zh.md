@@ -35,9 +35,9 @@ order: 14
 | created_time | int64 | 创建时间 |
 | accessed_time | int64 | 最后访问时间 |
 | expired_time | int64 | 过期时间，-1=永不过期 |
-| remain_quota | int64 | 剩余额度 |
+| remain_quota | number | 剩余金额（元） |
 | unlimited_quota | bool | 是否无限额度 |
-| used_quota | int64 | 已用额度 |
+| used_quota | number | 已用金额（元） |
 | models | string/null | 允许的模型（逗号分隔），null=全部 |
 | subnet | string/null | 允许的子网 |
 

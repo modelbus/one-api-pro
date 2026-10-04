@@ -22,7 +22,7 @@ The page is the same for regular users and admins — admins see their own token
 | `key` | `varchar` UNIQUE | Secret (clients prepend `sk-` when calling) |
 | `status` | `int` | `TokenStatusEnabled=1` / `Disabled=2` / `Expired=3` / `Exhausted=4` |
 | `expired_time` | `int64` | unix seconds; `-1` = never expires |
-| `remain_quota` | `int64` | Remaining quota |
+| `remain_quota` | `number` | Remaining amount (CNY) |
 | `unlimited_quota` | `bool` | Bypass quota checks |
 | `models` | `text` (comma separated) | Allowed models whitelist; empty = all |
 | `subnet` | `text` | Client subnet whitelist (e.g. `10.0.0.0/8,192.168.0.0/16`) |

@@ -58,9 +58,9 @@ order: 14
 | created_time | int64 | Created time |
 | accessed_time | int64 | Last access time |
 | expired_time | int64 | Expiration time, -1=never |
-| remain_quota | int64 | Remaining quota |
+| remain_quota | number | Remaining amount (CNY) |
 | unlimited_quota | bool | Whether quota is unlimited |
-| used_quota | int64 | Quota consumed |
+| used_quota | number | Amount consumed (CNY) |
 | models | string/null | Allowed models (comma separated), null=all |
 | subnet | string/null | Allowed subnet |
 

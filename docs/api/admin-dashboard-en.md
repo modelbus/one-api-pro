@@ -134,7 +134,7 @@ order: 15
 | day | string | Day bucket (YYYY-MM-DD, UTC day boundary) |
 | model_name | string | Model name |
 | request_count | int | Requests for that model on that day |
-| quota | int | Total quota consumed for that model on that day |
+| quota | number | Total amount consumed for that model on that day (CNY) |
 | prompt_tokens | int | Sum of input tokens |
 | completion_tokens | int | Sum of output tokens |
 
@@ -185,7 +185,7 @@ order: 15
 | username | string | Username |
 | email | string | Email |
 | request_count | int64 | Requests in the window |
-| quota | int64 | Quota consumed in the window |
+| quota | number | Amount consumed in the window (CNY) |
 | balance | int64 | Current remaining quota on the account |
 | current_plan_name | string | Name of the earliest-expiring active subscription, if any |
 
