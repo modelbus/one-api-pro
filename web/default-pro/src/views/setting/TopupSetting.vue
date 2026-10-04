@@ -62,7 +62,7 @@
             <a-input-number
               :model-value="record.credit"
               :min="0"
-              :precision="yuanInputPrecision(record.credit, quotaPerUnit)"
+              :precision="yuanInputPrecision(record.credit)"
               :step="1"
               size="small"
               style="width: 100%"
@@ -97,19 +97,22 @@ import { Message } from '@arco-design/web-vue'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import settingApi from '@/api/setting'
 import { validateTopupPresets } from '@/utils/topup'
-import { resolveQuotaPerUnit, quotaToYuanExact, yuanInputPrecision, yuanToQuota } from '@/utils/quota'
-import { useStatusStore } from '@/stores/status'
+import { yuanInputPrecision } from '@/utils/quota'
 
 const { t } = useI18n()
-const statusStore = useStatusStore()
 
-// quotaPerUnit：1 元对应的额度基准常量（来自 /api/status 的 quota_per_unit 只读输出）。
-const quotaPerUnit = computed(() => resolveQuotaPerUnit(statusStore.status?.quota_per_unit))
+// validateTopupPresets 内部使用短 key（amountPositive / duplicate / bonusTooLow），
+// 而 i18n 将它们定义在 settingPage.topup 命名空间下；这里绑定前缀后再传入，
+// 否则 vue-i18n 找不到 key 会原样返回 key 字符串（历史上界面会直接显示 "bonusTooLow"）。
+// The validator uses short keys while i18n defines them under settingPage.topup,
+// so bind the namespace here.
+const tTopup = (key, params) => t(`settingPage.topup.${key}`, params)
 
 const loading = ref(false)
 const saving = ref(false)
 
-// presets 以「元」为单位在前端编辑（amount = 支付金额，credit = 到账金额），提交时换算为 quota。
+// presets 在前端以「元」为单位编辑（amount = 支付金额，credit = 到账金额）。
+// v0.0.25 起后端 API 同样使用「元」，前后端不再需要任何 1e6 换算。
 const form = reactive({
   enabled: false,
   allow_custom: true,
@@ -122,11 +125,13 @@ const columns = computed(() => [
   { title: t('settingPage.topup.colAction'), slotName: 'action', width: 100, align: 'center' },
 ])
 
-// quotaToYuanText 将 quota 反算回元，保留 6 位小数避免小额点零；输入框再按精度自适应展示。
-// 版本: v0.0.24
+// quotaToYuanText 保留 6 位小数避免小额点零；输入框再按精度自适应展示。
+// 入参已是「元」（后端口径），此处仅做浮点误差收敛。
+// 版本: v0.0.25
 // 日期: 2026-10-04
-function quotaToYuanText(q) {
-  return quotaToYuanExact(q, quotaPerUnit.value)
+function quotaToYuanText(y) {
+  const n = Number(y)
+  return Number.isFinite(n) ? Number(n.toFixed(6)) : 0
 }
 
 function addPreset() {
@@ -164,11 +169,12 @@ async function loadSettings() {
 
 async function save() {
   // 前端预校验：金额 > 0、金额不重复、到账金额不低于支付金额
+  // 两个字段均为「元」口径（后端 API 自 v0.0.25 起统一返回并接收元）。
   const payloadPresets = form.presets.map(p => ({
     amount: Number(p.amount),
-    bonus_quota: yuanToQuota(p.credit, quotaPerUnit.value),
+    bonus_quota: Number(p.credit),
   }))
-  const err = validateTopupPresets(payloadPresets, t, quotaPerUnit.value)
+  const err = validateTopupPresets(payloadPresets, tTopup)
   if (err) {
     Message.error(err)
     return

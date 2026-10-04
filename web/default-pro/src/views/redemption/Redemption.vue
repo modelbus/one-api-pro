@@ -164,7 +164,7 @@
           <a-input-number
             v-model="form.quota_yuan"
             :min="0"
-            :precision="yuanInputPrecision(form.quota_yuan, quotaPerUnit)"
+            :precision="yuanInputPrecision(form.quota_yuan)"
             :step="1"
             :placeholder="$t('redemptionPage.quotaPlaceholder')"
             style="width: 100%"
@@ -181,14 +181,9 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { IconPlus, IconCopy, IconGift, IconRefresh } from '@arco-design/web-vue/es/icon'
 import api from '@/api'
-import { useStatusStore } from '@/stores/status'
-import { formatQuota as formatQuotaYuan, quotaToYuanExact, yuanInputPrecision, yuanToQuota, resolveQuotaPerUnit } from '@/utils/quota'
+import { formatQuota as formatQuotaYuan, yuanInputPrecision } from '@/utils/quota'
 
-const statusStore = useStatusStore()
 const { t } = useI18n()
-
-// quotaPerUnit：1 元 = quota_per_unit 额度（来自 /api/status 只读常量）。
-const quotaPerUnit = computed(() => resolveQuotaPerUnit(statusStore.status?.quota_per_unit))
 
 const ITEMS_PER_PAGE = 10
 
@@ -390,7 +385,7 @@ async function openCreateModal() {
 async function openEditModal(record) {
   editingRecord.value = record
   form.name = record.name || ''
-  form.quota_yuan = quotaToYuanExact(record.quota ?? 0, quotaPerUnit.value)
+  form.quota_yuan = Number(record.quota ?? 0)
   modalVisible.value = true
 }
 
@@ -404,14 +399,14 @@ async function handleSubmit() {
       await api.put('/api/redemption/', {
         id: editingRecord.value.id,
         name: form.name,
-        quota: yuanToQuota(form.quota_yuan, quotaPerUnit.value),
+        quota: Number(form.quota_yuan) || 0,
       })
       Message.success(t('redemptionPage.updated'))
     } else {
       await api.post('/api/redemption/', {
         name: form.name,
         count: form.count,
-        quota: yuanToQuota(form.quota_yuan, quotaPerUnit.value),
+        quota: Number(form.quota_yuan) || 0,
       })
       Message.success(t('redemptionPage.created'))
     }
@@ -453,14 +448,14 @@ async function handleDelete(record) {
 }
 
 // ============ 格式化 ============
-// formatQuota 兑换额度按系统基准（quota_per_unit）折算为元。
-// 版本: v0.0.23
-// 日期: 2026-10-03
+// formatQuota 兑换额度直接展示（后端口径已是「元」）。
+// 版本: v0.0.25
+// 日期: 2026-10-04
 function formatQuota(val) {
   if (val == null) return '-'
   const n = Number(val)
   if (isNaN(n)) return val
-  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
+  return formatQuotaYuan(n)
 }
 
 function formatTime(ts) {

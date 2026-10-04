@@ -459,11 +459,11 @@ const columns = computed(() => [
 ])
 
 function fmtNum(n) { return Number(n || 0).toLocaleString() }
-// fmtQuota 按系统基准（quota_per_unit）将额度折算为元展示。
-// 版本: v0.0.23
-// 日期: 2026-10-03
+// fmtQuota 金额直接展示（后端 API 自 v0.0.25 起统一返回「元」）。
+// 版本: v0.0.25
+// 日期: 2026-10-04
 function fmtQuota(n) {
-  return formatQuotaYuan(n, statusStore.status?.quota_per_unit)
+  return formatQuotaYuan(n)
 }
 function fmtTokens(n) {
   const v = Number(n) || 0
