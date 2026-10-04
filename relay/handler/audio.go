@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 
@@ -82,16 +83,15 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			if ratio == 0 {
 				ratio = 1.0
 			}
-			quota = int64(float64(len(ttsRequest.Input)) * ratio)
+			// 与 CalculateTokenQuota 一致：用 math.Round 而非截断。
+			quota = int64(math.Round(float64(len(ttsRequest.Input)) * ratio))
 			// 语音合成费用由输入文本长度在请求前确定，预扣即结算。
 			preConsumedQuota, bizErr = preConsumeExactQuota(ctx, quota, meta)
 		default:
-			ratio := (priceResult.InputPrice) / billingratio.Million * config.QuotaPerUnit
-			if ratio == 0 {
-				ratio = 1.0
-			}
-			estimate := int64(float64(config.PreConsumedQuota) * ratio)
-			preConsumedQuota, bizErr = preConsumeAmount(ctx, estimate, meta)
+			// PreConsumedQuota 是「额外预留的额度（微元）」，不是 token 数，
+			// 不再乘 ratio（历史实现把它当 token 数会放大 ratio 倍）。
+			// PreConsumedQuota is an extra reserved quota in micro-quota, not a token count.
+			preConsumedQuota, bizErr = preConsumeAmount(ctx, config.PreConsumedQuota, meta)
 		}
 	}
 	if bizErr != nil {
@@ -209,7 +209,13 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		if priceResult.BillingType == model.BillingTypePerRequest {
 			quota = billingratio.CalculatePerRequestQuota(priceResult.PerRequestPrice, 1, 1, groupDiscount)
 		} else {
-			quota = int64(float64(openai.CountTokenText(text, audioModel)) * priceResult.InputPrice / billingratio.Million * config.QuotaPerUnit * groupDiscount)
+			// 与 CalculateTokenQuota 保持一致：math.Round 取整 + 最小 1 微元兜底，
+			// 避免极短转写文本（或空文本）导致 0 扣费。
+			tokens := openai.CountTokenText(text, audioModel)
+			quota = int64(math.Round(float64(tokens) * priceResult.InputPrice / billingratio.Million * config.QuotaPerUnit * groupDiscount))
+			if quota <= 0 && tokens > 0 {
+				quota = 1
+			}
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	}
