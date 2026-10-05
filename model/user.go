@@ -208,6 +208,22 @@ func (user *User) Update(updatePassword bool) error {
 	return err
 }
 
+// UpdateUserQuotaColumn 按列显式更新用户额度，允许把额度写成 0。
+//
+// 为什么单独一个函数：User.Update 使用结构体形式的 Updates(user)，GORM 会跳过零值字段，
+// 管理员把额度清零时接口虽返回成功、额度却不变。此处改用列形式写入，0 也能落库。
+//
+// UpdateUserQuotaColumn writes the user quota column explicitly so that 0 is persisted;
+// struct-based Updates would silently skip it.
+// 版本: v0.0.25
+// 日期: 2026-10-05
+func UpdateUserQuotaColumn(userId int, quota int64) error {
+	if userId == 0 {
+		return errors.New("id 为空！")
+	}
+	return DB.Model(&User{}).Where("id = ?", userId).Update("quota", quota).Error
+}
+
 func (user *User) Delete() error {
 	if user.Id == 0 {
 		return errors.New("id 为空！")

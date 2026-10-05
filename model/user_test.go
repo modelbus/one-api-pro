@@ -110,5 +110,55 @@ func TestUser_BeforeUpdate_RefreshesUpdatedAt(t *testing.T) {
 	}
 }
 
+// TestUpdateUserQuotaColumn_AllowsZero 验证按列更新能把额度写成 0。
+//
+// 背景：User.Update 使用结构体形式的 Updates(user)，GORM 会跳过零值字段，
+// 管理端「把额度清零」会接口成功但额度不变；本函数是修复路径。
+// 版本: v0.0.25
+// 日期: 2026-10-05
+func TestUpdateUserQuotaColumn_AllowsZero(t *testing.T) {
+	setupUserTestDB(t)
+	u := &User{
+		Username:    "quota-zero-user",
+		Password:    "hashed-pwd",
+		Role:        RoleCommonUser,
+		Status:      UserStatusEnabled,
+		Group:       "default",
+		AccessToken: "quota-zero-token",
+		AffCode:     "quota-zero-aff",
+		Quota:       1_000_000,
+	}
+	if err := DB.Create(u).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+
+	if err := UpdateUserQuotaColumn(u.Id, 0); err != nil {
+		t.Fatalf("UpdateUserQuotaColumn: %v", err)
+	}
+	var stored User
+	if err := DB.First(&stored, "id = ?", u.Id).Error; err != nil {
+		t.Fatalf("readback: %v", err)
+	}
+	if stored.Quota != 0 {
+		t.Fatalf("quota = %d，期望 0", stored.Quota)
+	}
+
+	// 非零值同样可写入。
+	if err := UpdateUserQuotaColumn(u.Id, 2_500_000); err != nil {
+		t.Fatalf("UpdateUserQuotaColumn(non-zero): %v", err)
+	}
+	if err := DB.First(&stored, "id = ?", u.Id).Error; err != nil {
+		t.Fatalf("readback#2: %v", err)
+	}
+	if stored.Quota != 2_500_000 {
+		t.Fatalf("quota = %d，期望 2500000", stored.Quota)
+	}
+
+	// id 为空时拒绝，避免误更新整表。
+	if err := UpdateUserQuotaColumn(0, 10); err == nil {
+		t.Fatal("userId=0 应返回错误")
+	}
+}
+
 // _ ensures the helper import is referenced even if future tests don't use it.
 var _ = helper.GetTimestamp

@@ -204,20 +204,32 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			ups, upsErr := model.CacheGetUserActivePlans(meta.UserId)
 			if upsErr == nil {
 				for _, up := range ups {
-					if int(up.Id) == meta.PlanId && up.Plan != nil {
-						limits := up.Plan.GetModelLimits()
-						rule, found := model.FindLimit(limits, meta.OriginModelName)
-						if !found {
-							continue
-						}
-						for _, windowType := range []string{model.WindowTypePeriod, model.WindowTypeWeek, model.WindowTypeMonth} {
-							windowIndex := model.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
-							_ = model.IncrementPlanUsage(int(up.Id), meta.OriginModelName, windowType, windowIndex, 1, 0, 0, 0)
-						}
+					if int(up.Id) != meta.PlanId {
+						continue
+					}
+					// 套餐配置优先取实时值，plans 行已删时回退到购买快照。
+					limits, limitsErr := up.EffectiveModelLimits()
+					if limitsErr != nil {
+						logger.SysError("failed to parse plan model limits: " + limitsErr.Error())
 						break
 					}
+					rule, found := model.FindLimit(limits, meta.OriginModelName)
+					if !found {
+						break
+					}
+					for _, windowType := range []string{model.WindowTypePeriod, model.WindowTypeWeek, model.WindowTypeMonth} {
+						windowIndex := model.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
+						_ = model.IncrementPlanUsage(int(up.Id), meta.OriginModelName, windowType, windowIndex, 1, 0, 0, 0)
+					}
+					// 订阅虚拟余额：累加本次消费额度（微元）。
+					if err := model.IncrementUserPlanUsedAmount(int(up.Id), quota); err != nil {
+						logger.SysError("failed to increment plan used amount: " + err.Error())
+					}
+					break
 				}
 			}
+			// 订阅消费计入用户 used_quota / request_count，但不扣余额。
+			model.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
 		} else {
 			err := model.PostConsumeTokenQuota(meta.TokenId, quota)
 			if err != nil {
@@ -244,11 +256,11 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 				logContent = fmt.Sprintf("订阅计费 | %s", logContent)
 			}
 			model.RecordConsumeLog(ctx, &model.Log{
-				UserId:            meta.UserId,
-				ChannelId:         meta.ChannelId,
-				PromptTokens:      0,
-				CompletionTokens:  0,
-				CachedTokens:      0,
+				UserId:           meta.UserId,
+				ChannelId:        meta.ChannelId,
+				PromptTokens:     0,
+				CompletionTokens: 0,
+				CachedTokens:     0,
 				ModelName:        meta.OriginModelName,
 				TokenName:        tokenName,
 				Quota:            int(quota),
@@ -259,7 +271,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 					}
 					return 0
 				}(),
-				PlanId:           meta.PlanId,
+				PlanId: meta.PlanId,
 			})
 		}
 	}(c.Request.Context())

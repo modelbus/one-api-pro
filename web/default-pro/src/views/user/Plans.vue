@@ -45,6 +45,9 @@
           <span class="plan-price-period">/{{ plan.duration_text || $t('plansPage.monthUnit') }}</span>
         </div>
         <div class="plan-desc">{{ plan.description }}</div>
+        <div v-if="plan.virtual_amount > 0" class="plan-quota">
+          {{ $t('plansPage.includedQuota', { amount: formatAmount(plan.virtual_amount) }) }}
+        </div>
 
         <hr class="plan-divider" />
 
@@ -328,12 +331,26 @@ async function loadPlans() {
       sort: item.sort ?? index + 1,
       duration_days: item.duration_days ?? 30,
       duration_text: item.duration_text || t('plansPage.oneMonth'),
+      // 套餐虚拟余额（元，后端已完成单位换算，前端不再做 1e6 换算）。
+      virtual_amount: Number(item.virtual_amount) || 0,
     }))
   } catch (e) {
     Message.error(t('plansPage.loadPlansFailed'))
   } finally {
     loading.value = false
   }
+}
+
+// formatAmount 金额显示：保留两位小数。
+// 套餐额度由后端以「元」返回，前端不做任何 1e6 换算。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+function formatAmount(v) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return '0.00'
+  return n.toFixed(2)
 }
 
 function parseFeatures(raw) {
@@ -696,6 +713,13 @@ onMounted(() => { loadPlans() })
   margin-bottom: 0;
   line-height: 1.5;
   min-height: 40px;
+}
+.plan-quota {
+  font-size: 13px;
+  font-weight: 600;
+  color: #007AFF;
+  text-align: center;
+  margin-top: 6px;
 }
 .plan-divider {
   border: none;

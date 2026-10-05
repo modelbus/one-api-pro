@@ -17,6 +17,7 @@ import (
 	"github.com/modelbus/one-api-pro/common/client"
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/ctxkey"
+	"github.com/modelbus/one-api-pro/common/helper"
 	"github.com/modelbus/one-api-pro/common/logger"
 	"github.com/modelbus/one-api-pro/model"
 	"github.com/modelbus/one-api-pro/relay/adaptor/openai"
@@ -221,6 +222,13 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	succeed = true
 	quotaDelta := quota - preConsumedQuota
 	defer func(ctx context.Context) {
+		// 订阅用户：消耗套餐额度而非全局余额。历史实现让音频请求完全绕过
+		// 订阅链路，导致订阅用户的余额被真实扣减。
+		// Subscription users burn plan quota instead of account balance.
+		if meta.PlanId > 0 {
+			go applyAudioSubscriptionConsume(ctx, meta, quota, originAudioModel, tokenName)
+			return
+		}
 		go billing.PostConsumeQuota(ctx, &billing.ConsumeQuotaParams{
 			TokenId:         tokenId,
 			UserId:          userId,
@@ -254,10 +262,63 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	return nil
 }
 
+// applyAudioSubscriptionConsume 音频请求的订阅结算：累加套餐窗口用量与虚拟余额，
+// 并把消费计入用户 used_quota / request_count（不扣用户全局余额）。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func applyAudioSubscriptionConsume(ctx context.Context, m *meta.Meta, quota int64, modelName string, tokenName string) {
+	now := helper.GetTimestamp()
+	ups, err := model.CacheGetUserActivePlans(m.UserId)
+	if err != nil {
+		logger.Error(ctx, "failed to get active plans for audio subscription billing: "+err.Error())
+	} else {
+		for _, up := range ups {
+			if int(up.Id) != m.PlanId {
+				continue
+			}
+			// 套餐配置优先取实时值，plans 行已删时回退到购买快照。
+			limits, limitsErr := up.EffectiveModelLimits()
+			if limitsErr != nil {
+				logger.Error(ctx, "failed to parse plan model limits: "+limitsErr.Error())
+				break
+			}
+			rule, found := model.FindLimit(limits, modelName)
+			if !found {
+				break
+			}
+			for _, windowType := range []string{model.WindowTypePeriod, model.WindowTypeWeek, model.WindowTypeMonth} {
+				windowIndex := model.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
+				if err := model.IncrementPlanUsage(int(up.Id), modelName, windowType, windowIndex, 1, 0, 0, 0); err != nil {
+					logger.Error(ctx, "failed to increment plan usage: "+err.Error())
+				}
+			}
+			if err := model.IncrementUserPlanUsedAmount(int(up.Id), quota); err != nil {
+				logger.Error(ctx, "failed to increment plan used amount: "+err.Error())
+			}
+			break
+		}
+	}
+	model.UpdateUserUsedQuotaAndRequestCount(m.UserId, quota)
+	model.UpdateChannelUsedQuota(m.ChannelId, quota)
+	if quota != 0 {
+		model.RecordConsumeLog(ctx, &model.Log{
+			UserId:        m.UserId,
+			ChannelId:     m.ChannelId,
+			ModelName:     modelName,
+			TokenName:     tokenName,
+			Quota:         int(quota),
+			Content:       "订阅计费 | 音频请求",
+			BillingSource: 1,
+			PlanId:        m.PlanId,
+		})
+	}
+}
+
 func getTextFromVTT(body []byte) (string, error) {
 	return getTextFromSRT(body)
 }
-
 func getTextFromVerboseJSON(body []byte) (string, error) {
 	var whisperResponse openai.WhisperVerboseJSONResponse
 	if err := json.Unmarshal(body, &whisperResponse); err != nil {

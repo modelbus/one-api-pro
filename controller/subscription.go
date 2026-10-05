@@ -32,7 +32,7 @@ func GetAllSubscriptions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    ups,
+		"data":    toUserPlanDTOs(ups),
 	})
 }
 
@@ -53,7 +53,7 @@ func SearchSubscriptions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    ups,
+		"data":    toUserPlanDTOs(ups),
 	})
 }
 
@@ -72,7 +72,7 @@ func GetSubscriptionDetail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    up,
+		"data":    toUserPlanDTO(up),
 	})
 }
 
@@ -155,8 +155,12 @@ func AddSubscription(c *gin.Context) {
 		})
 		return
 	}
-	if req.BillingType != model.BillingTypeRequest && req.BillingType != model.BillingTypeToken {
-		req.BillingType = model.BillingTypeToken
+	if req.BillingType != "" && !model.IsValidBillingType(req.BillingType) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "不支持的计费维度: " + req.BillingType,
+		})
+		return
 	}
 
 	// For "free" the order is paid immediately and the subscription is
@@ -182,11 +186,24 @@ func AddSubscription(c *gin.Context) {
 	}
 	if up != nil {
 		up.Plan = plan
+		// 管理员显式指定的计费维度优先于套餐默认值（历史实现把该参数直接丢弃，
+		// 导致前端选择「按请求次数」从未生效）。
+		if model.IsValidBillingType(req.BillingType) && up.BillingType != req.BillingType {
+			up.BillingType = req.BillingType
+			if err := up.Update(); err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "更新计费维度失败: " + err.Error(),
+				})
+				return
+			}
+			model.CacheDeleteUserActivePlans(up.UserId)
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    up,
+		"data":    toUserPlanDTO(up),
 		"order":   out.Order,
 	})
 }
@@ -290,8 +307,39 @@ func GetUserSubscriptionInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    info,
+		"data":    subscriptionInfoToYuan(info),
 	})
+}
+
+// subscriptionInfoToYuan 把订阅总览 map 中的虚拟余额字段由微元换算为「元」。
+// remaining_amount = -1 表示不限额度，原样保留。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func subscriptionInfoToYuan(rows []map[string]interface{}) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, row := range rows {
+		clone := make(map[string]interface{}, len(row))
+		for k, v := range row {
+			clone[k] = v
+		}
+		if micro, ok := clone["virtual_amount"].(int64); ok {
+			clone["virtual_amount"] = quotaToYuan(micro)
+		}
+		if micro, ok := clone["used_amount"].(int64); ok {
+			clone["used_amount"] = quotaToYuan(micro)
+		}
+		if micro, ok := clone["remaining_amount"].(int64); ok {
+			if micro < 0 {
+				clone["remaining_amount"] = float64(-1)
+			} else {
+				clone["remaining_amount"] = quotaToYuan(micro)
+			}
+		}
+		out = append(out, clone)
+	}
+	return out
 }
 
 func GetUserSubscriptions(c *gin.Context) {
@@ -307,7 +355,7 @@ func GetUserSubscriptions(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    ups,
+		"data":    toUserPlanDTOs(ups),
 	})
 }
 
@@ -334,20 +382,29 @@ func GetSubscriptionUsage(c *gin.Context) {
 
 	now := helper.GetTimestamp()
 	limits := plan.GetModelLimits()
+	billingType := up.EffectiveBillingType()
+
+	// 虚拟余额（元）：remaining_amount = -1 表示不限额度。
+	virtualAmount := up.EffectiveVirtualAmount()
+	remaining := model.RemainingVirtualAmount(virtualAmount, up.UsedAmount)
+	remainingYuan := float64(-1)
+	if remaining >= 0 {
+		remainingYuan = quotaToYuan(remaining)
+	}
 
 	// Compute weighted usage for each window type
 	var weighted map[string]float64
 	var modelUsage map[string][]model.ModelUsageDetail
 	var nextReset map[string]int64
 	if limits != nil {
-		weighted = model.CalculateWeightedUsage(plan, pus, up.BillingType, now, up.StartTime)
-		modelUsage = model.CalcModelUsageDetails(limits, pus, up.BillingType, now, up.StartTime)
+		weighted = model.CalculateWeightedUsage(plan, pus, billingType, now, up.StartTime)
+		modelUsage = model.CalcModelUsageDetails(limits, pus, billingType, now, up.StartTime)
 		// Get period_h from the first rule
 		var periodH int
-			for _, r := range limits {
-				periodH = r.PeriodH
-				break
-			}
+		for _, r := range limits {
+			periodH = r.PeriodH
+			break
+		}
 		nextReset = map[string]int64{
 			model.WindowTypePeriod: model.CalcNextResetTime(now, up.StartTime, model.WindowTypePeriod, periodH),
 			model.WindowTypeWeek:   model.CalcNextResetTime(now, up.StartTime, model.WindowTypeWeek, periodH),
@@ -359,15 +416,18 @@ func GetSubscriptionUsage(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data": gin.H{
-			"subscription": up,
-			"usage":         pus,
-			"weighted":      weighted,
-			"limits":        limits,
-			"model_usage":   modelUsage,
-			"next_reset":    nextReset,
-			"now":           now,
-			"start_time":    up.StartTime,
-			"billing_type":  up.BillingType,
+			"subscription":     toUserPlanDTO(up),
+			"usage":            pus,
+			"weighted":         weighted,
+			"limits":           limits,
+			"model_usage":      modelUsage,
+			"next_reset":       nextReset,
+			"now":              now,
+			"start_time":       up.StartTime,
+			"billing_type":     billingType,
+			"virtual_amount":   quotaToYuan(virtualAmount),
+			"used_amount":      quotaToYuan(up.UsedAmount),
+			"remaining_amount": remainingYuan,
 		},
 	})
 }

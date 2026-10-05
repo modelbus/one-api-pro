@@ -27,7 +27,7 @@ func GetAllPlans(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    plans,
+		"data":    toPlanDTOs(plans),
 	})
 }
 
@@ -44,7 +44,7 @@ func SearchPlans(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    plans,
+		"data":    toPlanDTOs(plans),
 	})
 }
 
@@ -61,20 +61,20 @@ func GetPlan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    plan,
+		"data":    toPlanDTO(plan),
 	})
 }
 
 func AddPlan(c *gin.Context) {
-	plan := model.Plan{}
-	err := c.ShouldBindJSON(&plan)
-	if err != nil {
+	var req planWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "无效的参数",
 		})
 		return
 	}
+	plan := req.toPlan()
 	if plan.Name == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -82,10 +82,18 @@ func AddPlan(c *gin.Context) {
 		})
 		return
 	}
+	// 保存前校验： biling_type 白名单 + model_limits JSON 合法且与计费维度匹配。
+	// 历史实现不校验，配置写错会让套餐在运行时退化成「不限量免费」。
+	if err := plan.ValidateConfig(); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
 	plan.CreatedTime = helper.GetTimestamp()
 	plan.UpdatedTime = helper.GetTimestamp()
-	err = plan.Insert()
-	if err != nil {
+	if err := plan.Insert(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -95,20 +103,20 @@ func AddPlan(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    plan,
+		"data":    toPlanDTO(&plan),
 	})
 }
 
 func UpdatePlan(c *gin.Context) {
-	plan := model.Plan{}
-	err := c.ShouldBindJSON(&plan)
-	if err != nil {
+	var req planWriteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "无效的参数",
 		})
 		return
 	}
+	plan := req.toPlan()
 	if plan.Id == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -116,9 +124,15 @@ func UpdatePlan(c *gin.Context) {
 		})
 		return
 	}
+	if err := plan.ValidateConfig(); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
 	plan.UpdatedTime = helper.GetTimestamp()
-	err = plan.Update()
-	if err != nil {
+	if err := plan.Update(); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -161,7 +175,7 @@ func GetPublicPlans(c *gin.Context) {
 			enabled = append(enabled, p)
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": enabled})
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toPlanDTOs(enabled)})
 }
 
 // GetPublicPlanDetail returns a single plan by id (no auth).
@@ -172,7 +186,7 @@ func GetPublicPlanDetail(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": plan})
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": toPlanDTO(plan)})
 }
 
 // GetCurrentPlan returns the authenticated user's active subscription.
@@ -198,21 +212,31 @@ func GetCurrentPlan(c *gin.Context) {
 	now := helper.GetTimestamp()
 	expireDate := time.Unix(up.EndTime, 0).Format("2006-01-02")
 	data := gin.H{
-		"id":              up.Id,
-		"user_id":         up.UserId,
-		"plan_id":         up.PlanId,
-		"order_id":        up.OrderId,
-		"start_time":      up.StartTime,
-		"end_time":        up.EndTime,
-		"expire_time":     up.EndTime, // unix seconds (compat with tbus)
-		"expire_date":     expireDate, // ISO date (compat with tbus)
-		"status":          up.Status,
-		"billing_type":    up.BillingType,
-		"notes":           up.Notes,
-		"created_time":    up.CreatedTime,
-		"updated_time":    up.UpdatedTime,
-		"is_expired":      up.EndTime <= now,
-		"remaining_days":  int64(0),
+		"id":             up.Id,
+		"user_id":        up.UserId,
+		"plan_id":        up.PlanId,
+		"order_id":       up.OrderId,
+		"start_time":     up.StartTime,
+		"end_time":       up.EndTime,
+		"expire_time":    up.EndTime, // unix seconds (compat with tbus)
+		"expire_date":    expireDate, // ISO date (compat with tbus)
+		"status":         up.Status,
+		"billing_type":   up.EffectiveBillingType(),
+		"notes":          up.Notes,
+		"created_time":   up.CreatedTime,
+		"updated_time":   up.UpdatedTime,
+		"is_expired":     up.EndTime <= now,
+		"remaining_days": int64(0),
+	}
+	// 虚拟余额（元）：remaining_amount = -1 表示不限额度。
+	virtualAmount := up.EffectiveVirtualAmount()
+	remaining := model.RemainingVirtualAmount(virtualAmount, up.UsedAmount)
+	data["virtual_amount"] = quotaToYuan(virtualAmount)
+	data["used_amount"] = quotaToYuan(up.UsedAmount)
+	if remaining < 0 {
+		data["remaining_amount"] = float64(-1)
+	} else {
+		data["remaining_amount"] = quotaToYuan(remaining)
 	}
 	if up.EndTime > now {
 		data["remaining_days"] = int64((up.EndTime - now + 86399) / 86400)

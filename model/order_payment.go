@@ -105,9 +105,9 @@ type CreatePlanOrderInput struct {
 // the persisted Order plus the pre-payment fields needed by the caller
 // (amount, pay_url for WeChat/Alipay, package_name for display).
 type CreatePlanOrderOutput struct {
-	Order      *Order
-	Mode       string // OrderUpgradeModeStack or OrderUpgradeModePriceDiff (empty if no existing plan)
-	Amount     float64
+	Order       *Order
+	Mode        string // OrderUpgradeModeStack or OrderUpgradeModePriceDiff (empty if no existing plan)
+	Amount      float64
 	PackageName string
 }
 
@@ -248,6 +248,25 @@ func ActivatePackageByOrder(order *Order, mode string) error {
 		}
 	}
 
+	// 旧版本订单快照不含 billing_type / virtual_amount / model_limits，
+	// 用当前 plans 行补齐，保证 user_plans 快照字段完整。
+	// Old order snapshots lack the newer fields — backfill from the live row.
+	if dbPlan, err := GetPlanById(order.PlanId); err == nil && dbPlan != nil {
+		if !IsValidBillingType(plan.BillingType) {
+			plan.BillingType = dbPlan.BillingType
+		}
+		if plan.ModelLimits == "" {
+			plan.ModelLimits = dbPlan.ModelLimits
+		}
+		if plan.VirtualAmount == 0 {
+			plan.VirtualAmount = dbPlan.VirtualAmount
+		}
+	}
+	billingType := plan.BillingType
+	if !IsValidBillingType(billingType) {
+		billingType = BillingTypeToken
+	}
+
 	now := helper.GetTimestamp()
 	endTime := now + int64(plan.DurationDays)*86400
 
@@ -264,15 +283,22 @@ func ActivatePackageByOrder(order *Order, mode string) error {
 	}
 
 	up := &UserPlan{
-		UserId:      order.UserId,
-		PlanId:      order.PlanId,
-		OrderId:     order.Id,
-		StartTime:   now,
-		EndTime:     endTime,
-		Status:      UserPlanStatusActive,
-		BillingType: BillingTypeToken,
-		CreatedTime: now,
-		UpdatedTime: now,
+		UserId:    order.UserId,
+		PlanId:    order.PlanId,
+		OrderId:   order.Id,
+		StartTime: now,
+		EndTime:   endTime,
+		Status:    UserPlanStatusActive,
+		// 计费维度取自套餐配置（历史实现硬编码 token，导致前端的
+		// 「按请求次数」选择从未生效）。
+		BillingType: billingType,
+		// 套餐配置快照：即使 plans 行以后被删除，订阅仍能按快照计费，
+		// 不会因为拿不到配置而退化成「不限量免费」。
+		ModelLimits:   plan.ModelLimits,
+		VirtualAmount: plan.VirtualAmount,
+		UsedAmount:    0,
+		CreatedTime:   now,
+		UpdatedTime:   now,
 	}
 	if err := up.Insert(); err != nil {
 		return err

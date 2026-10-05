@@ -294,15 +294,24 @@ func planInfoQuotaToYuan(planInfo string) string {
 	if err := json.Unmarshal([]byte(planInfo), &fields); err != nil {
 		return planInfo
 	}
-	raw, ok := fields["bonus_quota"]
-	if !ok {
+	changed := false
+	// 充值订单：bonus_quota 微元 → 元
+	if raw, ok := fields["bonus_quota"]; ok {
+		if micro, ok := raw.(float64); ok {
+			fields["bonus_quota"] = quotaToYuan(int64(micro))
+			changed = true
+		}
+	}
+	// 套餐订单：快照内的 virtual_amount 微元 → 元
+	if raw, ok := fields["virtual_amount"]; ok {
+		if micro, ok := raw.(float64); ok {
+			fields["virtual_amount"] = quotaToYuan(int64(micro))
+			changed = true
+		}
+	}
+	if !changed {
 		return planInfo
 	}
-	micro, ok := raw.(float64)
-	if !ok {
-		return planInfo
-	}
-	fields["bonus_quota"] = quotaToYuan(int64(micro))
 	b, err := json.Marshal(fields)
 	if err != nil {
 		return planInfo
@@ -387,17 +396,24 @@ func tokenRemainQuotaToMicro(y float64) int64 {
 }
 
 // updateUserRequest PUT /api/user/ 的请求体：quota 以「元」传入。
+//
+// Quota 用指针接收，以区分「未传 quota（不改额度）」与「显式清零 quota=0」：
+// 零值在 GORM 的 Updates(struct) 中会被跳过，只有能分辨二者才能把零值补写落库。
 // PUT /api/user/ request body: quota is expressed in CNY yuan.
+// The pointer keeps "quota omitted" apart from an explicit zero.
 type updateUserRequest struct {
 	model.User
-	Quota float64 `json:"quota"`
+	Quota *float64 `json:"quota"`
 }
 
-// toModel 转成 model.User，并把元额度换算回微元。
+// toModel 转成 model.User，并把元额度换算回微元；未传 quota 时保持 0，
+// 由调用方根据 req.Quota 是否为 nil 决定是否补写。
 // Convert to model.User with the yuan-denominated quota written back as micro-quota.
 func (r *updateUserRequest) toModel() model.User {
 	u := r.User
-	u.Quota = yuanToQuota(r.Quota)
+	if r.Quota != nil {
+		u.Quota = yuanToQuota(*r.Quota)
+	}
 	return u
 }
 
@@ -429,4 +445,86 @@ func (r *redemptionWriteRequest) toRedemption() model.Redemption {
 	rd := r.Redemption
 	rd.Quota = yuanToQuota(r.Quota)
 	return rd
+}
+
+// ---------------------------------------------------------------------------
+// 套餐（plan）DTO
+//
+// plan.virtual_amount 是「套餐虚拟余额」（存储层微元），API 边界一律以「元」呈现。
+// 与 user/token/redemption 同一套遮蔽 + 显式回写模式。
+// Plan DTOs: plan.virtual_amount is stored in micro-quota but exposed in CNY yuan.
+// ---------------------------------------------------------------------------
+
+// planDTO 套餐输出：virtual_amount 以「元」为单位。
+type planDTO struct {
+	*model.Plan
+	VirtualAmount float64 `json:"virtual_amount"`
+}
+
+// toPlanDTO 把单个套餐转换为「元」口径的输出结构。
+// Convert a single plan to the yuan-denominated response shape.
+func toPlanDTO(p *model.Plan) *planDTO {
+	if p == nil {
+		return nil
+	}
+	return &planDTO{
+		Plan:          p,
+		VirtualAmount: quotaToYuan(p.VirtualAmount),
+	}
+}
+
+// toPlanDTOs 批量转换套餐列表；入参为 nil 时返回空切片而非 nil。
+// Convert a plan list; returns an empty slice (not nil) when the input is empty.
+func toPlanDTOs(plans []*model.Plan) []*planDTO {
+	out := make([]*planDTO, 0, len(plans))
+	for _, p := range plans {
+		out = append(out, toPlanDTO(p))
+	}
+	return out
+}
+
+// userPlanDTO 订阅输出：virtual_amount / used_amount 以「元」为单位，内嵌 plan 同样元化。
+type userPlanDTO struct {
+	*model.UserPlan
+	VirtualAmount float64  `json:"virtual_amount"`
+	UsedAmount    float64  `json:"used_amount"`
+	Plan          *planDTO `json:"plan,omitempty"`
+}
+
+// toUserPlanDTO 把单条订阅转换为「元」口径的输出结构。
+// Convert a single subscription to the yuan-denominated response shape.
+func toUserPlanDTO(up *model.UserPlan) *userPlanDTO {
+	if up == nil {
+		return nil
+	}
+	return &userPlanDTO{
+		UserPlan:      up,
+		VirtualAmount: quotaToYuan(up.VirtualAmount),
+		UsedAmount:    quotaToYuan(up.UsedAmount),
+		Plan:          toPlanDTO(up.Plan),
+	}
+}
+
+// toUserPlanDTOs 批量转换订阅列表；入参为 nil 时返回空切片而非 nil。
+// Convert a subscription list; returns an empty slice (not nil) when the input is empty.
+func toUserPlanDTOs(ups []*model.UserPlan) []*userPlanDTO {
+	out := make([]*userPlanDTO, 0, len(ups))
+	for _, up := range ups {
+		out = append(out, toUserPlanDTO(up))
+	}
+	return out
+}
+
+// planWriteRequest 套餐新增/修改请求体：virtual_amount 以「元」传入。
+type planWriteRequest struct {
+	model.Plan
+	VirtualAmount float64 `json:"virtual_amount"`
+}
+
+// toPlan 转成 model.Plan，并把元额度换算回微元。
+// Convert to model.Plan with the yuan-denominated virtual amount written back as micro-quota.
+func (r *planWriteRequest) toPlan() model.Plan {
+	p := r.Plan
+	p.VirtualAmount = yuanToQuota(r.VirtualAmount)
+	return p
 }

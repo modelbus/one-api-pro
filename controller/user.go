@@ -451,6 +451,19 @@ func UpdateUser(c *gin.Context) {
 		})
 		return
 	}
+	// GORM 的 Updates(struct) 会跳过零值字段，导致「把额度清零」静默失效（接口返回成功但额度不变）。
+	// 因此仅当请求显式携带 quota（含 quota=0）时，按列补写一次。
+	// Updates(struct) skips zero values, so an explicit quota=0 would be silently dropped;
+	// write the column directly whenever the client sent a quota field.
+	if req.Quota != nil {
+		if err := model.UpdateUserQuotaColumn(updatedUser.Id, updatedUser.Quota); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+	}
 	if originUser.Quota != updatedUser.Quota {
 		model.RecordLog(ctx, originUser.Id, model.LogTypeManage, fmt.Sprintf("管理员将用户额度从 %s修改为 %s", common.LogQuota(originUser.Quota), common.LogQuota(updatedUser.Quota)))
 		// DB quota field was overwritten — refresh Redis so the next request
