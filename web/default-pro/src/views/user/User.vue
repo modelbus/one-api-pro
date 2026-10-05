@@ -262,13 +262,13 @@
     >
       <a-form ref="addFormRef" :model="addForm" :rules="addRules" layout="vertical" class="user-form">
         <a-form-item field="username" :label="$t('userPage.username')">
-          <a-input v-model="addForm.username" :placeholder="$t('userPage.usernamePlaceholder')" :max-length="32" allow-clear />
+          <a-input v-model="addForm.username" :placeholder="$t('userPage.usernamePlaceholder')" :max-length="12" allow-clear />
         </a-form-item>
         <a-form-item field="display_name" :label="$t('userPage.displayName')">
-          <a-input v-model="addForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="64" allow-clear />
+          <a-input v-model="addForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="20" allow-clear />
         </a-form-item>
         <a-form-item field="password" :label="$t('userPage.password')">
-          <a-input-password v-model="addForm.password" :placeholder="$t('userPage.passwordPlaceholder')" :max-length="64" />
+          <a-input-password v-model="addForm.password" :placeholder="$t('userPage.passwordPlaceholder')" :max-length="20" />
         </a-form-item>
       </a-form>
     </a-modal>
@@ -289,13 +289,14 @@
           <a-input v-model="editForm.username" disabled />
         </a-form-item>
         <a-form-item field="display_name" :label="$t('userPage.displayName')">
-          <a-input v-model="editForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="64" allow-clear />
+          <a-input v-model="editForm.display_name" :placeholder="$t('userPage.displayNamePlaceholder')" :max-length="20" allow-clear />
         </a-form-item>
         <a-form-item field="password" :label="$t('userPage.password')">
-          <a-input-password v-model="editForm.password" :placeholder="$t('userPage.passwordKeepPlaceholder')" :max-length="64" />
+          <a-input-password v-model="editForm.password" :placeholder="$t('userPage.passwordKeepPlaceholder')" :max-length="20" />
         </a-form-item>
         <a-form-item field="group" :label="$t('userPage.group')">
-          <a-select v-model="editForm.group" :placeholder="$t('userPage.groupPlaceholder')" allow-clear>
+          <!-- 不允许清空：分组为空会让该用户匹配不到任何渠道，后端也会跳过空值写入 -->
+          <a-select v-model="editForm.group" :placeholder="$t('userPage.groupPlaceholder')">
             <a-option v-for="g in groups" :key="g" :value="g">{{ g }}</a-option>
           </a-select>
         </a-form-item>
@@ -442,13 +443,16 @@ const addForm = reactive({
 })
 
 const addRules = computed(() => ({
+  // 与后端 model.User 的 validate 对齐：username max=12，password min=8/max=20。
   username: [
     { required: true, message: t('userPage.usernameRequired') },
     { minLength: 3, message: t('userPage.usernameMin') },
+    { maxLength: 12, message: t('userPage.usernameMaxLength') },
   ],
   password: [
     { required: true, message: t('userPage.passwordRequired') },
-    { minLength: 6, message: t('userPage.passwordMin') },
+    { minLength: 8, message: t('userPage.passwordMin') },
+    { maxLength: 20, message: t('userPage.passwordMaxLength') },
   ],
 }))
 
@@ -657,10 +661,23 @@ function openEditModal(record) {
 }
 
 async function handleEditUser() {
+  // 后端 UpdateUser 以 body.id 定位目标用户（req.Id == 0 直接返回 invalid_parameter），
+  // 因此必须回传被编辑用户的 id，否则永远提示「无效的参数」。
+  if (!editingUser.value?.id) {
+    Message.error(t('userPage.editFailed'))
+    return
+  }
+  // 与后端 validate 对齐的前置校验：密码 8-20 字符（留空表示不修改）。
+  if (editForm.password && editForm.password.length < 8) {
+    Message.error(t('userPage.passwordMin'))
+    return
+  }
   submitting.value = true
   try {
+    // username 不在提交范围：用户名不允许修改，且后端对 username 有 max=12 校验，
+    // 历史超长用户名会被误判为「输入不合法」；不传即保持原值（后端跳过零值字段）。
     const payload = {
-      username: editForm.username,
+      id: editingUser.value.id,
       display_name: editForm.display_name,
       group: editForm.group,
       quota: editForm.quota,
