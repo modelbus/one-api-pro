@@ -22,10 +22,23 @@ type QuotaCheckResult struct {
 	WeekWeighted    float64 `json:"week_weighted"`
 	MonthWeighted   float64 `json:"month_weighted"`
 	ExhaustedWindow string  `json:"exhausted_window,omitempty"`
+	// 虚拟余额（微元）：VirtualAmount<=0 表示不限额度。
+	VirtualAmount   int64 `json:"virtual_amount"`
+	UsedAmount      int64 `json:"used_amount"`
+	RemainingAmount int64 `json:"remaining_amount"`
 }
 
 // CheckPlanQuota iterates through a user's active plans (sorted by EndTime ASC)
 // and returns the first plan that is not exhausted based on weighted pool calculation.
+//
+// 判定顺序（也是修复后的完整口径）：
+//  1. 套餐未过期；
+//  2. model_limits 能合法解析（解析失败 / 为空 = 该套餐不覆盖任何模型，跳过）；
+//  3. 虚拟余额（virtual_amount）未耗尽 —— 只要耗尽，整个套餐即不可用；
+//  4. 请求的模型在该套餐的 model_limits 内；
+//  5. 该模型对应的加权池未打满（任一窗口达到 100% 即视为套餐耗尽）。
+//
+// 任一条不通过就尝试下一个套餐；全部不通过则回落用户全局余额按量计费。
 func CheckPlanQuota(userId int, requestModel string) (*QuotaCheckResult, error) {
 	ups, err := CacheGetUserActivePlans(userId)
 	if err != nil {
@@ -50,24 +63,37 @@ func CheckPlanQuota(userId int, requestModel string) (*QuotaCheckResult, error) 
 			continue
 		}
 
-		if up.Plan == nil {
-			logger.Debugf(nil, "CheckPlanQuota: UserPlan %d has nil Plan (plan_id=%d), skipping", up.Id, up.PlanId)
+		billingType := up.EffectiveBillingType()
+
+		// model_limits 解析失败说明套餐配置是脏数据。历史实现会把它当成
+		// 「不限量」直接放行（配置写错 = 全免费），此处必须判为不可用。
+		limits, limitsErr := up.EffectiveModelLimits()
+		if limitsErr != nil {
+			logger.Debugf(nil, "CheckPlanQuota: UserPlan %d has invalid model_limits: %s, skipping", up.Id, limitsErr.Error())
+			continue
+		}
+		// 未配置任何模型限制 = 不覆盖任何模型，跳过并回落全局余额。
+		if limits == nil {
+			logger.Debugf(nil, "CheckPlanQuota: UserPlan %d has no model limits, skipping", up.Id)
 			continue
 		}
 
-		limits := up.Plan.GetModelLimits()
-		if limits == nil {
-			// 空 model_limits 表示「该套餐不限制模型」，直接可用。
-			// 注意：JSON 解析失败同样返回 nil（配置写错=全免费），该漏洞留待后续单独修复。
-			return &QuotaCheckResult{
-				Usable:      true,
-				PlanId:      int(up.Id),
-				BillingType: up.BillingType,
-			}, nil
+		// 虚拟余额是套餐级别的共享池：一旦耗尽，套餐内所有模型都不可用。
+		virtualAmount := up.EffectiveVirtualAmount()
+		var usedAmount int64
+		if virtualAmount > 0 {
+			used, err := GetUserPlanUsedAmount(int(up.Id))
+			if err != nil {
+				logger.Debugf(nil, "CheckPlanQuota: GetUserPlanUsedAmount(%d) error: %s", up.Id, err.Error())
+				continue
+			}
+			usedAmount = used
+			if RemainingVirtualAmount(virtualAmount, used) <= 0 {
+				continue
+			}
 		}
 
-		// 模型不在套餐限额内 → 该套餐不覆盖此模型（已无 default_model 可回落），
-		// 跳过并尝试下一个套餐；全部不覆盖则回落全局余额按量计费。
+		// 模型不在套餐限额内 → 该套餐不覆盖此模型，跳过并尝试下一个套餐。
 		if _, found := FindLimit(limits, requestModel); !found {
 			continue
 		}
@@ -79,16 +105,19 @@ func CheckPlanQuota(userId int, requestModel string) (*QuotaCheckResult, error) 
 		}
 
 		result := &QuotaCheckResult{
-			Usable:      true,
-			PlanId:      int(up.Id),
-			BillingType: up.BillingType,
+			Usable:          true,
+			PlanId:          int(up.Id),
+			BillingType:     billingType,
+			VirtualAmount:   virtualAmount,
+			UsedAmount:      usedAmount,
+			RemainingAmount: RemainingVirtualAmount(virtualAmount, usedAmount),
 		}
 
 		windowTypes := []string{WindowTypePeriod, WindowTypeWeek, WindowTypeMonth}
 		weightedValues := make(map[string]float64, 3)
 
 		for _, windowType := range windowTypes {
-			weighted := WeightedUsage(limits, usages, windowType, up.BillingType, now, up.StartTime)
+			weighted := WeightedUsage(limits, usages, windowType, billingType, now, up.StartTime)
 			weightedValues[windowType] = weighted
 			if IsExhausted(weighted) {
 				result.Usable = false
@@ -226,7 +255,7 @@ type ModelUsageDetail struct {
 	Model            string  `json:"model"`
 	Requests         int64   `json:"requests"`
 	PromptTokens     int64   `json:"prompt_tokens"`
-	CompletionTokens int64  `json:"completion_tokens"`
+	CompletionTokens int64   `json:"completion_tokens"`
 	CachedTokens     int64   `json:"cached_tokens"`
 	RequestPercent   float64 `json:"request_percent"`
 	TokenPercent     float64 `json:"token_percent"`
