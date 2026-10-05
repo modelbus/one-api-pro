@@ -340,21 +340,14 @@ func GetSubscriptionUsage(c *gin.Context) {
 	var modelUsage map[string][]model.ModelUsageDetail
 	var nextReset map[string]int64
 	if limits != nil {
-		weighted = model.CalculateWeightedUsage(plan, pus, up.BillingType, now, up.StartTime, "*")
-		modelUsage = model.CalcModelUsageDetails(limits, pus, up.BillingType, now, up.StartTime, plan.DefaultModel)
-		// Get period_h from default_model or first rule
+		weighted = model.CalculateWeightedUsage(plan, pus, up.BillingType, now, up.StartTime)
+		modelUsage = model.CalcModelUsageDetails(limits, pus, up.BillingType, now, up.StartTime)
+		// Get period_h from the first rule
 		var periodH int
-		if plan.DefaultModel != "" {
-			if rule, ok := limits[plan.DefaultModel]; ok {
-				periodH = rule.PeriodH
-			}
-		}
-		if periodH == 0 {
 			for _, r := range limits {
 				periodH = r.PeriodH
 				break
 			}
-		}
 		nextReset = map[string]int64{
 			model.WindowTypePeriod: model.CalcNextResetTime(now, up.StartTime, model.WindowTypePeriod, periodH),
 			model.WindowTypeWeek:   model.CalcNextResetTime(now, up.StartTime, model.WindowTypeWeek, periodH),
