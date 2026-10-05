@@ -396,17 +396,24 @@ func tokenRemainQuotaToMicro(y float64) int64 {
 }
 
 // updateUserRequest PUT /api/user/ 的请求体：quota 以「元」传入。
+//
+// Quota 用指针接收，以区分「未传 quota（不改额度）」与「显式清零 quota=0」：
+// 零值在 GORM 的 Updates(struct) 中会被跳过，只有能分辨二者才能把零值补写落库。
 // PUT /api/user/ request body: quota is expressed in CNY yuan.
+// The pointer keeps "quota omitted" apart from an explicit zero.
 type updateUserRequest struct {
 	model.User
-	Quota float64 `json:"quota"`
+	Quota *float64 `json:"quota"`
 }
 
-// toModel 转成 model.User，并把元额度换算回微元。
+// toModel 转成 model.User，并把元额度换算回微元；未传 quota 时保持 0，
+// 由调用方根据 req.Quota 是否为 nil 决定是否补写。
 // Convert to model.User with the yuan-denominated quota written back as micro-quota.
 func (r *updateUserRequest) toModel() model.User {
 	u := r.User
-	u.Quota = yuanToQuota(r.Quota)
+	if r.Quota != nil {
+		u.Quota = yuanToQuota(*r.Quota)
+	}
 	return u
 }
 

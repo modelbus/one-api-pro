@@ -194,6 +194,36 @@ func TestUpdateUserRequest_FractionalYuanIsAccepted(t *testing.T) {
 	}
 }
 
+// TestUpdateUserRequest_OmittedQuotaIsNil 验证未传 quota 时指针为 nil，
+// 调用方据此跳过「零值补写」，避免把额度误置为 0。
+func TestUpdateUserRequest_OmittedQuotaIsNil(t *testing.T) {
+	var req updateUserRequest
+	if err := json.Unmarshal([]byte(`{"id":9,"username":"bob"}`), &req); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if req.Quota != nil {
+		t.Fatalf("未传 quota 时 Quota 应为 nil，实际 %v", *req.Quota)
+	}
+	if got := req.toModel().Quota; got != 0 {
+		t.Fatalf("quota = %d，期望 0", got)
+	}
+}
+
+// TestUpdateUserRequest_ExplicitZeroQuotaIsNotNil 验证 quota=0 与「未传」可区分，
+// 这是管理端把额度清零能真正落库的前提。
+func TestUpdateUserRequest_ExplicitZeroQuotaIsNotNil(t *testing.T) {
+	var req updateUserRequest
+	if err := json.Unmarshal([]byte(`{"id":9,"quota":0}`), &req); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if req.Quota == nil {
+		t.Fatal("显式 quota=0 应被识别为已传值")
+	}
+	if got := req.toModel().Quota; got != 0 {
+		t.Fatalf("quota = %d，期望 0", got)
+	}
+}
+
 // TestTokenWriteRequest_UnlimitedSentinel 验证 -1 哨兵不被换算成 -1000000。
 func TestTokenWriteRequest_UnlimitedSentinel(t *testing.T) {
 	var req tokenWriteRequest
