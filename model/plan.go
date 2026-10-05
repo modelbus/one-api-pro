@@ -160,7 +160,6 @@ type Plan struct {
 	Sort         int         `gorm:"not null;default:0" json:"sort"`
 	Features     StringSlice `gorm:"type:text" json:"features"`
 	ModelLimits  string      `gorm:"type:text;column:model_limits" json:"model_limits"`
-	DefaultModel string      `gorm:"type:varchar(100);default:''" json:"default_model"`
 	CreatedTime  int64       `gorm:"not null;default:0" json:"created_time"`
 	UpdatedTime  int64       `gorm:"not null;default:0" json:"updated_time"`
 	CreatedAt    int64       `json:"created_at" gorm:"bigint;default:0"`
@@ -175,20 +174,6 @@ type ModelLimitRule struct {
 	TokenPeriod   int64 `json:"token_period"`
 	TokenWeek     int64 `json:"token_week"`
 	TokenMonth    int64 `json:"token_month"`
-}
-
-func (p *Plan) ValidateDefaultModel() error {
-	if p.DefaultModel == "" {
-		return nil
-	}
-	limits := p.GetModelLimits()
-	if limits == nil {
-		return fmt.Errorf("default_model '%s' is set but model_limits is empty", p.DefaultModel)
-	}
-	if _, ok := limits[p.DefaultModel]; !ok {
-		return fmt.Errorf("default_model '%s' is not found in model_limits", p.DefaultModel)
-	}
-	return nil
 }
 
 func (p *Plan) GetModelLimits() map[string]ModelLimitRule {
@@ -224,7 +209,7 @@ func (p *Plan) Insert() error {
 func (p *Plan) Update() error {
 	return DB.Model(p).Select("name", "description", "price", "duration_days",
 		"duration_text", "status", "recommended", "sort", "features",
-		"model_limits", "default_model", "updated_time").Updates(p).Error
+		"model_limits", "updated_time").Updates(p).Error
 }
 
 func DeletePlanById(id int) error {
