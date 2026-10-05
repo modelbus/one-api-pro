@@ -41,11 +41,9 @@
           <div class="quota-info-label">{{ $t('redeemPage.currentQuota') }}</div>
           <div :class="['quota-info-value', 'quota-info-value-current', { flash: quotaFlash }]" :key="quotaFlashKey">{{ fmtQuota(quota) }}</div>
         </div>
-        <div class="quota-info-row" v-if="quotaUsed > 0 || quotaTotal > 0">
+        <div class="quota-info-row" v-if="quotaUsed > 0">
           <div class="quota-info-label">{{ $t('redeemPage.usage') }}</div>
-          <div class="quota-info-value">
-            {{ fmtQuota(quotaUsed) }} <span class="quota-divider">/</span> {{ fmtQuota(quotaTotal) }}
-          </div>
+          <div class="quota-info-value">{{ fmtQuota(quotaUsed) }}</div>
         </div>
       </a-spin>
     </div>
@@ -68,7 +66,6 @@ const success = ref('')
 const quotaLoading = ref(true)
 const quota = ref(0)
 const quotaUsed = ref(0)
-const quotaTotal = ref(0)
 const quotaFlash = ref(false)
 const quotaFlashKey = ref(0)
 
@@ -92,7 +89,10 @@ async function fetchQuota() {
     if (data?.success && data.data) {
       quota.value = data.data.quota ?? data.data.remain_quota ?? 0
       quotaUsed.value = data.data.used_quota ?? 0
-      quotaTotal.value = (Number(quota.value) + Number(quotaUsed.value)) || 0
+      // 不再推导「累计总额 = 余额 + 已用」：订阅消费现在也计入 used_quota，
+      // 而套餐额度并不进入余额，相加会虚增。
+      // No more total = balance + used: subscription usage is now included in
+      // used_quota while plan quota never enters the balance, so the sum inflates.
     }
   } catch (e) {
     // silent
