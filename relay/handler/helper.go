@@ -207,27 +207,39 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		billingSource = 1
 		now := helper.GetTimestamp()
 		ups, err := dbmodel.CacheGetUserActivePlans(meta.UserId)
-		if err != nil || len(ups) == 0 {
+		if err != nil {
 			logger.Error(ctx, "failed to get active plans for subscription billing: "+err.Error())
+		} else if len(ups) == 0 {
+			logger.Error(ctx, "no active plans found for subscription billing")
 		} else {
 			for _, up := range ups {
-				if int(up.Id) == planId {
-					limits := up.Plan.GetModelLimits()
-					modelName := meta.OriginModelName
-					rule, found := dbmodel.FindLimit(limits, modelName)
-					if !found {
-						continue
-					}
-					resolvedName := modelName
-				for _, windowType := range []string{dbmodel.WindowTypePeriod, dbmodel.WindowTypeWeek, dbmodel.WindowTypeMonth} {
-					windowIndex := dbmodel.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
-					err := dbmodel.IncrementPlanUsage(int(up.Id), resolvedName, windowType, windowIndex, 1, int64(promptTokens), int64(completionTokens), int64(cachedTokens))
-						if err != nil {
-							logger.Error(ctx, fmt.Sprintf("failed to increment plan usage: %s", err.Error()))
-						}
-					}
+				if int(up.Id) != planId {
+					continue
+				}
+				// 套餐配置优先取实时值，plans 行已删时回退到购买快照。
+				limits, limitsErr := up.EffectiveModelLimits()
+				if limitsErr != nil {
+					logger.Error(ctx, "failed to parse plan model limits: "+limitsErr.Error())
 					break
 				}
+				modelName := meta.OriginModelName
+				rule, found := dbmodel.FindLimit(limits, modelName)
+				if !found {
+					break
+				}
+				for _, windowType := range []string{dbmodel.WindowTypePeriod, dbmodel.WindowTypeWeek, dbmodel.WindowTypeMonth} {
+					windowIndex := dbmodel.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
+					err := dbmodel.IncrementPlanUsage(int(up.Id), modelName, windowType, windowIndex, 1, int64(promptTokens), int64(completionTokens), int64(cachedTokens))
+					if err != nil {
+						logger.Error(ctx, fmt.Sprintf("failed to increment plan usage: %s", err.Error()))
+					}
+				}
+				// 订阅虚拟余额：累加本次消费额度（微元）。耗尽判定在
+				// CheckPlanQuota 中实时查库，不依赖本缓存的聚合值。
+				if err := dbmodel.IncrementUserPlanUsedAmount(int(up.Id), quota); err != nil {
+					logger.Error(ctx, fmt.Sprintf("failed to increment plan used amount: %s", err.Error()))
+				}
+				break
 			}
 		}
 		if preConsumedQuota != 0 {
@@ -283,12 +295,11 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		PlanId:            planId,
 		SessionKey:        meta.SessionKey,
 	})
-	if billingSource == 0 {
-		dbmodel.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
-		dbmodel.UpdateChannelUsedQuota(meta.ChannelId, quota)
-	} else {
-		dbmodel.UpdateChannelUsedQuota(meta.ChannelId, quota)
-	}
+	// 订阅消费同样计入用户的 used_quota / request_count（统计口径统一），
+	// 但不扣减 users.quota —— 套餐额度消耗记在 user_plans.used_amount 上。
+	// Subscription usage is counted into user stats but never charged to users.quota.
+	dbmodel.UpdateUserUsedQuotaAndRequestCount(meta.UserId, quota)
+	dbmodel.UpdateChannelUsedQuota(meta.ChannelId, quota)
 }
 
 func getMappedModelName(modelName string, mapping map[string]string) (string, bool) {
