@@ -155,6 +155,7 @@
           <div class="balance-value">
             <span class="balance-num">{{ fmtQuota(balance) }}</span>
           </div>
+          <div v-if="planQuotaText" class="balance-plan-quota">{{ planQuotaText }}</div>
           <div class="balance-actions">
             <a class="balance-btn" @click="$router.push('/redeem')">{{ $t('dash.redeem') }}</a>
             <a class="balance-btn" @click="$router.push('/plans')">{{ $t('dash.subscribe') }}</a>
@@ -340,6 +341,21 @@ const logStat = reactive({
 
 const currentPlan = ref({ id: 0, name: '-', expireDate: '-' })
 const planExpired = ref(false)
+// 套餐虚拟余额（元，来自 /api/subscription/self，后端已换算）
+const planQuota = ref(null)
+
+// planQuotaText 余额卡下方的套餐额度提示。
+// total<=0 表示不限额度（不展示）；remaining<=0 表示已耗尽。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+const planQuotaText = computed(() => {
+  const q = planQuota.value
+  if (!q || !(q.total > 0)) return ''
+  if (!(q.remaining > 0)) return t('dash.planQuotaExhausted')
+  return t('dash.planQuotaLeft', { amount: Number(q.remaining).toFixed(2) })
+})
 const todayPercent = ref(0)
 const monthPercent = ref(0)
 const todayTokens = ref(0)
@@ -758,6 +774,12 @@ async function loadSubscription() {
         sevendayTokens.value = Number(first.week_tokens || 0)
         todayResetTime.value = first.today_reset || ''
         sevendayResetTime.value = first.week_reset || ''
+        // 套餐虚拟余额（元）：total=0 表示不限额度。
+        planQuota.value = {
+          total: Number(first.virtual_amount) || 0,
+          used: Number(first.used_amount) || 0,
+          remaining: Number(first.remaining_amount),
+        }
       }
     }
   } catch (e) { /* ignore */ }
@@ -935,6 +957,12 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.balance-plan-quota {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+
 .dashboard {
   display: flex;
   flex-direction: column;
