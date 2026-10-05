@@ -22,7 +22,6 @@ type QuotaCheckResult struct {
 	WeekWeighted    float64 `json:"week_weighted"`
 	MonthWeighted   float64 `json:"month_weighted"`
 	ExhaustedWindow string  `json:"exhausted_window,omitempty"`
-	DefaultModel    string  `json:"default_model,omitempty"`
 }
 
 // CheckPlanQuota iterates through a user's active plans (sorted by EndTime ASC)
@@ -58,6 +57,8 @@ func CheckPlanQuota(userId int, requestModel string) (*QuotaCheckResult, error) 
 
 		limits := up.Plan.GetModelLimits()
 		if limits == nil {
+			// 空 model_limits 表示「该套餐不限制模型」，直接可用。
+			// 注意：JSON 解析失败同样返回 nil（配置写错=全免费），该漏洞留待后续单独修复。
 			return &QuotaCheckResult{
 				Usable:      true,
 				PlanId:      int(up.Id),
@@ -65,8 +66,11 @@ func CheckPlanQuota(userId int, requestModel string) (*QuotaCheckResult, error) 
 			}, nil
 		}
 
-		defaultModel := up.Plan.DefaultModel
-		_, _, modelInLimits := FindLimit(limits, requestModel, "")
+		// 模型不在套餐限额内 → 该套餐不覆盖此模型（已无 default_model 可回落），
+		// 跳过并尝试下一个套餐；全部不覆盖则回落全局余额按量计费。
+		if _, found := FindLimit(limits, requestModel); !found {
+			continue
+		}
 
 		usages, err := GetPlanUsageByUserPlanId(int(up.Id))
 		if err != nil {
@@ -80,15 +84,11 @@ func CheckPlanQuota(userId int, requestModel string) (*QuotaCheckResult, error) 
 			BillingType: up.BillingType,
 		}
 
-		if !modelInLimits && defaultModel != "" {
-			result.DefaultModel = defaultModel
-		}
-
 		windowTypes := []string{WindowTypePeriod, WindowTypeWeek, WindowTypeMonth}
 		weightedValues := make(map[string]float64, 3)
 
 		for _, windowType := range windowTypes {
-			weighted := WeightedUsage(limits, usages, windowType, up.BillingType, now, up.StartTime, requestModel, defaultModel)
+			weighted := WeightedUsage(limits, usages, windowType, up.BillingType, now, up.StartTime)
 			weightedValues[windowType] = weighted
 			if IsExhausted(weighted) {
 				result.Usable = false
@@ -120,15 +120,13 @@ func WeightedUsage(
 	billingType string,
 	now int64,
 	startTime int64,
-	requestModel string,
-	defaultModel string,
 ) float64 {
 	total := 0.0
 	for _, usage := range usages {
 		if usage.WindowType != windowType {
 			continue
 		}
-		rule, _, found := FindLimit(limits, usage.Model, defaultModel)
+		rule, found := FindLimit(limits, usage.Model)
 		if !found {
 			continue
 		}
@@ -165,19 +163,11 @@ func WeightedUsage(
 	return math.Round(total*1e8) / 1e8
 }
 
-// FindLimit returns the ModelLimitRule and the resolved model name for a given model.
-// Priority: explicit model name > default_model > not found.
-// The "other" key is no longer treated as a fallback; it is treated as a regular model name.
-func FindLimit(limits map[string]ModelLimitRule, model string, defaultModel string) (ModelLimitRule, string, bool) {
-	if rule, ok := limits[model]; ok {
-		return rule, model, true
-	}
-	if defaultModel != "" {
-		if rule, ok := limits[defaultModel]; ok {
-			return rule, defaultModel, true
-		}
-	}
-	return ModelLimitRule{}, "", false
+// FindLimit returns the ModelLimitRule for a given model.
+// Only an exact model-name match counts — the "other" key is treated as a regular model name.
+func FindLimit(limits map[string]ModelLimitRule, model string) (ModelLimitRule, bool) {
+	rule, ok := limits[model]
+	return rule, ok
 }
 
 // IsExhausted returns true if the weighted usage has reached or exceeded QuotaPoolCapacity.
@@ -219,7 +209,6 @@ func CalculateWeightedUsage(
 	billingType string,
 	now int64,
 	startTime int64,
-	requestModel string,
 ) map[string]float64 {
 	limits := plan.GetModelLimits()
 	if limits == nil {
@@ -227,7 +216,7 @@ func CalculateWeightedUsage(
 	}
 	result := make(map[string]float64, 3)
 	for _, windowType := range []string{WindowTypePeriod, WindowTypeWeek, WindowTypeMonth} {
-		result[windowType] = WeightedUsage(limits, usages, windowType, billingType, now, startTime, requestModel, plan.DefaultModel)
+		result[windowType] = WeightedUsage(limits, usages, windowType, billingType, now, startTime)
 	}
 	return result
 }
@@ -252,7 +241,6 @@ func CalcModelUsageDetails(
 	billingType string,
 	now int64,
 	startTime int64,
-	defaultModel string,
 ) map[string][]ModelUsageDetail {
 	type usageKey struct {
 		Model      string
@@ -262,7 +250,7 @@ func CalcModelUsageDetails(
 	// Build current-window usage lookup keyed by model|windowType
 	usageMap := make(map[usageKey]*PlanUsage, len(usages))
 	for _, u := range usages {
-		rule, _, found := FindLimit(limits, u.Model, defaultModel)
+		rule, found := FindLimit(limits, u.Model)
 		if !found {
 			continue
 		}
