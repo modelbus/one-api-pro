@@ -31,7 +31,6 @@ order: 18
       "price": 99.00,
       "tokens": 500000000,
       "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
-      "default_model": "gpt-4o",
       "description": "Basic plan description",
 "features": ["1000 API calls/month", "GPT-4o support"],
       "sort": 0,
@@ -54,7 +53,6 @@ order: 18
 | price | float64 | Price |
 | tokens | int64 | Token quota |
 | model_limits | string | Model limit config as JSON; key is the model name, value is a `ModelLimitRule` |
-| default_model | string | Default model name. Requests for models not in `model_limits` are forwarded here for billing; empty means no forwarding and unconfigured models yield 422 |
 | description | string | Description |
 | features | array&lt;string&gt; | Feature list, one item per line on the user-facing plan card |
 | sort | int | Sort weight |
@@ -98,7 +96,6 @@ order: 18
   "price": 99.00,
   "tokens": 500000000,
   "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
-  "default_model": "gpt-4o",
   "description": "Basic plan description",
   "features": "Feature description",
   "sort": 0,
@@ -146,12 +143,12 @@ Keys are model names; values are `ModelLimitRule` objects:
 | token_week | int64 | Max tokens per week |
 | token_month | int64 | Max tokens per month |
 
-**`default_model` field notes:**
+**Handling of uncovered models:**
 
-- When a user requests a model that is not in `model_limits`, the system forwards the request to the model named in `default_model`.
-- `default_model` must be a model already configured in `model_limits`; otherwise creating/updating the plan returns an error.
-- If `default_model` is empty and the requested model is not in `model_limits`, the response is 422.
-- After forwarding, the actual upstream request uses `default_model`; the model name recorded in logs is also `default_model`.
+- If the requested model is not in `model_limits`, the plan does not cover the request and is skipped.
+- If the user also has balance, the request falls back to global balance pay-as-you-go billing; insufficient balance is rejected by the pay-as-you-go path.
+- If the platform has no price configured for that model, the response is 422 `model_price_not_found`.
+- An empty `model_limits` string means the plan does not restrict models — every model is covered.
 
 
 ### 10.6 Delete a Plan
