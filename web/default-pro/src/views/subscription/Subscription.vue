@@ -266,12 +266,44 @@
               <span class="ud-value">{{ renderBillingType(usageData.billing_type || usageData.subscription?.billing_type) }}</span>
             </div>
             <div class="ud-item">
+              <span class="ud-label">{{ $t('subPage.planQuotaLabel') }}</span>
+              <span class="ud-value">{{ formatPlanQuotaText(usageData) }}</span>
+            </div>
+            <div class="ud-item">
               <span class="ud-label">{{ $t('subPage.colStart') }}</span>
               <span class="ud-value ud-mono">{{ formatTime(usageData.subscription?.start_time) }}</span>
             </div>
             <div class="ud-item">
               <span class="ud-label">{{ $t('subPage.colEnd') }}</span>
               <span class="ud-value ud-mono">{{ formatTime(usageData.subscription?.end_time) }}</span>
+            </div>
+          </div>
+
+          <!-- 套餐虚拟余额 -->
+          <div class="usage-section" v-if="Number(usageData.virtual_amount) > 0">
+            <h4 class="section-title">{{ $t('subPage.planQuotaSection') }}</h4>
+            <div class="quota-block">
+              <div class="quota-head">
+                <span class="quota-text">
+                  {{ $t('subPage.planQuotaUsed', {
+                    used: fmtYuan(usageData.used_amount),
+                    total: fmtYuan(usageData.virtual_amount),
+                  }) }}
+                </span>
+                <span class="quota-pct" :class="quotaPctClass(quotaPercent(usageData))">
+                  {{ quotaPercent(usageData).toFixed(2) }}%
+                </span>
+              </div>
+              <div class="quota-bar">
+                <div
+                  class="quota-fill"
+                  :class="quotaPctClass(quotaPercent(usageData))"
+                  :style="{ width: Math.min(100, quotaPercent(usageData)) + '%' }"
+                ></div>
+              </div>
+              <div class="quota-remain" :class="{ exhausted: quotaPercent(usageData) >= 100 }">
+                {{ $t('subPage.planQuotaRemain', { amount: fmtYuan(usageData.remaining_amount) }) }}
+              </div>
             </div>
           </div>
 
@@ -597,6 +629,47 @@ function formatNumber(num) {
   return String(n)
 }
 
+// ============ 套餐虚拟余额（元）============
+// num 处理非数值：返回 0。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+function num(v) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
+
+// fmtYuan 金额展示：保留两位小数。
+function fmtYuan(v) {
+  return num(v).toFixed(2)
+}
+
+// quotaPercent 套餐额度使用百分比（0-∞）。
+function quotaPercent(row) {
+  const total = num(row?.virtual_amount)
+  if (total <= 0) return 0
+  return (num(row?.used_amount) / total) * 100
+}
+
+// quotaPctClass 套餐额度进度条颜色：>=100 危险，>=80 警告，其余正常。
+function quotaPctClass(pct) {
+  const n = num(pct)
+  if (n >= 100) return 'pct-danger'
+  if (n >= 80) return 'pct-warning'
+  return 'pct-normal'
+}
+
+// formatPlanQuotaText 基础信息区的套餐额度文本。
+// virtual_amount=0 表示不限额度；已耗尽时给出回落提示。
+function formatPlanQuotaText(row) {
+  if (!row) return '-'
+  const total = num(row.virtual_amount)
+  if (total <= 0) return t('subPage.planQuotaUnlimited')
+  if (quotaPercent(row) >= 100) return t('subPage.planQuotaExhausted')
+  return t('subPage.planQuotaUsed', { used: fmtYuan(row.used_amount), total: fmtYuan(row.virtual_amount) })
+}
+
 function formatPercent(val) {
   if (val === null || val === undefined) return '-'
   const n = Number(val)
@@ -809,6 +882,47 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* 套餐虚拟余额进度块 */
+.quota-block {
+  padding: 4px 2px 8px;
+}
+.quota-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--color-text-1);
+}
+.quota-pct {
+  font-weight: 600;
+}
+.quota-pct.pct-normal { color: #00b42a; }
+.quota-pct.pct-warning { color: #ff7d00; }
+.quota-pct.pct-danger { color: #f53f3f; }
+.quota-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-fill-2);
+  overflow: hidden;
+}
+.quota-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.quota-fill.pct-normal { background: #00b42a; }
+.quota-fill.pct-warning { background: #ff7d00; }
+.quota-fill.pct-danger { background: #f53f3f; }
+.quota-remain {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-3);
+}
+.quota-remain.exhausted {
+  color: #f53f3f;
+}
+
 .sub-page {
   display: flex;
   flex-direction: column;
