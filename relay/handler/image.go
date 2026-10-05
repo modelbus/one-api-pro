@@ -110,9 +110,6 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	var isModelMapped bool
-	if meta.DefaultModel != "" {
-		imageRequest.Model = meta.DefaultModel
-	}
 	meta.OriginModelName = imageRequest.Model
 	imageRequest.Model, isModelMapped = getMappedModelName(imageRequest.Model, meta.ModelMapping)
 	meta.ActualModelName = imageRequest.Model
@@ -209,13 +206,13 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 				for _, up := range ups {
 					if int(up.Id) == meta.PlanId && up.Plan != nil {
 						limits := up.Plan.GetModelLimits()
-						rule, resolvedModel, found := model.FindLimit(limits, meta.OriginModelName, up.Plan.DefaultModel)
+						rule, found := model.FindLimit(limits, meta.OriginModelName)
 						if !found {
 							continue
 						}
 						for _, windowType := range []string{model.WindowTypePeriod, model.WindowTypeWeek, model.WindowTypeMonth} {
 							windowIndex := model.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
-							_ = model.IncrementPlanUsage(int(up.Id), resolvedModel, windowType, windowIndex, 1, 0, 0, 0)
+							_ = model.IncrementPlanUsage(int(up.Id), meta.OriginModelName, windowType, windowIndex, 1, 0, 0, 0)
 						}
 						break
 					}
@@ -256,7 +253,12 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 				TokenName:        tokenName,
 				Quota:            int(quota),
 				Content:          logContent,
-				BillingSource:    func() int { if meta.PlanId > 0 { return 1 }; return 0 }(),
+				BillingSource: func() int {
+					if meta.PlanId > 0 {
+						return 1
+					}
+					return 0
+				}(),
 				PlanId:           meta.PlanId,
 			})
 		}
