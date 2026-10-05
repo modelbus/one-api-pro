@@ -94,9 +94,8 @@ Admin picks the mode in [Plan Settings](../en/subscription/plan-settings).
 1. Admin → Plans → Add
 2. Name, price, validity, discount
 3. Fill `model_limits` for every model the plan should cover
-4. Pick a `default_model` (suggested: the plan's flagship model)
-5. Set Status to Published
-6. Save
+4. Set Status to Published
+5. Save
 
 Tip: test before publishing. Open a test subscription and verify calls, quotas, upgrade, downgrade.
 
@@ -111,7 +110,8 @@ consumption × ModelPrice × plan.discount × (group.discount / group.default)
 ## FAQ
 
 - **Changed model_limits — does it affect old subscriptions?** No. Old subscriptions use the snapshot at purchase time.
-- **Is default_model required?** Required if you want to limit models; leave empty if the plan is unrestricted.
+- **What if a model is not in `model_limits`?** The plan does not cover it; the request falls back to global balance pay-as-you-go billing, or is rejected when the balance is insufficient.
+- **What does an empty `model_limits` mean?** The plan does not restrict models — every model is covered.
 - **Plan deleted — old subscriptions still work?** Yes. Delete only blocks new subscriptions.
 
 ## Related
