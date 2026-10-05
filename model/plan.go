@@ -160,10 +160,18 @@ type Plan struct {
 	Sort         int         `gorm:"not null;default:0" json:"sort"`
 	Features     StringSlice `gorm:"type:text" json:"features"`
 	ModelLimits  string      `gorm:"type:text;column:model_limits" json:"model_limits"`
-	CreatedTime  int64       `gorm:"not null;default:0" json:"created_time"`
-	UpdatedTime  int64       `gorm:"not null;default:0" json:"updated_time"`
-	CreatedAt    int64       `json:"created_at" gorm:"bigint;default:0"`
-	UpdatedAt    int64       `json:"updated_at" gorm:"bigint;default:0"`
+	// BillingType 套餐默认计费维度（token / request）。历史实现缺失该字段，导致
+	// user_plans.billing_type 在激活时被硬编码为 token，管理员在前端选择的
+	// 「按请求次数」从未生效。存储层单位见 controller/quota_dto.go。
+	BillingType string `gorm:"type:varchar(20);not null;default:'token'" json:"billing_type"`
+	// VirtualAmount 套餐虚拟余额总池（微元，0 = 不限额度）。
+	// 只要套餐未过期，配置了限额的模型都从这笔共享余额里扣；余额耗尽后整个套餐
+	// 不可用，请求回落到用户全局余额按量计费。
+	VirtualAmount int64 `gorm:"not null;default:0" json:"virtual_amount"`
+	CreatedTime   int64 `gorm:"not null;default:0" json:"created_time"`
+	UpdatedTime   int64 `gorm:"not null;default:0" json:"updated_time"`
+	CreatedAt     int64 `json:"created_at" gorm:"bigint;default:0"`
+	UpdatedAt     int64 `json:"updated_at" gorm:"bigint;default:0"`
 }
 
 type ModelLimitRule struct {
@@ -176,16 +184,80 @@ type ModelLimitRule struct {
 	TokenMonth    int64 `json:"token_month"`
 }
 
-func (p *Plan) GetModelLimits() map[string]ModelLimitRule {
-	if p.ModelLimits == "" {
-		return nil
+// ParseModelLimits 解析 model_limits JSON。
+// 空字符串返回 (nil, nil)；JSON 非法时返回错误，供保存前拦截脏配置。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func (p *Plan) ParseModelLimits() (map[string]ModelLimitRule, error) {
+	if strings.TrimSpace(p.ModelLimits) == "" {
+		return nil, nil
 	}
 	var limits map[string]ModelLimitRule
-	err := json.Unmarshal([]byte(p.ModelLimits), &limits)
+	if err := json.Unmarshal([]byte(p.ModelLimits), &limits); err != nil {
+		return nil, err
+	}
+	return limits, nil
+}
+
+// GetModelLimits 运行时宽松解析：非法 JSON 返回 nil。
+// 注意：调用方必须把 nil 当作「配置不可用」而不是「不限量」，否则会重演
+// 「配置写错 = 全免费」的漏洞。
+func (p *Plan) GetModelLimits() map[string]ModelLimitRule {
+	limits, err := p.ParseModelLimits()
 	if err != nil {
 		return nil
 	}
 	return limits
+}
+
+// ValidateConfig 落库前校验套餐配置的合法性与完整性。
+//
+// 规则：
+//  1. billing_type 必须是 token 或 request；
+//  2. virtual_amount 不能为负；
+//  3. model_limits 必须非空且可解析为 map[string]ModelLimitRule
+//     （格式写错会让 GetModelLimits 返回 nil，历史实现据此把套餐当成「不限量」
+//     免费放行，所以必须在保存阶段直接拒绝）；
+//  4. 每条规则至少要配置一个与 billing_type 匹配的限额，否则该模型在加权池里
+//     权重恒为 0，等于免费。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func (p *Plan) ValidateConfig() error {
+	if !IsValidBillingType(p.BillingType) {
+		return fmt.Errorf("计费维度只能是 %s 或 %s", BillingTypeToken, BillingTypeRequest)
+	}
+	if p.VirtualAmount < 0 {
+		return errors.New("套餐额度不能为负数")
+	}
+	if strings.TrimSpace(p.ModelLimits) == "" {
+		return errors.New("模型限制不能为空：请至少配置一个模型及其限额")
+	}
+	limits, err := p.ParseModelLimits()
+	if err != nil {
+		return fmt.Errorf("模型限制格式错误: %v", err)
+	}
+	if len(limits) == 0 {
+		return errors.New("模型限制不能为空对象")
+	}
+	for name, rule := range limits {
+		if strings.TrimSpace(name) == "" {
+			return errors.New("模型限制中存在空的模型名")
+		}
+		var matched bool
+		if p.BillingType == BillingTypeRequest {
+			matched = rule.RequestPeriod > 0 || rule.RequestWeek > 0 || rule.RequestMonth > 0
+		} else {
+			matched = rule.TokenPeriod > 0 || rule.TokenWeek > 0 || rule.TokenMonth > 0
+		}
+		if !matched {
+			return fmt.Errorf("模型 %s 缺少与计费维度 %s 匹配的限额", name, p.BillingType)
+		}
+	}
+	return nil
 }
 
 // GetFeatures 返回当前 features 列表（拷贝，调用方修改不会影响原值）。
@@ -209,7 +281,7 @@ func (p *Plan) Insert() error {
 func (p *Plan) Update() error {
 	return DB.Model(p).Select("name", "description", "price", "duration_days",
 		"duration_text", "status", "recommended", "sort", "features",
-		"model_limits", "updated_time").Updates(p).Error
+		"model_limits", "billing_type", "virtual_amount", "updated_time").Updates(p).Error
 }
 
 func DeletePlanById(id int) error {
@@ -252,6 +324,13 @@ type UserPlan struct {
 	EndTime     int64  `gorm:"not null;index:idx_end_time" json:"end_time"`
 	Status      int    `gorm:"not null;default:1;index:idx_user_status" json:"status"`
 	BillingType string `gorm:"type:varchar(20);not null;default:'token'" json:"billing_type"`
+	// 以下三个字段是「购买时的套餐快照」：plans 表行被删除后，订阅仍能按快照继续
+	// 计费，不会因为拿不到套餐配置而退化成「不限量免费」。
+	// ModelLimits 快照仅在 plans 行缺失时生效，plans 行存在时以实时配置为准。
+	ModelLimits   string `gorm:"type:text;column:model_limits" json:"model_limits"`
+	VirtualAmount int64  `gorm:"not null;default:0" json:"virtual_amount"`
+	// UsedAmount 订阅期内累计已用额度（微元），不随窗口重置。
+	UsedAmount  int64  `gorm:"not null;default:0" json:"used_amount"`
 	Notes       string `gorm:"type:text" json:"notes"`
 	CreatedTime int64  `gorm:"not null;default:0" json:"created_time"`
 	UpdatedTime int64  `gorm:"not null;default:0" json:"updated_time"`
@@ -259,6 +338,108 @@ type UserPlan struct {
 	UpdatedAt   int64  `json:"updated_at" gorm:"bigint;default:0"`
 
 	Plan *Plan `gorm:"-" json:"plan,omitempty"`
+}
+
+// EffectiveModelLimits 返回订阅当前生效的模型限制。
+// plans 行仍在时用实时配置；套餐已被删除时回退到购买快照。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func (up *UserPlan) EffectiveModelLimits() (map[string]ModelLimitRule, error) {
+	if up.Plan != nil {
+		return up.Plan.ParseModelLimits()
+	}
+	if strings.TrimSpace(up.ModelLimits) == "" {
+		return nil, nil
+	}
+	var limits map[string]ModelLimitRule
+	if err := json.Unmarshal([]byte(up.ModelLimits), &limits); err != nil {
+		return nil, err
+	}
+	return limits, nil
+}
+
+// EffectiveBillingType 返回订阅当前生效的计费维度。
+// plans 行仍在时以套餐配置为准，否则用订阅自身记录（激活时即已写入）。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func (up *UserPlan) EffectiveBillingType() string {
+	if up.Plan != nil && IsValidBillingType(up.Plan.BillingType) {
+		return up.Plan.BillingType
+	}
+	if IsValidBillingType(up.BillingType) {
+		return up.BillingType
+	}
+	return BillingTypeToken
+}
+
+// EffectiveVirtualAmount 返回订阅当前生效的虚拟余额总池（微元）。
+// plans 行仍在时以套餐配置为准，否则回退到购买快照。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func (up *UserPlan) EffectiveVirtualAmount() int64 {
+	if up.Plan != nil {
+		return up.Plan.VirtualAmount
+	}
+	return up.VirtualAmount
+}
+
+// IsValidBillingType 判断计费维度是否合法（套餐仅支持 token / request）。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func IsValidBillingType(t string) bool {
+	return t == BillingTypeToken || t == BillingTypeRequest
+}
+
+// GetUserPlanUsedAmount 实时读取订阅已用额度（微元）。
+// 不走 Redis 缓存：虚拟余额的耗尽判定必须基于最新值，否则会出现超额放行。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func GetUserPlanUsedAmount(userPlanId int) (int64, error) {
+	var up UserPlan
+	if err := DB.Select("used_amount").First(&up, "id = ?", userPlanId).Error; err != nil {
+		return 0, err
+	}
+	return up.UsedAmount, nil
+}
+
+// IncrementUserPlanUsedAmount 原子累加订阅已用额度（微元）。
+// 用 gorm.Expr 直接自增，避免读改写竞态。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func IncrementUserPlanUsedAmount(userPlanId int, quota int64) error {
+	if userPlanId <= 0 || quota == 0 {
+		return nil
+	}
+	return DB.Model(&UserPlan{}).Where("id = ?", userPlanId).
+		UpdateColumn("used_amount", gorm.Expr("used_amount + ?", quota)).Error
+}
+
+// RemainingVirtualAmount 计算虚拟余额剩余额度（微元）。
+// virtualAmount <= 0 表示「不限额度」，返回 -1 以便调用方区分「不限」与「已耗尽(0)」。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
+func RemainingVirtualAmount(virtualAmount, usedAmount int64) int64 {
+	if virtualAmount <= 0 {
+		return -1
+	}
+	if usedAmount >= virtualAmount {
+		return 0
+	}
+	return virtualAmount - usedAmount
 }
 
 func (up *UserPlan) Insert() error {
@@ -542,8 +723,12 @@ func GetUserSubscriptionInfo(userId int) ([]map[string]interface{}, error) {
 			"start_time":   up.StartTime,
 			"end_time":     up.EndTime,
 			"status":       up.Status,
-			"billing_type": up.BillingType,
+			"billing_type": up.EffectiveBillingType(),
 			"usage":        usageMap,
+			// 虚拟余额（微元）：由 controller 层换算为「元」。-1 表示不限额度。
+			"virtual_amount":   up.EffectiveVirtualAmount(),
+			"used_amount":      up.UsedAmount,
+			"remaining_amount": RemainingVirtualAmount(up.EffectiveVirtualAmount(), up.UsedAmount),
 		}
 		result = append(result, entry)
 	}
