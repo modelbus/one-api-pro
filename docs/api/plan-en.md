@@ -29,7 +29,8 @@ order: 18
       "id": 1,
       "name": "Basic Plan",
       "price": 99.00,
-      "tokens": 500000000,
+      "billing_type": "token",
+      "virtual_amount": 100,
       "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
       "description": "Basic plan description",
 "features": ["1000 API calls/month", "GPT-4o support"],
@@ -50,8 +51,9 @@ order: 18
 |-------|------|-------------|
 | id | uint | Plan ID |
 | name | string | Plan name |
-| price | float64 | Price |
-| tokens | int64 | Token quota |
+| price | float64 | Price (CNY) |
+| billing_type | string | Billing dimension: `token` or `request` |
+| virtual_amount | float64 | Plan virtual quota pool (CNY); `0` means unlimited |
 | model_limits | string | Model limit config as JSON; key is the model name, value is a `ModelLimitRule` |
 | description | string | Description |
 | features | array&lt;string&gt; | Feature list, one item per line on the user-facing plan card |
@@ -60,6 +62,8 @@ order: 18
 | duration_days | int | Validity in days |
 | duration_text | string | Validity display text |
 | recommended | bool | Whether the plan is recommended |
+
+> Unit convention: `virtual_amount` is stored as micro-quota (1 CNY = 1,000,000) and exposed in CNY at the API boundary — the frontend never needs to convert.
 
 
 ### 10.2 Search Plans
@@ -94,10 +98,11 @@ order: 18
 {
   "name": "Basic Plan",
   "price": 99.00,
-  "tokens": 500000000,
+  "billing_type": "token",
+  "virtual_amount": 100,
   "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
   "description": "Basic plan description",
-  "features": "Feature description",
+  "features": ["1000 API calls/month", "GPT-4o support"],
   "sort": 0,
   "status": 1,
   "duration_days": 30,
@@ -105,6 +110,15 @@ order: 18
   "recommended": false
 }
 ```
+
+**Save-time validation (rejected with `success:false` when violated):**
+
+1. `billing_type` must be `token` or `request`;
+2. `virtual_amount` must not be negative;
+3. `model_limits` must be a non-empty JSON object parsable into `map<string, ModelLimitRule>`;
+4. every rule needs at least one limit matching `billing_type` (`token` → `token_*`; `request` → `request_*`).
+
+> The validation closes the historical hole where a malformed or empty `model_limits` made the plan silently unlimited ("config typo = free usage").
 
 
 ### 10.5 Update a Plan
@@ -148,7 +162,15 @@ Keys are model names; values are `ModelLimitRule` objects:
 - If the requested model is not in `model_limits`, the plan does not cover the request and is skipped.
 - If the user also has balance, the request falls back to global balance pay-as-you-go billing; insufficient balance is rejected by the pay-as-you-go path.
 - If the platform has no price configured for that model, the response is 422 `model_price_not_found`.
-- An empty `model_limits` string means the plan does not restrict models — every model is covered.
+
+**Runtime invalidation (any of these makes the whole plan unusable; billing falls back to the account balance):**
+
+- `model_limits` is empty or invalid JSON (no longer treated as "unrestricted")
+- Plan virtual quota exhausted: `user_plans.used_amount >= plans.virtual_amount` (`virtual_amount = 0` means unlimited)
+- Any weighted billing window reaches 100% (`Σ used × 100 / limit ≥ 100`)
+- Plan expired (`end_time <= now`)
+
+> Subscription usage is counted into `users.used_quota` / `request_count` but never deducts `users.quota`; consumption is tracked in `user_plans.used_amount`.
 
 
 ### 10.6 Delete a Plan

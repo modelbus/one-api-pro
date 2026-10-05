@@ -29,7 +29,8 @@ order: 18
       "id": 1,
       "name": "基础套餐",
       "price": 99.00,
-      "tokens": 500000000,
+      "billing_type": "token",
+      "virtual_amount": 100,
       "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
       "description": "基础套餐描述",
 "features": ["API 调用 1000 次/月", "支持 GPT-4o"],
@@ -50,8 +51,9 @@ order: 18
 |------|------|------|
 | id | uint | 套餐ID |
 | name | string | 套餐名称 |
-| price | float64 | 价格 |
-| tokens | int64 | Token配额 |
+| price | float64 | 价格（元） |
+| billing_type | string | 计费维度：`token`（按 Token）或 `request`（按请求次数） |
+| virtual_amount | float64 | 套餐虚拟余额总池（元）；`0` 表示不限额度 |
 | model_limits | string | 模型限额配置JSON，key为模型名称，value为ModelLimitRule |
 | description | string | 描述 |
 | features | `array<string>` | 功能特性列表，每项一行展示在用户端套餐卡 |
@@ -60,6 +62,8 @@ order: 18
 | duration_days | int | 有效天数 |
 | duration_text | string | 有效期显示文本 |
 | recommended | bool | 是否推荐 |
+
+> 单位口径：`virtual_amount` 存储层为「微元」（1 元 = 1_000_000），API 出入参统一为「元」，前端不需要做任何换算。
 
 ### 10.2 搜索套餐
 
@@ -91,10 +95,11 @@ order: 18
 {
   "name": "基础套餐",
   "price": 99.00,
-  "tokens": 500000000,
+  "billing_type": "token",
+  "virtual_amount": 100,
   "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
   "description": "基础套餐描述",
-  "features": "功能特性描述",
+  "features": ["API 调用 1000 次/月", "支持 GPT-4o"],
   "sort": 0,
   "status": 1,
   "duration_days": 30,
@@ -102,6 +107,15 @@ order: 18
   "recommended": false
 }
 ```
+
+**保存校验（不通过则返回 `success:false` 并拒绝落库）：**
+
+1. `billing_type` 只能是 `token` 或 `request`；
+2. `virtual_amount` 不能为负；
+3. `model_limits` 必须是非空 JSON 对象，且可解析为 `map<string, ModelLimitRule>`；
+4. 每条规则至少要配置一个与 `billing_type` 匹配的限额（`token` → `token_*`；`request` → `request_*`），否则视为无效配置。
+
+> 校验的目的是堵住「配置写错 = 套餐免费不限量」：历史上 `model_limits` 写错或为空时，运行时会把套餐当成「不限制模型」直接放行。
 
 ### 10.5 更新套餐
 
@@ -132,7 +146,15 @@ key 为模型名称，value 为 `ModelLimitRule` 对象：
 - 请求的模型不在 `model_limits` 中时，该套餐不适用于此请求，系统会跳过该套餐
 - 若用户同时有余额，则回落至全局余额按量计费；余额不足由按量计费链路拒绝
 - 平台未配置该模型的价格时，返回 422 `model_price_not_found`
-- `model_limits` 为空字符串表示该套餐不限制模型，所有模型均可用
+
+**运行时失效条件（任一满足则该套餐整体不可用，请求回落全局余额）：**
+
+- `model_limits` 为空或 JSON 非法（不再视为「不限制模型」）
+- 套餐虚拟余额已耗尽：`user_plans.used_amount >= plans.virtual_amount`（`virtual_amount = 0` 表示不限额度）
+- 任一计费窗口的加权用量达到 100%（`Σ 已用 × 100 / 限额 ≥ 100`）
+- 套餐已过期（`end_time <= now`）
+
+> 套餐消费会计入 `users.used_quota` / `request_count`，但**不扣减** `users.quota`；额度消耗记在 `user_plans.used_amount` 上。
 
 ### 10.6 删除套餐
 
