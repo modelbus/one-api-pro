@@ -36,7 +36,6 @@ type Meta struct {
 	StartTime          time.Time
 	PlanId              int    // UserPlan.Id if using subscription, 0 if using quota
 	BillingType         string // "request" or "token"
-	DefaultModel        string // plan's default_model for forwarding
 	SessionKey          string
 }
 
@@ -58,7 +57,6 @@ func GetByContext(c *gin.Context) *Meta {
 		StartTime:          time.Now(),
 		PlanId:            c.GetInt(ctxkey.PlanId),
 		BillingType:       c.GetString(ctxkey.BillingType),
-		DefaultModel:      c.GetString(ctxkey.DefaultModel),
 		SessionKey:        c.GetString(ctxkey.SessionKey),
 	}
 	cfg, ok := c.Get(ctxkey.Config)

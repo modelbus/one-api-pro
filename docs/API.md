@@ -1333,7 +1333,6 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
       "price": 99.00,
       "tokens": 500000000,
       "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
-      "default_model": "gpt-4o",
       "description": "基础套餐描述",
 "features": ["API 调用 1000 次/月", "支持 GPT-4o"],
       "sort": 0,
@@ -1356,7 +1355,6 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
 | price | float64 | 价格 |
 | tokens | int64 | Token配额 |
 | model_limits | string | 模型限额配置JSON，key为模型名称，value为ModelLimitRule |
-| default_model | string | 默认模型名称，不在model_limits中的请求模型将转发至此模型计费；为空则不转发，未配置模型返回422 |
 | description | string | 描述 |
 | features | array<string> | 功能特性列表，每项一行展示在用户端套餐卡 |
 | sort | int | 排序权重 |
@@ -1403,7 +1401,6 @@ sk-xxxxxxxx-5    # 使用渠道 ID 为 5 的渠道
   "price": 99.00,
   "tokens": 500000000,
   "model_limits": "{\"gpt-4o\":{\"request_month\":1000,\"token_month\":50000000}}",
-  "default_model": "gpt-4o",
   "description": "基础套餐描述",
   "features": "功能特性描述",
   "sort": 0,
@@ -1452,12 +1449,12 @@ key 为模型名称，value 为 `ModelLimitRule` 对象：
 | token_week | int64 | 周内最大Token数 |
 | token_month | int64 | 月内最大Token数 |
 
-**`default_model` 字段说明：**
+**未覆盖模型的处理：**
 
-- 当用户请求的模型不在 `model_limits` 中时，系统会将请求转发至 `default_model` 指定的模型
-- `default_model` 必须是 `model_limits` 中已配置的模型名称，否则创建/更新套餐时会报错
-- 如果 `default_model` 为空且用户请求的模型不在 `model_limits` 中，将返回 422 错误
-- 转发后，实际请求将使用 `default_model` 发送到上游，日志中记录的模型名称也是 `default_model`
+- 请求的模型不在 `model_limits` 中时，该套餐不适用于此请求，系统会跳过该套餐
+- 若用户同时有余额，则回落至全局余额按量计费；余额不足由按量计费链路拒绝
+- 平台未配置该模型的价格时，返回 422 `model_price_not_found`
+- `model_limits` 为空字符串表示该套餐不限制模型，所有模型均可用
 
 ---
 

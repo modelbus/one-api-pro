@@ -50,10 +50,6 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 	}
 
-	if meta.DefaultModel != "" {
-		audioModel = meta.DefaultModel
-	}
-
 	originAudioModel := audioModel
 	modelMapping := c.GetStringMapString(ctxkey.ModelMapping)
 	if modelMapping != nil && modelMapping[audioModel] != "" {

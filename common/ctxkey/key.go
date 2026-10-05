@@ -25,7 +25,6 @@ const (
 	PlanId            = "plan_id"
 	PlanLimits        = "plan_limits"
 	BillingType       = "billing_type"
-	DefaultModel      = "default_model"
 	SessionKey        = "session_key"
 	ConcurrencyAcquired = "concurrency_acquired"
 )

@@ -14,7 +14,6 @@
       <template #status="{ record }">
         <a-tag :color="record.status===1?'green':'gray'" size="small">{{ record.status===1 ? $t('settingPage.plan.enabled') : $t('settingPage.plan.disabled') }}</a-tag>
       </template>
-      <template #default_model="{ record }">{{ record.default_model || '-' }}</template>
       <template #actions="{ record }">
         <a-space>
           <a-button type="text" size="small" @click="openModal(record)">{{ $t('settingPage.plan.edit') }}</a-button>
@@ -100,9 +99,6 @@
             </a-button>
           </div>
         </a-form-item>
-        <a-form-item :label="$t('settingPage.plan.defaultModel')">
-          <a-input v-model="form.default_model" :placeholder="$t('settingPage.plan.defaultModelPlaceholder')" />
-        </a-form-item>
         <a-form-item :label="$t('settingPage.plan.modelLimits')">
           <a-textarea v-model="form.model_limits" :auto-size="{ minRows: 2, maxRows: 6 }" placeholder='{"gpt-4": 1000, "gpt-3.5": 5000}' />
         </a-form-item>
@@ -136,7 +132,7 @@ const editing = ref(false)
 const saving = ref(false)
 const form = reactive({
   name: '', description: '', price: 0, duration_days: 30, duration_text: '',
-  status: 1, recommended: false, sort: 0, features: [], model_limits: '', default_model: '',
+  status: 1, recommended: false, sort: 0, features: [], model_limits: '',
 })
 
 // 弹窗中"特性说明"动态行（与 form.features 解耦，避免双向 v-model 在行删除时的索引问题）。
@@ -151,7 +147,6 @@ const columns = computed(() => [
   { title: t('settingPage.plan.name'), dataIndex: 'name', width: 140 },
   { title: t('settingPage.plan.price'), dataIndex: 'price', width: 80 },
   { title: t('settingPage.plan.durationDays'), dataIndex: 'duration_days', width: 90 },
-  { title: t('settingPage.plan.defaultModel'), slotName: 'default_model', width: 120 },
   { title: t('settingPage.plan.recommended'), slotName: 'recommended', width: 60, align: 'center' },
   { title: t('settingPage.plan.status'), slotName: 'status', width: 70 },
   { title: t('settingPage.plan.sort'), dataIndex: 'sort', width: 60 },
@@ -204,7 +199,6 @@ function resetForm() {
   form.sort = 0
   form.features = []
   form.model_limits = ''
-  form.default_model = ''
 }
 
 function openModal(record) {
@@ -217,7 +211,6 @@ function openModal(record) {
       model_limits: typeof record.model_limits === 'string'
         ? record.model_limits
         : JSON.stringify(record.model_limits || {}, null, 2),
-      default_model: record.default_model || '',
       features: Array.isArray(record.features) ? record.features : [],
     })
   }

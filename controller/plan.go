@@ -82,13 +82,6 @@ func AddPlan(c *gin.Context) {
 		})
 		return
 	}
-	if err := plan.ValidateDefaultModel(); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
-		})
-		return
-	}
 	plan.CreatedTime = helper.GetTimestamp()
 	plan.UpdatedTime = helper.GetTimestamp()
 	err = plan.Insert()
@@ -120,13 +113,6 @@ func UpdatePlan(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "套餐 ID 不能为空",
-		})
-		return
-	}
-	if err := plan.ValidateDefaultModel(); err != nil {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": err.Error(),
 		})
 		return
 	}
@@ -241,7 +227,6 @@ func GetCurrentPlan(c *gin.Context) {
 		data["description"] = up.Plan.Description
 		data["features"] = up.Plan.GetFeatures()
 		data["model_limits"] = up.Plan.ModelLimits
-		data["default_model"] = up.Plan.DefaultModel
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": data})
 }

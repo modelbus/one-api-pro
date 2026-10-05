@@ -21,8 +21,8 @@ import (
 	billingratio "github.com/modelbus/one-api-pro/relay/billing/ratio"
 	"github.com/modelbus/one-api-pro/relay/handler/validator"
 	"github.com/modelbus/one-api-pro/relay/meta"
-	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 	"github.com/modelbus/one-api-pro/relay/relaymode"
+	relaymodel "github.com/modelbus/one-api-pro/relay/schema"
 )
 
 func getAndValidateTextRequest(c *gin.Context, relayMode int) (*relaymodel.GeneralOpenAIRequest, error) {
@@ -214,11 +214,11 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 				if int(up.Id) == planId {
 					limits := up.Plan.GetModelLimits()
 					modelName := meta.OriginModelName
-					rule, resolvedModel, found := dbmodel.FindLimit(limits, modelName, up.Plan.DefaultModel)
+					rule, found := dbmodel.FindLimit(limits, modelName)
 					if !found {
 						continue
 					}
-					resolvedName := resolvedModel
+					resolvedName := modelName
 				for _, windowType := range []string{dbmodel.WindowTypePeriod, dbmodel.WindowTypeWeek, dbmodel.WindowTypeMonth} {
 					windowIndex := dbmodel.CalcWindowIndex(now, up.StartTime, windowType, rule.PeriodH)
 					err := dbmodel.IncrementPlanUsage(int(up.Id), resolvedName, windowType, windowIndex, 1, int64(promptTokens), int64(completionTokens), int64(cachedTokens))
