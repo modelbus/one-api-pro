@@ -430,60 +430,41 @@ func GetPlanUsage(userPlanId int, model string, windowType string, windowIndex i
 	return &pu, nil
 }
 
+// IncrementPlanUsage 原子累加套餐用量（按用户套餐 + 模型 + 窗口维度）。
+//
+// 三种方言（MySQL / PostgreSQL / SQLite）统一走 gorm clause.OnConflict，
+// 所有值均由占位符绑定，禁止拼接 SQL 字符串——修复 model 参数导致的 SQL 注入。
+// MySQL 下 GORM 会生成 ON DUPLICATE KEY UPDATE，冲突列由唯一索引
+// idx_plan_unique_window(user_plan_id, model, window_type, window_index) 保证。
+//
+// 版本: v0.0.25
+// 日期: 2026-10-05
+// 作者: opencode
 func IncrementPlanUsage(userPlanId int, model string, windowType string, windowIndex int, requests int64, promptTokens int64, completionTokens int64, cachedTokens int64) error {
 	now := helper.GetTimestamp()
-	if common.UsingPostgreSQL {
-		result := DB.Model(&PlanUsage{}).
-			Where("user_plan_id = ? AND model = ? AND window_type = ? AND window_index = ?",
-				userPlanId, model, windowType, windowIndex).
-			Updates(map[string]interface{}{
-				"requests":          gorm.Expr("requests + ?", requests),
-				"prompt_tokens":     gorm.Expr("prompt_tokens + ?", promptTokens),
-				"completion_tokens": gorm.Expr("completion_tokens + ?", completionTokens),
-				"cached_tokens":     gorm.Expr("cached_tokens + ?", cachedTokens),
-				"updated_time":      now,
-			})
-		if result.RowsAffected == 0 {
-			pu := PlanUsage{
-				UserPlanId:       userPlanId,
-				Model:            model,
-				WindowType:       windowType,
-				WindowIndex:      windowIndex,
-				Requests:         requests,
-				PromptTokens:     promptTokens,
-				CompletionTokens: completionTokens,
-				CachedTokens:     cachedTokens,
-				UpdatedTime:      now,
-			}
-			return DB.Create(&pu).Error
-		}
-		return result.Error
+	pu := PlanUsage{
+		UserPlanId:       userPlanId,
+		Model:            model,
+		WindowType:       windowType,
+		WindowIndex:      windowIndex,
+		Requests:         requests,
+		PromptTokens:     promptTokens,
+		CompletionTokens: completionTokens,
+		CachedTokens:     cachedTokens,
+		UpdatedTime:      now,
 	}
-	if common.UsingSQLite {
-		pu := PlanUsage{
-			UserPlanId:       userPlanId,
-			Model:            model,
-			WindowType:       windowType,
-			WindowIndex:      windowIndex,
-			Requests:         requests,
-			PromptTokens:     promptTokens,
-			CompletionTokens: completionTokens,
-			CachedTokens:     cachedTokens,
-			UpdatedTime:      now,
-		}
-		return DB.Clauses(clause.OnConflict{
-			Columns:   []clause.Column{{Name: "user_plan_id"}, {Name: "model"}, {Name: "window_type"}, {Name: "window_index"}},
-			DoUpdates: clause.AssignmentColumns([]string{"requests", "prompt_tokens", "completion_tokens", "cached_tokens", "updated_time"}),
-		}).Create(&pu).Error
-	}
-	sql := fmt.Sprintf(
-		"INSERT INTO plan_usages (user_plan_id, model, window_type, window_index, requests, prompt_tokens, completion_tokens, cached_tokens, updated_time) "+
-			"VALUES (%d, '%s', '%s', %d, %d, %d, %d, %d, %d) "+
-			"ON DUPLICATE KEY UPDATE requests = requests + %d, prompt_tokens = prompt_tokens + %d, completion_tokens = completion_tokens + %d, cached_tokens = cached_tokens + %d, updated_time = %d",
-		userPlanId, model, windowType, windowIndex, requests, promptTokens, completionTokens, cachedTokens, now,
-		requests, promptTokens, completionTokens, cachedTokens, now,
-	)
-	return DB.Exec(sql).Error
+	return DB.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "user_plan_id"}, {Name: "model"}, {Name: "window_type"}, {Name: "window_index"},
+		},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"requests":          gorm.Expr("requests + ?", requests),
+			"prompt_tokens":     gorm.Expr("prompt_tokens + ?", promptTokens),
+			"completion_tokens": gorm.Expr("completion_tokens + ?", completionTokens),
+			"cached_tokens":     gorm.Expr("cached_tokens + ?", cachedTokens),
+			"updated_time":      now,
+		}),
+	}).Create(&pu).Error
 }
 
 func GetPlanUsageByUserPlanId(userPlanId int) ([]*PlanUsage, error) {
