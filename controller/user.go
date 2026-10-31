@@ -139,7 +139,7 @@ func Register(c *gin.Context) {
 	if err := common.Validate.Struct(&user); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": i18n.Translate(c, "invalid_input"),
+			"message": common.ValidationMessage(c, err),
 		})
 		return
 	}
@@ -185,15 +185,79 @@ func Register(c *gin.Context) {
 	return
 }
 
-func GetAllUsers(c *gin.Context) {
+const (
+	// maxUserPageSize 单页上限，避免一次拉取过多用户数据。
+	// Upper bound for a single page of users.
+	maxUserPageSize = 100
+	// maxUserPageIndex 页号上限，避免 (page-1)*pageSize 溢出。
+	// Page index bound to keep (page-1)*pageSize from overflowing.
+	maxUserPageIndex = 100000
+)
+
+// userListPagination 为解析后的用户列表分页参数，Page 为 1-based。
+// Parsed user-list pagination params; Page is 1-based.
+type userListPagination struct {
+	Page     int
+	PageSize int
+	Offset   int
+}
+
+// parseUserListPagination 解析用户列表分页参数。
+// 优先使用 page（1-based）+ pageSize/page_size；未传 page 时兼容历史参数 p（0-based 页索引），
+// 缺省页大小沿用 config.ItemsPerPage，保证已有调用方行为不变。
+// Prefer page (1-based) + pageSize/page_size, fall back to the legacy `p`
+// (0-based page index); the default size stays config.ItemsPerPage so existing
+// callers observe the same behavior as before.
+func parseUserListPagination(c *gin.Context) userListPagination {
+	pageSize := config.ItemsPerPage
+	for _, key := range []string{"pageSize", "page_size"} {
+		if raw := c.Query(key); raw != "" {
+			if v, err := strconv.Atoi(raw); err == nil && v > 0 {
+				pageSize = v
+			}
+			break
+		}
+	}
+	if pageSize > maxUserPageSize {
+		pageSize = maxUserPageSize
+	}
+
+	if raw := c.Query("page"); raw != "" {
+		page := 1
+		if v, err := strconv.Atoi(raw); err == nil && v > 1 {
+			page = v
+		}
+		if page > maxUserPageIndex {
+			page = maxUserPageIndex
+		}
+		return userListPagination{Page: page, PageSize: pageSize, Offset: (page - 1) * pageSize}
+	}
+
 	p, _ := strconv.Atoi(c.Query("p"))
 	if p < 0 {
 		p = 0
 	}
+	if p > maxUserPageIndex {
+		p = maxUserPageIndex
+	}
+	return userListPagination{Page: p + 1, PageSize: pageSize, Offset: p * pageSize}
+}
+
+func GetAllUsers(c *gin.Context) {
+	pagination := parseUserListPagination(c)
 
 	order := c.DefaultQuery("order", "")
-	users, err := model.GetAllUsers(p*config.ItemsPerPage, config.ItemsPerPage, order)
+	users, err := model.GetAllUsers(pagination.Offset, pagination.PageSize, order)
 
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	total, err := model.CountAllUsers()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -215,10 +279,17 @@ func GetAllUsers(c *gin.Context) {
 	}
 
 	// quota/used_quota 在 API 边界统一换算为「元」（见 quota_dto.go）。
+	// data 保持数组结构（向后兼容）；total / page / page_size 为新增字段，
+	// 旧调用方忽略即可，新调用方据此计算页数。
+	// `data` stays an array for backward compatibility; total / page / page_size
+	// are additive fields so callers can compute the page count.
 	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    toUserDTOs(users),
+		"success":   true,
+		"message":   "",
+		"data":      toUserDTOs(users),
+		"total":     total,
+		"page":      pagination.Page,
+		"page_size": pagination.PageSize,
 	})
 }
 
@@ -413,7 +484,7 @@ func UpdateUser(c *gin.Context) {
 	if err := common.Validate.Struct(&updatedUser); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": i18n.Translate(c, "invalid_input"),
+			"message": common.ValidationMessage(c, err),
 		})
 		return
 	}
@@ -495,7 +566,7 @@ func UpdateSelf(c *gin.Context) {
 	if err := common.Validate.Struct(&user); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "输入不合法 " + err.Error(),
+			"message": common.ValidationMessage(c, err),
 		})
 		return
 	}
@@ -602,7 +673,7 @@ func CreateUser(c *gin.Context) {
 	if err := common.Validate.Struct(&user); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": i18n.Translate(c, "invalid_input"),
+			"message": common.ValidationMessage(c, err),
 		})
 		return
 	}
