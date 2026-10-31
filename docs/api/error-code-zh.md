@@ -26,7 +26,6 @@ One API Pro 没有显式的 `error_code` 数字枚举。错误通过两种统一
 | 用户被封禁（Bearer 路径） | `用户已被封禁` | 403 | `middleware/auth.go::TokenAuth` |
 | Bearer Token 指定了模型，但不在 `models` 白名单 | `该令牌无权使用模型：<model>` | 403 | `middleware/auth.go::TokenAuth` |
 | 普通用户在 API Key 后追加 `-<channel>` 指定渠道 | `普通用户不支持指定渠道` | 403 | `middleware/auth.go::TokenAuth` |
-| 普通用户在 `/v1/oneapi/proxy/:channelid/...` 指定渠道 | `普通用户不支持指定渠道` | 403 | `middleware/auth.go::TokenAuth` |
 
 ## 2. 通用参数错误
 
