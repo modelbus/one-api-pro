@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/modelbus/one-api-pro/common"
+	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/model"
 )
 
@@ -289,4 +290,102 @@ func TestGetUserById_StillOmitsAccessToken(t *testing.T) {
 			t.Fatalf("empty usernames must return success=false; got message=%q", r.Message)
 		}
 	})
+}
+
+// paginatedUsersResponse mirrors the additive pagination fields returned by
+// GET /api/user/ (data stays an array; total/page/page_size are new).
+type paginatedUsersResponse struct {
+	Success  bool         `json:"success"`
+	Message  string       `json:"message"`
+	Data     []model.User `json:"data"`
+	Total    int64        `json:"total"`
+	Page     int          `json:"page"`
+	PageSize int          `json:"page_size"`
+}
+
+// TestGetAllUsers_Pagination verifies that page/pageSize are honored (offset
+// applied, pages disjoint) and that total reflects the full non-deleted count.
+func TestGetAllUsers_Pagination(t *testing.T) {
+	for i := 0; i < 15; i++ {
+		seedUser(t, fmt.Sprintf("pg-%02d", i), model.RoleCommonUser, fmt.Sprintf("pg-token-%02d", i))
+	}
+
+	var wantTotal int64
+	if err := model.DB.Model(&model.User{}).Where("status != ?", model.UserStatusDeleted).Count(&wantTotal).Error; err != nil {
+		t.Fatalf("count users: %v", err)
+	}
+
+	var page1, page2 paginatedUsersResponse
+	runHandler(t, GetAllUsers, "/api/user/?page=1&pageSize=5", &page1)
+	if !page1.Success {
+		t.Fatalf("page1 success=false, message=%q", page1.Message)
+	}
+	runHandler(t, GetAllUsers, "/api/user/?page=2&pageSize=5", &page2)
+	if !page2.Success {
+		t.Fatalf("page2 success=false, message=%q", page2.Message)
+	}
+
+	if page1.Total != wantTotal || page2.Total != wantTotal {
+		t.Fatalf("total = %d/%d, want %d", page1.Total, page2.Total, wantTotal)
+	}
+	if page1.Page != 1 || page1.PageSize != 5 {
+		t.Fatalf("page1 page/page_size = %d/%d, want 1/5", page1.Page, page1.PageSize)
+	}
+	if page2.Page != 2 || page2.PageSize != 5 {
+		t.Fatalf("page2 page/page_size = %d/%d, want 2/5", page2.Page, page2.PageSize)
+	}
+	if len(page1.Data) != 5 || len(page2.Data) != 5 {
+		t.Fatalf("page1/page2 lengths = %d/%d, want 5/5", len(page1.Data), len(page2.Data))
+	}
+
+	seen := make(map[int]struct{}, len(page1.Data))
+	for _, u := range page1.Data {
+		seen[u.Id] = struct{}{}
+	}
+	for _, u := range page2.Data {
+		if _, ok := seen[u.Id]; ok {
+			t.Fatalf("user id=%d returned on both page 1 and page 2", u.Id)
+		}
+	}
+}
+
+// TestGetAllUsers_LegacyPParamCompatible guards the legacy `p` (0-based page
+// index) contract used by existing callers.
+func TestGetAllUsers_LegacyPParamCompatible(t *testing.T) {
+	var first, second paginatedUsersResponse
+	runHandler(t, GetAllUsers, "/api/user/?p=0", &first)
+	runHandler(t, GetAllUsers, "/api/user/?p=1", &second)
+
+	if first.Page != 1 || first.PageSize != config.ItemsPerPage {
+		t.Fatalf("p=0 page/page_size = %d/%d, want 1/%d", first.Page, first.PageSize, config.ItemsPerPage)
+	}
+	if second.Page != 2 || second.PageSize != config.ItemsPerPage {
+		t.Fatalf("p=1 page/page_size = %d/%d, want 2/%d", second.Page, second.PageSize, config.ItemsPerPage)
+	}
+
+	seen := make(map[int]struct{}, len(first.Data))
+	for _, u := range first.Data {
+		seen[u.Id] = struct{}{}
+	}
+	for _, u := range second.Data {
+		if _, ok := seen[u.Id]; ok {
+			t.Fatalf("user id=%d returned on both p=0 and p=1 pages", u.Id)
+		}
+	}
+}
+
+// TestGetAllUsers_PaginationParamBounds verifies invalid values fall back to
+// defaults and oversized page sizes are clamped.
+func TestGetAllUsers_PaginationParamBounds(t *testing.T) {
+	var resp paginatedUsersResponse
+
+	runHandler(t, GetAllUsers, "/api/user/?page=0&pageSize=abc", &resp)
+	if resp.Page != 1 || resp.PageSize != config.ItemsPerPage {
+		t.Fatalf("invalid params page/page_size = %d/%d, want 1/%d", resp.Page, resp.PageSize, config.ItemsPerPage)
+	}
+
+	runHandler(t, GetAllUsers, "/api/user/?page=1&pageSize=10000", &resp)
+	if resp.PageSize != maxUserPageSize {
+		t.Fatalf("clamped page_size = %d, want %d", resp.PageSize, maxUserPageSize)
+	}
 }
