@@ -827,6 +827,7 @@ If a freshly deployed cluster shows a blank page, see [#97](https://github.com/m
 - [x] **Decentralized active-active cluster** — GORM-event-driven + HTTP active push; no shared DB.
 - [x] **Precise cost accounting** — independent Prompt / Completion / Cached pricing, stacked group discounts.
 - [x] **Multi-level permissions** — Guest / User / Admin / Root, upstream API authorization loophole fixed.
+- [x] **SQL injection hardening** — the plan-usage upsert now goes through GORM `clause.OnConflict` with bound parameters on MySQL / PostgreSQL / SQLite; the metering path no longer builds dialect-specific SQL by string concatenation.
 - [x] **OpenAI-compatible API** — `models` / `chat` / `completions` / `embeddings` / `images` / `audio` / `moderations`.
 - [x] **Subscription checkout & upgrade flow** — native `POST /api/order/plan` creates the subscription order, supports `stack` (additive) and `price_diff` (upgrade) modes, auto-computes the upgrade price from remaining days, and rejects same-tier / downgrade attempts.
 - [x] **Order audit & order center** — new `orders` table (type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no) persists every checkout / admin grant. Frontend `/plans` and `/orders` pages render the full lifecycle; the order center table includes an **Order type** column that distinguishes a subscription vs top-up row.
