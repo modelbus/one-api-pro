@@ -8,6 +8,7 @@ import (
 	"github.com/modelbus/one-api-pro/common/config"
 	"github.com/modelbus/one-api-pro/common/helper"
 	"github.com/modelbus/one-api-pro/model"
+	"github.com/modelbus/one-api-pro/relay/channeltype"
 	"net/http"
 	"strconv"
 	"strings"
@@ -91,6 +92,13 @@ func AddChannel(c *gin.Context) {
 		})
 		return
 	}
+	if channel.Type == channeltype.Proxy {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Proxy 渠道类型已移除",
+		})
+		return
+	}
 	channel.CreatedTime = helper.GetTimestamp()
 	keys := strings.Split(channel.Key, "\n")
 	channels := make([]model.Channel, 0, len(keys))
@@ -166,6 +174,13 @@ func UpdateChannel(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
+		})
+		return
+	}
+	if channel.Type == channeltype.Proxy {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Proxy 渠道类型已移除",
 		})
 		return
 	}
