@@ -66,9 +66,3 @@ order: 20
 
 **接口：** `GET /v1/dashboard/billing/usage?start_date=2024-01-01&end_date=2024-12-31`
 
-### 12.10 代理转发
-
-**接口：** `ANY /v1/oneapi/proxy/:channelid/*target`
-
-**说明：** 直接代理到指定渠道。
-
