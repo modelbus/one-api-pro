@@ -1013,6 +1013,7 @@ Admin 删除节点时**不物理删除**记录，而是设置 `disabled = true`�
 - [x] **精确成本核算**：Prompt / Completion / Cached 独立定价，分组折扣叠加
 - [x] **多级权限体系**：Guest / User / Admin / Root 四级，修复原版 API 权限漏洞
 - [x] **SQL 注入加固**：套餐用量 upsert 统一走 GORM `clause.OnConflict` + 参数绑定（MySQL / PostgreSQL / SQLite），计量链路不再按方言拼接 SQL
+- [x] **SSRF 加固**：下线历史 Proxy 渠道类型（43）与 `/v1/oneapi/proxy/:channelid/*target` 透传路由，网关不再能被指向回环地址、内网与云元数据；存量记录需执行 `bin/migration_remove_proxy_channel.sql` 禁用
 - [x] **OpenAI 兼容接口**：完整支持 models / chat / completions / embeddings / images / audio / moderations
 - [x] **套餐下单与升级流程**：原生 POST `/api/order/plan` 创建套餐订阅订单，支持 `stack`（叠加）与 `price_diff`（差价升级）两种模式，差价按剩余天数比例自动计算，含同级与降级校验
 - [x] **订单审计与订单中心**：新增 `orders` 表（type/source/order_no/plan_info/amount/status/pay_status/pay_method/pay_time/pay_trade_no）持久化所有支付/管理开通流水，前端用户侧 `/plans` 与 `/orders` 页面完整呈现；订单中心表格新增「订单类型」列区分套餐 / 充值
