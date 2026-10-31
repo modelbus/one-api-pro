@@ -1,5 +1,20 @@
 {
   "invalid_input": "Invalid input, please check your input",
   "send_email_failed": "failed to send email: ",
-  "invalid_parameter": "invalid parameter"
+  "invalid_parameter": "invalid parameter",
+  "validation_field_generic": "value",
+  "validation_field_username": "username",
+  "validation_field_password": "password",
+  "validation_field_display_name": "display name",
+  "validation_field_email": "email",
+  "validation_rule_required": " is required",
+  "validation_rule_min": " length must be at least %s characters",
+  "validation_rule_max": " length must be at most %s characters",
+  "validation_rule_len": " length must be exactly %s characters",
+  "validation_rule_email": " format is invalid",
+  "validation_rule_gt": " must be greater than %s",
+  "validation_rule_gte": " must be greater than or equal to %s",
+  "validation_rule_lt": " must be less than %s",
+  "validation_rule_lte": " must be less than or equal to %s",
+  "validation_rule_oneof": " must be one of the allowed values"
 }
