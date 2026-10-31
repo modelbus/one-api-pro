@@ -48,8 +48,6 @@ func relayHelper(c *gin.Context, relayMode int) *model.ErrorWithStatusCode {
 		fallthrough
 	case relaymode.AudioTranscription:
 		err = controller.RelayAudioHelper(c, relayMode)
-	case relaymode.Proxy:
-		err = controller.RelayProxyHelper(c, relayMode)
 	default:
 		err = controller.RelayTextHelper(c)
 	}
@@ -246,11 +244,9 @@ func tryFallbackChannel(c *gin.Context, group string, relayMode int, prevErr *mo
 	}
 
 	// Rewrite request body to swap the model name for the fallback channel.
-	if relayMode != relaymode.Proxy {
-		if rerr := rewriteRequestModel(c, fbModel); rerr != nil {
-			logger.Errorf(c.Request.Context(), "rewriteRequestModel failed: %+v", rerr)
-			return prevErr
-		}
+	if rerr := rewriteRequestModel(c, fbModel); rerr != nil {
+		logger.Errorf(c.Request.Context(), "rewriteRequestModel failed: %+v", rerr)
+		return prevErr
 	}
 
 	// Re-bind gin context for the fallback channel (auth headers, base URL,

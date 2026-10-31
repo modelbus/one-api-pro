@@ -26,7 +26,6 @@ This page enumerates every **known `message` string** so the client can localize
 | Bearer-token user banned | `用户已被封禁` | 403 | `middleware/auth.go::TokenAuth` |
 | Bearer token `models` whitelist violated | `该令牌无权使用模型：<model>` | 403 | `middleware/auth.go::TokenAuth` |
 | Non-admin user appends `-<channel>` to API key | `普通用户不支持指定渠道` | 403 | `middleware/auth.go::TokenAuth` |
-| Non-admin user hits `/v1/oneapi/proxy/:channelid/...` | `普通用户不支持指定渠道` | 403 | `middleware/auth.go::TokenAuth` |
 
 ## 2. Generic Parameter Errors
 

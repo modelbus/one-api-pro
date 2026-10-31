@@ -33,7 +33,6 @@ import (
 	_ "github.com/modelbus/one-api-pro/relay/adaptor/openai"
 	_ "github.com/modelbus/one-api-pro/relay/adaptor/provider/openrouter"
 	_ "github.com/modelbus/one-api-pro/relay/adaptor/provider/palm"
-	_ "github.com/modelbus/one-api-pro/relay/adaptor/provider/proxy"
 	_ "github.com/modelbus/one-api-pro/relay/adaptor/provider/replicate"
 	_ "github.com/modelbus/one-api-pro/relay/adaptor/provider/siliconflow"
 	_ "github.com/modelbus/one-api-pro/relay/adaptor/provider/stepfun"
