@@ -42,6 +42,14 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	}
 	groupDiscount := billingratio.GetGroupDiscount(meta.Group, textRequest.Model, meta.OriginModelName)
 
+	// Resolve the adaptor before pre-consuming quota: when a channel type has no
+	// registered adaptor (e.g. a legacy type-43 row left behind after the proxy
+	// channel removal), returning here must not leave a pre-consumed charge.
+	adaptor := relay.GetAdaptorByChannelID(meta.ChannelID)
+	if adaptor == nil {
+		return openai.ErrorWrapper(fmt.Errorf("invalid channel type: %s", meta.ChannelID), "invalid_channel_type", http.StatusBadRequest)
+	}
+
 	// Pre-consume amount differs by billing type:
 	//   - per_request: the cost is a flat, fully-known price per call, so
 	//     pre-consume the exact amount. Settlement then computes the same
@@ -71,10 +79,6 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return bizErr
 	}
 
-	adaptor := relay.GetAdaptorByChannelID(meta.ChannelID)
-	if adaptor == nil {
-		return openai.ErrorWrapper(fmt.Errorf("invalid channel type: %s", meta.ChannelID), "invalid_channel_type", http.StatusBadRequest)
-	}
 	adaptor.Init(meta)
 
 	requestBody, err := getRequestBody(c, meta, textRequest, adaptor)
