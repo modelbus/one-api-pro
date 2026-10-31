@@ -248,7 +248,7 @@ const { t } = useI18n()
 const channelTypeIds = [
   1, 50, 14, 33, 3, 11, 24, 51, 28, 41, 40, 15,
   47, 17, 49, 18, 48, 16, 19, 25, 23, 26, 27, 29,
-  30, 31, 32, 34, 35, 36, 37, 38, 39, 42, 43, 44,
+  30, 31, 32, 34, 35, 36, 37, 38, 39, 42, 44,
   45, 46, 8, 22, 21, 20, 2, 5, 7, 10, 4, 6, 9, 12, 13,
 ]
 const typeNameMap = computed(() => {
@@ -268,7 +268,7 @@ const typeColorMap = {
   27: 'red', 29: 'orange', 30: 'gray', 31: 'green',
   32: 'arcoblue', 34: 'arcoblue', 35: 'arcoblue', 36: 'gray',
   37: 'orange', 38: 'gray', 39: 'arcoblue', 42: 'arcoblue',
-  43: 'arcoblue', 44: 'arcoblue', 45: 'arcoblue', 46: 'arcoblue',
+  44: 'arcoblue', 45: 'arcoblue', 46: 'arcoblue',
   8: 'pinkpurple', 22: 'arcoblue', 21: 'purple',
   20: 'gray', 2: 'arcoblue', 5: 'gold', 7: 'purple',
   10: 'purple', 4: 'cyan', 6: 'purple', 9: 'gold', 12: 'arcoblue',
