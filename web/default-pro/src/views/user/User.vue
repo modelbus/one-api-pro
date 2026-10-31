@@ -7,7 +7,7 @@
         <p class="welcome-desc">{{ $t('userPage.subtitle') }}</p>
       </div>
       <div class="welcome-meta">
-        <span class="meta-chip">{{ $t('userPage.totalPeople', { n: pageTotal || users.length }) }}</span>
+        <span class="meta-chip">{{ $t('userPage.totalPeople', { n: pagerTotal }) }}</span>
       </div>
     </div>
 
@@ -43,7 +43,7 @@
 
     <!-- 列表 -->
     <div class="list-wrap">
-      <div v-if="pageItems.length === 0 && !loading && !loadingMore" class="empty-state">
+      <div v-if="pageItems.length === 0 && !loading" class="empty-state">
         <div class="empty-icon">
           <icon-user-group :size="32" />
         </div>
@@ -193,20 +193,14 @@
           </div>
         </a-spin>
 
-        <div v-if="loadingMore" class="load-more-row">
-          <a-spin :loading="true" :size="14" />
-          <span class="load-more-text">{{ $t('userPage.loadingMore') }}</span>
-        </div>
-        <div
-          v-else-if="isReachedEnd && users.length > pageSize && !loading"
-          class="load-end-row"
-        >
-          {{ $t('userPage.allLoaded', { n: users.length }) }}
-        </div>
       </div>
 
-      <div v-if="users.length > 0 && !isSearchMode" class="list-footer">
-        <div class="batch-bar">
+      <div
+        v-if="pagerTotal > 0 && !loading"
+        class="list-footer"
+        :class="{ 'list-footer--search': isSearchMode }"
+      >
+        <div v-if="!isSearchMode" class="batch-bar">
           <span class="batch-count">{{ $t('userPage.selectedCount', { n: selectedUsernames.length }) }}</span>
           <a-dropdown trigger="click" position="top">
             <a-button
@@ -235,17 +229,26 @@
             </template>
           </a-dropdown>
         </div>
+        <!-- 后端 /api/user/?page=&pageSize= 返回真实 total/page/page_size，
+             分页器直接用服务端总数，不需要再推算页数；搜索模式为本地分页。 -->
         <a-pagination
           :current="activePage"
-          :total="totalCountForPager"
+          :total="pagerTotal"
           :page-size="pageSize"
+          :page-size-options="PAGE_SIZE_OPTIONS"
+          :auto-adjust="false"
           show-total
           show-page-size
-          :page-size-options="[10, 20, 50]"
           size="small"
           @change="onPaginationChange"
-          @page-size-change="handlePageSizeChange"
-        />
+          @page-size-change="onPageSizeChange"
+        >
+          <template #total>
+            <span class="pager-summary">
+              {{ $t('userPage.pagerSummary', { total: pagerTotal, page: activePage, pages: pagerPages }) }}
+            </span>
+          </template>
+        </a-pagination>
       </div>
     </div>
 
@@ -349,10 +352,14 @@ const authStore = useAuthStore()
 const { t } = useI18n()
 
 const ITEMS_PER_PAGE = 10
+// 与后端 parseUserListPagination 的 maxUserPageSize(100) 对齐：允许的每页条数。
+// Keep every option within the backend cap (maxUserPageSize = 100).
+const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
 const loading = ref(true)
-const loadingMore = ref(false)
-const isReachedEnd = ref(false)
+// 服务端返回的真实总数（搜索模式为本地结果条数）。
+// Real total returned by the server (local result count in search mode).
+const totalCount = ref(0)
 const submitting = ref(false)
 const users = ref([])
 const groups = ref([])
@@ -361,9 +368,15 @@ const keyword = ref('')
 const isSearchMode = ref(false)
 const orderBy = ref('')
 const activePage = ref(1)
-const pageSize = ref(20)
+// 后端支持 page(1 基) + pageSize（上限 maxUserPageSize=100），默认沿用 config.ItemsPerPage。
+// Backend accepts 1-based `page` + `pageSize`; the default matches config.ItemsPerPage.
+const pageSize = ref(ITEMS_PER_PAGE)
 
+// 服务端分页下 users 即当前页；搜索结果一次返回全量，需要本地切片。
+// Server-side paging: users already holds the current page. Search results are
+// returned in full, so they are sliced locally.
 const pageItems = computed(() => {
+  if (!isSearchMode.value) return users.value
   const start = (activePage.value - 1) * pageSize.value
   return users.value.slice(start, start + pageSize.value)
 })
@@ -422,17 +435,23 @@ watch(isSearchMode, (val) => {
   if (val) selectedUsernames.value = []
 })
 
-// 操作成功后保留仍存在的 username，清理已不存在的
-// After a successful operation, prune usernames no longer in the list.
-function pruneSelection() {
-  const live = new Set(users.value.map((u) => u.username))
-  selectedUsernames.value = selectedUsernames.value.filter((n) => live.has(n))
+// 批量操作成功后移除已成功处理的 username（跨页选择时不能用当前页裁剪）。
+// Drop usernames reported as succeeded by the batch API.
+function pruneSelection(succeeded) {
+  if (!Array.isArray(succeeded) || succeeded.length === 0) return
+  const done = new Set(succeeded)
+  selectedUsernames.value = selectedUsernames.value.filter((n) => !done.has(n))
 }
 
-const totalCountForPager = computed(() => {
-  if (isReachedEnd.value) return users.value.length
-  return users.value.length + pageSize.value
+// 分页器总数：服务端直接返回 total，搜索模式（/api/user/search 返回全量）用结果条数。
+// Pager total: the server returns `total`; in search mode (full result set) use its length.
+const pagerTotal = computed(() => {
+  if (isSearchMode.value) return users.value.length
+  return totalCount.value
 })
+const pagerPages = computed(() =>
+  Math.max(1, Math.ceil(pagerTotal.value / Math.max(1, pageSize.value))),
+)
 
 const addVisible = ref(false)
 const addFormRef = ref(null)
@@ -488,35 +507,52 @@ onMounted(async () => {
   loading.value = false
 })
 
-async function fetchUsers({ append = false, pageIdx = 0 } = {}) {
-  if (append) loadingMore.value = true
-  else loading.value = true
+// 请求序号：快速切页/切搜索时只保留最后一次响应，避免旧响应把页码改回去。
+// Request sequence: only the latest response wins when pages are switched quickly.
+let fetchSeq = 0
+
+// 后端契约：GET /api/user/?page=<1 基页号>&pageSize=<每页条数>&order=<quota|used_quota>
+// 响应：data 为当前页数组，另有 total / page / page_size 三个字段，据此驱动分页器。
+// Backend contract: 1-based `page` + `pageSize`; the response carries
+// total / page / page_size (data stays an array).
+async function fetchUsers({ page = activePage.value, size = pageSize.value } = {}) {
+  const seq = ++fetchSeq
+  loading.value = true
   try {
-    const params = { p: pageIdx }
+    const targetPage = Math.max(1, Math.floor(Number(page)) || 1)
+    const targetSize = Math.max(1, Math.floor(Number(size)) || ITEMS_PER_PAGE)
+    const params = { page: targetPage, pageSize: targetSize }
     if (orderBy.value) params.order = orderBy.value
     const { data } = await api.get('/api/user/', { params })
+    if (seq !== fetchSeq) return
     if (data.success) {
       const list = Array.isArray(data.data) ? data.data : (data.data?.items || [])
-      if (append) {
-        if (list.length === 0) {
-          isReachedEnd.value = true
-        } else {
-          users.value = [...users.value, ...list]
-          if (list.length < pageSize.value) isReachedEnd.value = true
-        }
-      } else {
-        users.value = list
-        activePage.value = 1
-        isReachedEnd.value = list.length < pageSize.value
+      // 以后端回显的分页信息为准，避免前后端页号/页大小不一致。
+      // Trust the echoed page/page_size so the pager never drifts from the server.
+      const resolvedPage = Number(data.page) > 0 ? Number(data.page) : targetPage
+      const resolvedSize = Number(data.page_size) > 0 ? Number(data.page_size) : targetSize
+      const resolvedTotal = Number.isFinite(Number(data.total))
+        ? Number(data.total)
+        : (resolvedPage - 1) * resolvedSize + list.length
+      // 当前页已越界（如批量删除后末页变空）时回退到最后一页，避免停在空页。
+      // Fall back to the last page when the requested page went out of range.
+      const lastPage = Math.max(1, Math.ceil(resolvedTotal / resolvedSize))
+      if (list.length === 0 && resolvedPage > lastPage) {
+        fetchUsers({ page: lastPage, size: resolvedSize })
+        return
       }
+      users.value = list
+      activePage.value = resolvedPage
+      pageSize.value = resolvedSize
+      totalCount.value = resolvedTotal
     } else {
       Message.error(data.message || t('userPage.fetchUsersFailed'))
     }
   } catch (e) {
+    if (seq !== fetchSeq) return
     Message.error(e.response?.data?.message || e.message || t('userPage.fetchUsersFailed'))
   } finally {
-    loading.value = false
-    loadingMore.value = false
+    if (seq === fetchSeq) loading.value = false
   }
 }
 
@@ -554,58 +590,85 @@ function getUserPlans(userId) {
     }))
 }
 
-async function handleSearch(val) {
-  const term = (val || '').trim()
-  if (!term) {
-    handleClearSearch()
-    return
-  }
+// 搜索结果接口一次返回全量，前端做本地分页。
+// /api/user/search returns the full match set, so it is paginated client-side.
+async function loadSearchResults(term) {
+  const seq = ++fetchSeq
   loading.value = true
   isSearchMode.value = true
   keyword.value = term
   activePage.value = 1
-  isReachedEnd.value = true // 搜索结果不支持追加
   try {
     const { data } = await api.get('/api/user/search', { params: { keyword: term } })
+    if (seq !== fetchSeq) return
     if (data.success) {
-      const items = Array.isArray(data.data) ? data.data : (data.data?.items || [])
-      users.value = items
+      users.value = Array.isArray(data.data) ? data.data : (data.data?.items || [])
     } else {
       Message.error(data.message || t('userPage.searchFailed'))
     }
   } catch (e) {
+    if (seq !== fetchSeq) return
     Message.error(e.response?.data?.message || e.message || t('userPage.searchFailed'))
   } finally {
-    loading.value = false
+    if (seq === fetchSeq) loading.value = false
   }
+}
+
+async function handleSearch(val) {
+  const term = (val || '').trim()
+  if (!term) {
+    await handleClearSearch()
+    return
+  }
+  await loadSearchResults(term)
 }
 
 async function handleClearSearch() {
   keyword.value = ''
   isSearchMode.value = false
   activePage.value = 1
-  isReachedEnd.value = false
-  await fetchUsers({ append: false })
+  await fetchUsers({ page: 1 })
+}
+
+// 列表刷新：搜索模式重跑搜索（保持本地分页），否则重新拉取指定页。
+// Refresh helper: re-run search in search mode, otherwise re-fetch the given page.
+async function refreshUsers({ page = activePage.value } = {}) {
+  if (isSearchMode.value) {
+    await loadSearchResults(keyword.value)
+    return
+  }
+  await fetchUsers({ page })
 }
 
 function onPaginationChange(page) {
-  activePage.value = page
-  const totalPages = Math.ceil(users.value.length / pageSize.value)
-  if (page > totalPages && !isReachedEnd.value && !loadingMore.value && !keyword.value) {
-    const nextPageIdx = totalPages
-    fetchUsers({ append: true, pageIdx: nextPageIdx })
+  const target = Math.floor(Number(page))
+  if (!Number.isFinite(target) || target < 1 || target === activePage.value) return
+  if (isSearchMode.value) {
+    activePage.value = target
+    return
   }
+  fetchUsers({ page: target })
 }
 
-function handlePageSizeChange(s) {
-  pageSize.value = s
+// 切换每页条数：回到第 1 页重新拉取（搜索模式只需本地重算）。
+// Page-size switch: back to page 1 and re-fetch (search mode only re-slices locally).
+function onPageSizeChange(size) {
+  const target = Math.floor(Number(size))
+  if (!Number.isFinite(target) || target < 1 || target === pageSize.value) return
+  pageSize.value = target
   activePage.value = 1
+  if (isSearchMode.value) return
+  fetchUsers({ page: 1, size: target })
 }
 
 function handleOrderByChange() {
+  // 排序只在服务端列表生效，若处于搜索状态先退出，避免两种数据源混用。
+  if (isSearchMode.value) {
+    keyword.value = ''
+    isSearchMode.value = false
+  }
   activePage.value = 1
-  isReachedEnd.value = false
-  fetchUsers({ append: false })
+  fetchUsers({ page: 1 })
 }
 
 function openAddModal() {
@@ -630,8 +693,11 @@ async function handleAddUser() {
       Message.success(t('userPage.addSuccess'))
       addVisible.value = false
       resetAddForm()
+      // 新用户按 id desc 排序后位于第 1 页；搜索状态下先退出搜索再回到首页。
+      keyword.value = ''
+      isSearchMode.value = false
       activePage.value = 1
-      await Promise.all([fetchUsers(), fetchSubscriptions()])
+      await Promise.all([fetchUsers({ page: 1 }), fetchSubscriptions()])
     } else {
       Message.error(data.message || t('userPage.addFailed'))
     }
@@ -690,7 +756,7 @@ async function handleEditUser() {
       Message.success(t('userPage.editSuccess'))
       editVisible.value = false
       resetEditForm()
-      await fetchUsers()
+      await refreshUsers()
     } else {
       Message.error(data.message || t('userPage.editFailed'))
     }
@@ -755,10 +821,12 @@ async function deleteUser(record) {
     })
     if (data.success) {
       Message.success(t('userPage.deleteSuccess'))
-      if (pageItems.value.length === 1 && activePage.value > 1) {
-        activePage.value -= 1
-      }
-      await Promise.all([fetchUsers(), fetchSubscriptions()])
+      // 当前页删空后回到上一页，否则停留在当前页刷新。
+      const targetPage =
+        !isSearchMode.value && pageItems.value.length === 1 && activePage.value > 1
+          ? activePage.value - 1
+          : activePage.value
+      await Promise.all([refreshUsers({ page: targetPage }), fetchSubscriptions()])
     } else {
       Message.error(data.message || t('userPage.deleteFailed'))
     }
@@ -832,12 +900,15 @@ async function runBatch(action) {
             : t('userPage.userDisabled', { n: ok }),
         )
       }
-      await Promise.all([fetchUsers(), fetchSubscriptions()])
-      // 保留仍存在的 username，清理已不存在的
-      // Keep usernames still in the list, drop missing ones.
-      pruneSelection()
-      if (pageItems.value.length === 0 && activePage.value > 1) {
-        activePage.value -= 1
+      // 刷新当前页；若本页已被清空则回退一页重新拉取。
+      // Refresh current page, fall back one page if it became empty.
+      const targetPage = activePage.value
+      await Promise.all([refreshUsers({ page: targetPage }), fetchSubscriptions()])
+      // 仅移除批量接口确认成功的 username（跨页选择不能被当前页裁剪）。
+      // Only drop the usernames the batch API reported as succeeded.
+      pruneSelection(data.data.succeeded)
+      if (!isSearchMode.value && users.value.length === 0 && targetPage > 1) {
+        await fetchUsers({ page: targetPage - 1 })
       }
     } else {
       // 全部失败：data.data 仍包含明细
@@ -1257,6 +1328,15 @@ function renderBilling(type) {
   border-top: 1px solid var(--color-fill-3);
 }
 
+/* 搜索模式隐藏批量栏，分页器靠右对齐。 */
+.list-footer--search {
+  justify-content: flex-end;
+}
+
+.pager-summary {
+  font-variant-numeric: tabular-nums;
+}
+
 .batch-bar {
   display: flex;
   align-items: center;
@@ -1301,26 +1381,6 @@ function renderBilling(type) {
   margin: 0 0 16px;
 }
 
-/* ============ 追加加载 / 末尾提示 ============ */
-.load-more-row,
-.load-end-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
-  font-size: 12px;
-  color: var(--color-text-3);
-  border-top: 1px dashed var(--color-fill-3);
-}
-.load-more-text {
-  color: var(--color-text-3);
-}
-.load-end-row {
-  color: var(--color-text-4);
-  background: var(--color-fill-1);
-  border-top: 1px solid var(--color-fill-3);
-}
 
 .user-form :deep(.arco-form-item) {
   margin-bottom: 16px;

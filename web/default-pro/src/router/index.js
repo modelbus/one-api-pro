@@ -1,52 +1,63 @@
+import { watch } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '@/layouts/AdminLayout.vue'
 import i18n from '@/i18n'
+import { buildDocumentTitle, resolvePageTitle } from '@/utils/title'
 
 const routes = [
   {
     path: '/',
     name: 'Landing',
     component: () => import('@/views/Landing.vue'),
+    meta: { title: 'route.home' },
   },
   {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/auth/Login.vue'),
+    meta: { title: 'route.login' },
   },
   {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/auth/Register.vue'),
+    meta: { title: 'route.register' },
   },
   {
     path: '/reset',
     name: 'PasswordReset',
     component: () => import('@/views/auth/PasswordReset.vue'),
+    meta: { title: 'route.passwordReset' },
   },
   {
     path: '/reset/:token',
     name: 'PasswordResetConfirm',
     component: () => import('@/views/auth/PasswordResetConfirm.vue'),
+    meta: { title: 'route.passwordReset' },
   },
   {
     path: '/terms',
     name: 'TermsOfService',
     component: () => import('@/views/TermsOfService.vue'),
+    meta: { title: 'route.terms' },
   },
   {
     path: '/privacy',
     name: 'PrivacyPolicy',
     component: () => import('@/views/PrivacyPolicy.vue'),
+    meta: { title: 'route.privacy' },
   },
   {
     path: '/oauth/github',
     name: 'GitHubOAuth',
     component: () => import('@/views/auth/GitHubOAuth.vue'),
+    meta: { title: 'route.login' },
   },
   {
     path: '/oauth/lark',
     name: 'LarkOAuth',
     component: () => import('@/views/auth/LarkOAuth.vue'),
+    meta: { title: 'route.login' },
   },
   {
     path: '/',
@@ -81,6 +92,7 @@ const routes = [
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('@/views/NotFound.vue'),
+    meta: { title: 'route.notFound' },
   },
 ]
 
@@ -117,14 +129,24 @@ router.beforeEach((to, from, next) => {
   next()
 })
 
-const BASE_TITLE = 'ONE-API-PRO'
+// applyDocumentTitle 依据「当前路由 meta.title → i18n → 站点名」渲染 Tab 标题
+// 标题只由路由与页面元信息驱动，任何全局初始化（如 /api/status）都不得改写它。
+// Renders the tab title from the active route meta; global bootstrap must never override it.
+function applyDocumentTitle(to) {
+  if (typeof document === 'undefined') return
+  const pageTitle = resolvePageTitle(to?.meta?.title, (key) => i18n.global.t(key))
+  document.title = buildDocumentTitle(pageTitle, i18n.global.t('route.baseTitle'))
+}
 
 router.afterEach((to) => {
-  if (to.meta && to.meta.title) {
-    document.title = `${i18n.global.t(to.meta.title)}—${BASE_TITLE}`
-  } else {
-    document.title = `${BASE_TITLE}—${i18n.global.t('route.baseTitle')}`
-  }
+  applyDocumentTitle(to)
 })
+
+// 切换语言后同一路由的标题文案需要跟随刷新（路由不会重新导航）
+// Keep the title in sync when the locale changes without a navigation.
+watch(
+  () => i18n.global.locale.value,
+  () => applyDocumentTitle(router.currentRoute.value),
+)
 
 export default router

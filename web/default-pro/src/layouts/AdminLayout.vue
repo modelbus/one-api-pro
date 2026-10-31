@@ -138,8 +138,18 @@
 
     <!-- Token Modal -->
     <a-modal v-model:visible="showToken" :title="$t('layout.accessToken')" :footer="false" width="520">
-      <a-input v-if="accessToken" :model-value="accessToken" readonly size="large" />
-      <a-button v-if="accessToken" type="text" size="small" @click="copyToken" style="margin-top:8px">{{ $t('common.copy') }}</a-button>
+      <div v-if="accessToken" class="token-result">
+        <div class="token-tip">{{ $t('layout.tokenLabel') }}</div>
+        <a-input :model-value="accessToken" readonly size="large">
+          <template #suffix>
+            <a-tooltip :content="$t('common.copy')" mini>
+              <a-button class="token-copy-btn" type="text" size="mini" :aria-label="$t('common.copy')" @click.stop="copyToken">
+                <icon-copy />
+              </a-button>
+            </a-tooltip>
+          </template>
+        </a-input>
+      </div>
       <div v-if="!accessToken && !tokenLoading" style="text-align:center;padding:20px 0">
         <p style="color:var(--color-text-3);margin-bottom:16px">{{ $t('layout.generateConfirm') }}</p>
         <a-button type="primary" @click="genToken">{{ $t('layout.generate') }}</a-button>
@@ -156,7 +166,7 @@ import { useI18n } from 'vue-i18n'
 import { Message } from '@arco-design/web-vue'
 import { useAuthStore } from '@/stores/auth'
 import { useStatusStore } from '@/stores/status'
-import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown, IconStorage, IconBarChart } from '@arco-design/web-vue/es/icon'
+import { IconDashboard, IconMessage, IconApps, IconCode, IconGift, IconArchive, IconUserGroup, IconCalendar, IconFile, IconSettings, IconExport, IconUser, IconDown, IconStorage, IconBarChart, IconCopy } from '@arco-design/web-vue/es/icon'
 import LangSwitcher from '@/components/LangSwitcher.vue'
 import api from '@/api'
 import logoPng from '@/assets/logo.png'
@@ -237,8 +247,44 @@ async function genToken() {
   } catch (e) { Message.error(t('layout.tokenLoadFailed')) } finally { tokenLoading.value = false }
 }
 
-function copyToken() {
-  navigator.clipboard?.writeText(accessToken.value).then(() => Message.success(t('common.copied')))
+async function copyToken() {
+  const text = accessToken.value
+  if (!text) return
+  try {
+    await writeClipboard(text)
+    Message.success(t('common.copied'))
+  } catch (e) {
+    Message.error(t('layout.copyFailed'))
+  }
+}
+
+/**
+ * 写入剪贴板：优先使用异步 Clipboard API（需安全上下文 + 权限），
+ * 非安全上下文（http 访问）或权限被拒时降级为隐藏 textarea + execCommand('copy')。
+ */
+async function writeClipboard(text) {
+  if (window.isSecureContext && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text)
+      return
+    } catch (e) { /* 权限被拒 / 文档未聚焦，继续走降级方案 */ }
+  }
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.top = '0'
+  textarea.style.left = '0'
+  textarea.style.opacity = '0'
+  textarea.style.fontSize = '12pt' // 避免 iOS 聚焦时自动缩放
+  document.body.appendChild(textarea)
+  try {
+    textarea.select()
+    textarea.setSelectionRange(0, text.length)
+    if (!document.execCommand('copy')) throw new Error('execCommand copy failed')
+  } finally {
+    document.body.removeChild(textarea)
+  }
 }
 
 watch(() => route.path, (path) => { selectedKeys.value = [path] })
@@ -279,6 +325,11 @@ watch(() => route.path, (path) => { selectedKeys.value = [path] })
 .user-trigger:hover { background: var(--color-fill-2); }
 
 .content-area { padding: 20px; overflow-y: auto; min-width: 0; overflow-x: hidden; }
+
+.token-result { display: flex; flex-direction: column; gap: 8px; }
+.token-tip { font-size: 12px; color: var(--color-text-3); }
+.token-copy-btn { padding: 0 2px; height: 24px; color: var(--color-text-2); }
+.token-copy-btn:hover { background: var(--color-fill-2); color: rgb(var(--primary-6)); }
 
 .admin-footer {
   text-align: center;

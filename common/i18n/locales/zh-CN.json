@@ -1,5 +1,20 @@
 {
   "invalid_input": "无效的输入，请检查您的输入",
   "send_email_failed": "发送邮件失败：",
-  "invalid_parameter": "无效的参数"
+  "invalid_parameter": "无效的参数",
+  "validation_field_generic": "该字段",
+  "validation_field_username": "用户名",
+  "validation_field_password": "密码",
+  "validation_field_display_name": "显示名称",
+  "validation_field_email": "邮箱",
+  "validation_rule_required": "不能为空",
+  "validation_rule_min": "长度不能少于 %s 位",
+  "validation_rule_max": "长度不能超过 %s 位",
+  "validation_rule_len": "长度必须为 %s 位",
+  "validation_rule_email": "格式不正确",
+  "validation_rule_gt": "必须大于 %s",
+  "validation_rule_gte": "必须大于等于 %s",
+  "validation_rule_lt": "必须小于 %s",
+  "validation_rule_lte": "必须小于等于 %s",
+  "validation_rule_oneof": "取值不在允许范围内"
 }
