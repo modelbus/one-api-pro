@@ -9,6 +9,7 @@ order: 1
 
 Sorted by version, newest first. Click into a release for details and upgrade notes.
 
+- [v0.0.27](v0.0.27.md) — Server-side user pagination with `total` + route-driven tab titles + clipboard fallback and readable validation messages
 - [v0.0.26](v0.0.26.md) — Legacy Proxy channel type and the `/v1/oneapi/proxy` passthrough route removed (SSRF hardening) + no-adaptor quota leak fixed
 - [v0.0.25](v0.0.25.md) — Amount APIs unified on CNY yuan (zero frontend conversion) + top-up credit fix + migration script
 - [v0.0.24](v0.0.24.md) — Quota base fixed as a constant (¥1 = 1,000,000 quota) + exchange rate removed + CNY everywhere
