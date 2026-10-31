@@ -104,6 +104,15 @@ func GetAllUsers(startIdx int, num int, order string) (users []*User, err error)
 	return users, err
 }
 
+// CountAllUsers 统计未被删除的用户总数，过滤条件与 GetAllUsers 保持一致。
+// CountAllUsers returns the total number of non-deleted users, using the exact
+// same filter as GetAllUsers so pagination and total never disagree.
+func CountAllUsers() (int64, error) {
+	var count int64
+	err := DB.Model(&User{}).Where("status != ?", UserStatusDeleted).Count(&count).Error
+	return count, err
+}
+
 func SearchUsers(keyword string) (users []*User, err error) {
 	if !common.UsingPostgreSQL {
 		err = DB.Omit("password").Where("id = ? or username LIKE ? or email LIKE ? or display_name LIKE ?", keyword, keyword+"%", keyword+"%", keyword+"%").Find(&users).Error
