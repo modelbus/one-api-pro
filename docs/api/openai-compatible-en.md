@@ -98,8 +98,3 @@ The endpoints below are compatible with the OpenAI API format. They use Bearer T
 **Endpoint:** `GET /v1/dashboard/billing/usage?start_date=2024-01-01&end_date=2024-12-31`
 
 
-### 12.10 Proxy Forwarding
-
-**Endpoint:** `ANY /v1/oneapi/proxy/:channelid/*target`
-
-**Description:** Proxies directly to the specified channel.
